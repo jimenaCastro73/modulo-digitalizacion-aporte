@@ -5,7 +5,7 @@ Tabla T-02 · Catálogo global de tipos de escáneres
 
 Catálogo compartido por todos los proyectos. Permite registrar el equipo
 utilizado durante la etapa de Digitalizado. Referenciado desde
-digitalizacion.registro mediante el campo Many2one tipo_escaner_id.
+digitalizacion.registro mediante el campo Many2many tipo_escaner_ids.
 """
 
 from odoo import fields, models
@@ -33,7 +33,7 @@ class DigitalizacionTipoEscaner(models.Model):
         string  = "Activo",
         default = True,
         help    = "Soft delete de Odoo. False = escáner archivado/fuera de uso. "
-                  "No aparece en el formulario de registro.",
+        "No aparece en el formulario de registro.",
     )
 
     # ── Restricciones SQL ─────────────────────────────────────────────────────

@@ -270,7 +270,7 @@
 
                             const escanerId = tr.querySelector('.input-escaner').value;
                             if(escanerId) {
-                                filaObj.tipo_escaner_id = [parseInt(escanerId)];
+                                filaObj.tipo_escaner_ids = [parseInt(escanerId)];
                             }
 
                             payloadFilas.push(filaObj);

@@ -225,7 +225,7 @@
 
                     <!-- ── BLOQUE: DIGITALIZADO ───────────────────────────
                          Visible cuando etapa es Digitalizado.
-                         Campos: folios fisicos, escaneos, tipo_escaner_id.
+                         Campos: folios fisicos, escaneos, tipo_escaner_ids.
                          ─────────────────────────────────────────────── -->
                     <group string="Produccion — Digitalizado"
                            invisible="'digitalizado' not in (etapa_id.name or '').lower()">
@@ -236,7 +236,7 @@
                                    string="Numero de escaneos (hojas digitales)"/>
                         </group>
                         <group>
-                            <field name="tipo_escaner_id"
+                            <field name="tipo_escaner_ids"
                                    string="Escaner(es) utilizados"
                                    widget="many2many_tags"
                                    options="{'no_create': True}"/>

@@ -7,23 +7,23 @@ Tabla principal y transaccional del módulo. Almacena cada unidad de trabajo
 registrada por el Líder al final de la jornada.
 
 Granularidad:
-  1 registro = 1 miembro + 1 etapa + cantidades acumuladas del día.
-  El Líder agrega N registros por jornada, uno por cada combinación
-  miembro+etapa trabajada. Un mismo miembro puede tener múltiples registros
-  en el mismo día si trabajó en varias etapas.
+    1 registro = 1 miembro + 1 etapa + cantidades acumuladas del día.
+    El Líder agrega N registros por jornada, uno por cada combinación
+    miembro+etapa trabajada. Un mismo miembro puede tener múltiples registros
+    en el mismo día si trabajó en varias etapas.
 
-Estrategia de tabla plana con campos opcionales por etapa:
-  Los campos que no corresponden a la etapa activa quedan en NULL.
-  La visibilidad dinámica se controla en la vista QWeb del portal (WF-03)
-  y en la vista de formulario del backend mediante attrs/invisible.
+    Estrategia de tabla plana con campos opcionales por etapa:
+        Los campos que no corresponden a la etapa activa quedan en NULL.
+        La visibilidad dinámica se controla en la vista QWeb del portal (WF-03)
+        y en la vista de formulario del backend mediante attrs/invisible.
 
-Relaciones:
-  lider_id         → res.users                          (auditoría, auto env.user)
-  miembro_id       → digitalizacion.miembro_proyecto    (T-05, digitalizador)
-  proyecto_id      → digitalizacion.proyecto            (T-03)
-  etapa_id         → digitalizacion.etapa               (T-01)
-  tipo_escaner_ids → digitalizacion.tipo_escaner        (T-02, Many2many)
-"""
+        Relaciones:
+            lider_id         → res.users                          (auditoría, auto env.user)
+            miembro_id       → digitalizacion.miembro_proyecto    (T-05, digitalizador)
+            proyecto_id      → digitalizacion.proyecto            (T-03)
+            etapa_id         → digitalizacion.etapa               (T-01)
+            tipo_escaner_ids → digitalizacion.tipo_escaner        (T-02, Many2many)
+            """
 
 import logging
 
@@ -52,7 +52,7 @@ class Registro(models.Model):
         readonly     = True,
         index        = True,
         help         = "Usuario Odoo que realizó el registro. Auto-completado con "
-                       "el usuario en sesión. No editable.",
+        "el usuario en sesión. No editable.",
     )
 
     miembro_id = fields.Many2one(
@@ -62,7 +62,7 @@ class Registro(models.Model):
         ondelete     = "restrict",
         index        = True,
         help         = "Integrante del equipo al que pertenece el trabajo registrado. "
-                       "Filtrado por proyecto_id y miembros activos sin fecha_salida.",
+        "Filtrado por proyecto_id y miembros activos sin fecha_salida.",
     )
 
     proyecto_id = fields.Many2one(
@@ -72,7 +72,7 @@ class Registro(models.Model):
         ondelete     = "restrict",
         index        = True,
         help         = "Proyecto al que pertenece el registro. Solo muestra proyectos "
-                       "con asignación activa del líder en sesión.",
+        "con asignación activa del líder en sesión.",
     )
 
     etapa_id = fields.Many2one(
@@ -82,7 +82,7 @@ class Registro(models.Model):
         ondelete     = "restrict",
         index        = True,
         help         = "Etapa del proceso de digitalización. Determina qué campos "
-                       "de detalle son visibles y cuáles quedan en NULL.",
+        "de detalle son visibles y cuáles quedan en NULL.",
     )
 
     # =========================================================================
@@ -102,7 +102,7 @@ class Registro(models.Model):
         default = fields.Datetime.now,
         readonly = True,
         help    = "Timestamp de cuando se guardó el formulario. "
-                  "Capturado automáticamente.",
+        "Capturado automáticamente.",
     )
 
     # =========================================================================
@@ -112,7 +112,7 @@ class Registro(models.Model):
     observacion = fields.Text(
         string = "Observaciones",
         help   = "Campo libre de texto. Incidencias, notas de la jornada, "
-                 "atascos de escáner, incorporaciones tardías, etc.",
+        "atascos de escáner, incorporaciones tardías, etc.",
     )
 
     # =========================================================================
@@ -123,28 +123,28 @@ class Registro(models.Model):
     no_caja = fields.Char(
         string = "Nombre / ID de caja",
         help   = "ETAPAS: Limpieza, Ordenado. "
-                 "Identificador o descripción de la caja/folder físico procesado. "
-                 "Acepta texto libre (puede listar múltiples cajas separadas por coma, "
-                 "igual que el Excel origen). Ej: '504A, 504B, 504C'.",
+        "Identificador o descripción de la caja/folder físico procesado. "
+        "Acepta texto libre (puede listar múltiples cajas separadas por coma, "
+        "igual que el Excel origen). Ej: '504A, 504B, 504C'.",
     )
 
     cantidad_cajas = fields.Integer(
         string = "Cantidad de cajas",
         help   = "ETAPAS: Limpieza, Ordenado. "
-                 "Número de cajas físicas procesadas en esta jornada.",
+        "Número de cajas físicas procesadas en esta jornada.",
     )
 
     no_expedientes = fields.Integer(
         string = "Cantidad de expedientes",
         help   = "ETAPAS: Limpieza, Ordenado. "
-                 "Número de expedientes físicos procesados.",
+        "Número de expedientes físicos procesados.",
     )
 
     total_folios = fields.Integer(
         string = "Cantidad de folios",
         help   = "ETAPAS: Limpieza, Ordenado, Digitalizado. "
-                 "Número de folios (hojas físicas) procesados. "
-                 "El folio es la unidad física individual numerada secuencialmente.",
+        "Número de folios (hojas físicas) procesados. "
+        "El folio es la unidad física individual numerada secuencialmente.",
     )
 
     # =========================================================================
@@ -155,14 +155,16 @@ class Registro(models.Model):
     total_escaneos = fields.Integer(
         string = "Número de escaneos",
         help   = "ETAPA: Digitalizado. "
-                 "Número de hojas digitales generadas (scans). "
-                 "Puede diferir de total_folios si hubo re-escaneos o caras dobles.",
+        "Número de hojas digitales generadas (scans). "
+        "Puede diferir de total_folios si hubo re-escaneos o caras dobles.",
     )
 
-    tipo_escaner_id = fields.Many2one(
+    tipo_escaner_ids = fields.Many2many(
         comodel_name = "digitalizacion.tipo_escaner",
-        string       = "Tipo de escáner",
-        help         = "ETAPA: Digitalizado. Equipo utilizado en la sesión.",
+        string       = "Tipo(s) de escáner",
+        help         = "ETAPA: Digitalizado. Equipo(s) utilizados en la sesión. "
+        "Permite registrar múltiples escáneres. "
+        "Tabla intermedia generada automáticamente por Odoo (nota 3.4).",
     )
 
     # =========================================================================
@@ -172,13 +174,13 @@ class Registro(models.Model):
     expedientes_editados = fields.Integer(
         string = "Expedientes editados",
         help   = "ETAPA: Editado. "
-                 "Número de expedientes que pasaron por el proceso de edición digital.",
+        "Número de expedientes que pasaron por el proceso de edición digital.",
     )
 
     folios_editados = fields.Integer(
         string = "Folios editados",
         help   = "ETAPA: Editado. "
-                 "Número de folios editados digitalmente.",
+        "Número de folios editados digitalmente.",
     )
 
     # =========================================================================
@@ -188,13 +190,13 @@ class Registro(models.Model):
     expedientes_indexados = fields.Integer(
         string = "Expedientes indexados",
         help   = "ETAPA: Indexado. "
-                 "Número de expedientes a los que se asignaron metadatos/etiquetas.",
+        "Número de expedientes a los que se asignaron metadatos/etiquetas.",
     )
 
     folios_indexados = fields.Integer(
         string = "Folios indexados",
         help   = "ETAPA: Indexado. "
-                 "Número de folios digitales indexados.",
+        "Número de folios digitales indexados.",
     )
 
     # =========================================================================
@@ -244,7 +246,7 @@ class Registro(models.Model):
         compute = "_compute_produccion_principal",
         store   = True,
         help    = "Cantidad representativa de la etapa: escaneos para Digitalizado, "
-                  "expedientes para Limpieza/Ordenado, folios para Editado/Indexado.",
+        "expedientes para Limpieza/Ordenado, folios para Editado/Indexado.",
     )
 
     unidad_produccion = fields.Char(
@@ -252,7 +254,7 @@ class Registro(models.Model):
         compute = "_compute_produccion_principal",
         store   = True,
         help    = "Etiqueta de la unidad de producción principal. "
-                  "Ej: 'escaneos', 'expedientes', 'folios edit.'",
+        "Ej: 'escaneos', 'expedientes', 'folios edit.'",
     )
 
     # =========================================================================
@@ -285,10 +287,10 @@ class Registro(models.Model):
             if rec.miembro_id and rec.proyecto_id:
                 if rec.miembro_id.proyecto_id.id != rec.proyecto_id.id:
                     raise ValidationError(
-                        f"El digitalizador '{rec.miembro_id.partner_id.name}' "
-                        f"no pertenece al proyecto '{rec.proyecto_id.name}'. "
-                        f"Verifica la asignación de miembros."
-                    )
+                f"El digitalizador '{rec.miembro_id.partner_id.name}' "
+                f"no pertenece al proyecto '{rec.proyecto_id.name}'. "
+                f"Verifica la asignación de miembros."
+            )
 
     @api.constrains("miembro_id")
     def _check_miembro_activo(self):
@@ -299,10 +301,10 @@ class Registro(models.Model):
         for rec in self:
             if rec.miembro_id and rec.miembro_id.fecha_salida:
                 raise ValidationError(
-                    f"'{rec.miembro_id.partner_id.name}' tiene fecha de salida "
-                    f"registrada ({rec.miembro_id.fecha_salida}). "
-                    f"No se pueden crear nuevos registros para este miembro."
-                )
+            f"'{rec.miembro_id.partner_id.name}' tiene fecha de salida "
+            f"registrada ({rec.miembro_id.fecha_salida}). "
+            f"No se pueden crear nuevos registros para este miembro."
+        )
 
     @api.constrains("fecha")
     def _check_fecha_no_futura(self):
@@ -314,9 +316,9 @@ class Registro(models.Model):
         for rec in self:
             if rec.fecha and rec.fecha > hoy:
                 raise ValidationError(
-                    f"La fecha del registro ({rec.fecha}) no puede ser futura. "
-                    f"El registro debe corresponder a una jornada ya trabajada."
-                )
+            f"La fecha del registro ({rec.fecha}) no puede ser futura. "
+            f"El registro debe corresponder a una jornada ya trabajada."
+        )
 
     @api.constrains(
         "etapa_id",
@@ -345,37 +347,37 @@ class Registro(models.Model):
             if "digitalizado" in nombre_etapa:
                 if not (rec.total_escaneos or rec.total_folios):
                     raise ValidationError(
-                        f"La etapa '{rec.etapa_id.name}' requiere informar al menos "
-                        f"'Número de escaneos' o 'Cantidad de folios'."
-                    )
+                f"La etapa '{rec.etapa_id.name}' requiere informar al menos "
+                f"'Número de escaneos' o 'Cantidad de folios'."
+            )
 
             # Editado: obligatorio al menos expedientes o folios editados
-            elif "editado" in nombre_etapa:
-                if not (rec.expedientes_editados or rec.folios_editados):
-                    raise ValidationError(
-                        f"La etapa '{rec.etapa_id.name}' requiere informar al menos "
-                        f"'Expedientes editados' o 'Folios editados'."
-                    )
+                elif "editado" in nombre_etapa:
+                    if not (rec.expedientes_editados or rec.folios_editados):
+                        raise ValidationError(
+                    f"La etapa '{rec.etapa_id.name}' requiere informar al menos "
+                    f"'Expedientes editados' o 'Folios editados'."
+                )
 
-            # Indexado: obligatorio al menos expedientes o folios indexados
-            elif "indexado" in nombre_etapa:
-                if not (rec.expedientes_indexados or rec.folios_indexados):
-                    raise ValidationError(
+                # Indexado: obligatorio al menos expedientes o folios indexados
+                    elif "indexado" in nombre_etapa:
+                        if not (rec.expedientes_indexados or rec.folios_indexados):
+                            raise ValidationError(
                         f"La etapa '{rec.etapa_id.name}' requiere informar al menos "
                         f"'Expedientes indexados' o 'Folios indexados'."
                     )
 
-            # Limpieza / Ordenado: al menos expedientes o folios
-            elif "limpieza" in nombre_etapa or "ordenado" in nombre_etapa:
-                if not (rec.no_expedientes or rec.total_folios or rec.cantidad_cajas):
-                    raise ValidationError(
-                        f"La etapa '{rec.etapa_id.name}' requiere informar al menos "
-                        f"'Cantidad de expedientes', 'Folios' o 'Cajas'."
-                    )
+                    # Limpieza / Ordenado: al menos expedientes o folios
+                        elif "limpieza" in nombre_etapa or "ordenado" in nombre_etapa:
+                            if not (rec.no_expedientes or rec.total_folios or rec.cantidad_cajas):
+                                raise ValidationError(
+                            f"La etapa '{rec.etapa_id.name}' requiere informar al menos "
+                            f"'Cantidad de expedientes', 'Folios' o 'Cajas'."
+                        )
 
-    # =========================================================================
-    # MÉTODOS COMPUTADOS
-    # =========================================================================
+                        # =========================================================================
+                        # MÉTODOS COMPUTADOS
+                        # =========================================================================
 
     @api.depends("lider_id", "miembro_id", "etapa_id", "fecha")
     def _compute_display_name(self):
@@ -402,65 +404,68 @@ class Registro(models.Model):
         Almacenado (store=True) para filtros y reportes eficientes.
 
         Mapeo etapa → (campo, etiqueta):
-          Digitalizado → num_escaneos         → 'escaneos'
-          Editado      → expedientes_editados → 'exp. editados'
-          Indexado     → expedientes_indexados → 'exp. indexados'
-          Limpieza     → no_expedientes → 'expedientes'
-          Ordenado     → no_expedientes → 'expedientes'
-          (fallback)   → total_folios      → 'folios'
-        """
-        for rec in self:
-            nombre = (rec.etapa_id.name or "").lower()
+            Digitalizado → num_escaneos         → 'escaneos'
+            Editado      → expedientes_editados → 'exp. editados'
+            Indexado     → expedientes_indexados → 'exp. indexados'
+            Limpieza     → no_expedientes → 'expedientes'
+            Ordenado     → no_expedientes → 'expedientes'
+            (fallback)   → total_folios      → 'folios'
+            """
+            for rec in self:
+                nombre = (rec.etapa_id.name or "").lower()
 
-            if "digitalizado" in nombre:
-                rec.produccion_principal = rec.total_escaneos or 0
-                rec.unidad_produccion    = "escaneos"
+                if "digitalizado" in nombre:
+                    rec.produccion_principal = rec.total_escaneos or 0
+                    rec.unidad_produccion    = "escaneos"
 
-            elif "editado" in nombre:
-                rec.produccion_principal = rec.expedientes_editados or 0
-                rec.unidad_produccion    = "exp. editados"
+                elif "editado" in nombre:
+                    rec.produccion_principal = rec.expedientes_editados or 0
+                    rec.unidad_produccion    = "exp. editados"
 
-            elif "indexado" in nombre:
-                rec.produccion_principal = rec.expedientes_indexados or 0
-                rec.unidad_produccion    = "exp. indexados"
+                elif "indexado" in nombre:
+                    rec.produccion_principal = rec.expedientes_indexados or 0
+                    rec.unidad_produccion    = "exp. indexados"
 
-            elif "limpieza" in nombre or "ordenado" in nombre:
-                rec.produccion_principal = rec.no_expedientes or 0
-                rec.unidad_produccion    = "expedientes"
+                elif "limpieza" in nombre or "ordenado" in nombre:
+                    rec.produccion_principal = rec.no_expedientes or 0
+                    rec.unidad_produccion    = "expedientes"
 
-            else:
-                rec.produccion_principal = rec.total_folios or 0
-                rec.unidad_produccion    = "folios"
+                else:
+                    rec.produccion_principal = rec.total_folios or 0
+                    rec.unidad_produccion    = "folios"
 
-    # =========================================================================
-    # ONCHANGE — Limpiar campos de otras etapas al cambiar etapa
-    # =========================================================================
+                    # =========================================================================
+                    # ONCHANGE — Limpiar campos de otras etapas al cambiar etapa
+                    # =========================================================================
 
     @api.onchange("etapa_id")
     def _onchange_etapa(self):
-        """Ajusta los campos visibles según la etapa seleccionada."""
-        if self.etapa_id:
-            nombre = (self.etapa_id.name or "").lower()
+        """
+        Limpia los campos que no corresponden a la etapa seleccionada.
+        Evita que queden valores residuales de una etapa anterior.
+        Si etapa_id esta vacio, limpia todos los campos de detalle.
+        """
+        nombre = (self.etapa_id.name or "").lower() if self.etapa_id else ""
 
-            # Limpiar campos de Digitalizado
-            if "digitalizado" not in nombre:
-                self.total_escaneos = 0
-                self.tipo_escaner_id = False
+        # Limpiar campos de Digitalizado
+        if "digitalizado" not in nombre:
+            self.total_escaneos  = 0
+            self.tipo_escaner_ids = [(5, 0, 0)]  # limpiar Many2many
 
-        # Limpiar campos de Editado
-        if "editado" not in nombre:
-            self.expedientes_editados = 0
-            self.folios_editados      = 0
+            # Limpiar campos de Editado
+            if "editado" not in nombre:
+                self.expedientes_editados = 0
+                self.folios_editados      = 0
 
-        # Limpiar campos de Indexado
-        if "indexado" not in nombre:
-            self.expedientes_indexados = 0
-            self.folios_indexados      = 0
+                # Limpiar campos de Indexado
+                if "indexado" not in nombre:
+                    self.expedientes_indexados = 0
+                    self.folios_indexados      = 0
 
-        # Limpiar campos de Limpieza / Ordenado
-        if "limpieza" not in nombre and "ordenado" not in nombre:
-            self.cantidad_cajas        = 0
-            self.no_expedientes  = 0
+                    # Limpiar campos de Limpieza / Ordenado
+                    if "limpieza" not in nombre and "ordenado" not in nombre:
+                        self.cantidad_cajas   = 0
+                        self.no_expedientes   = 0
 
     @api.onchange("proyecto_id")
     def _onchange_proyecto_limpiar_miembro(self):
@@ -472,14 +477,14 @@ class Registro(models.Model):
         self.miembro_id = False
         if self.proyecto_id:
             return {
-                "domain": {
-                    "miembro_id": [
-                        ("proyecto_id", "=", self.proyecto_id.id),
-                        ("active",      "=", True),
-                        ("fecha_salida", "=", False),
-                    ]
-                }
-            }
+        "domain": {
+            "miembro_id": [
+                ("proyecto_id", "=", self.proyecto_id.id),
+                ("active",      "=", True),
+                ("fecha_salida", "=", False),
+            ]
+        }
+    }
 
     # =========================================================================
     # OVERRIDE CREATE / WRITE — Completar lider_id y hora automáticamente
@@ -501,7 +506,7 @@ class Registro(models.Model):
             if not vals.get("hora"):
                 vals["hora"] = ahora
 
-        return super().create(vals_list)
+                return super().create(vals_list)
 
     def write(self, vals):
         """
@@ -513,11 +518,11 @@ class Registro(models.Model):
                 "Intento de modificar lider_id en registro(s) %s. Ignorado.",
                 self.ids,
             )
-        return super().write(vals)
+            return super().write(vals)
 
-    # =========================================================================
-    # MÉTODOS DE NEGOCIO Y ACCIONES
-    # =========================================================================
+        # =========================================================================
+        # MÉTODOS DE NEGOCIO Y ACCIONES
+        # =========================================================================
 
     def action_duplicar_para_hoy(self):
         """
@@ -530,16 +535,16 @@ class Registro(models.Model):
             "hora":  fields.Datetime.now(),
         })
         return {
-            "type":      "ir.actions.act_window",
-            "name":      "Registro duplicado",
-            "res_model": "digitalizacion.registro",
-            "res_id":    nuevo.id,
-            "view_mode": "form",
-        }
+    "type":      "ir.actions.act_window",
+    "name":      "Registro duplicado",
+    "res_model": "digitalizacion.registro",
+    "res_id":    nuevo.id,
+    "view_mode": "form",
+}
 
-    # =========================================================================
-    # MÉTODOS DE CONSULTA PARA EL PORTAL Y REPORTES
-    # =========================================================================
+# =========================================================================
+# MÉTODOS DE CONSULTA PARA EL PORTAL Y REPORTES
+# =========================================================================
 
     @api.model
     def get_kpis_lider(self, lider_id: int, domain_extra: list = None) -> dict:
@@ -549,20 +554,20 @@ class Registro(models.Model):
         desde reportes del backend.
 
         Retorna:
-          {
-            "escaneos":        int,
-            "folios_fisicos":  int,
-            "exp_indexados":   int,
-            "total_registros": int,
-          }
-        """
-        domain = [("lider_id", "=", lider_id)]
-        if domain_extra:
-            domain += domain_extra
+            {
+                "escaneos":        int,
+                "folios_fisicos":  int,
+                "exp_indexados":   int,
+                "total_registros": int,
+            }
+            """
+            domain = [("lider_id", "=", lider_id)]
+            if domain_extra:
+                domain += domain_extra
 
-        registros = self.sudo().search(domain)
+                registros = self.sudo().search(domain)
 
-        return {
+                return {
             "escaneos":        sum(r.total_escaneos or 0            for r in registros),
             "folios_fisicos":  sum(r.total_folios or 0         for r in registros),
             "exp_indexados":   sum(r.expedientes_indexados or 0   for r in registros),
@@ -576,15 +581,15 @@ class Registro(models.Model):
         Usado en el dashboard del backend (Administrador).
 
         Retorna lista de dicts:
-          [{"etapa": "Digitalizado", "total": 1840, "unidad": "escaneos"}, ...]
-        """
-        registros = self.sudo().search([("proyecto_id", "=", proyecto_id)])
-        resumen   = {}
+            [{"etapa": "Digitalizado", "total": 1840, "unidad": "escaneos"}, ...]
+            """
+            registros = self.sudo().search([("proyecto_id", "=", proyecto_id)])
+            resumen   = {}
 
-        for rec in registros:
-            etapa = rec.etapa_id.name or "Sin etapa"
-            if etapa not in resumen:
-                resumen[etapa] = {"etapa": etapa, "total": 0, "unidad": rec.unidad_produccion}
-            resumen[etapa]["total"] += rec.produccion_principal or 0
+            for rec in registros:
+                etapa = rec.etapa_id.name or "Sin etapa"
+                if etapa not in resumen:
+                    resumen[etapa] = {"etapa": etapa, "total": 0, "unidad": rec.unidad_produccion}
+                    resumen[etapa]["total"] += rec.produccion_principal or 0
 
-        return sorted(resumen.values(), key=lambda x: x["etapa"])
+                    return sorted(resumen.values(), key=lambda x: x["etapa"])

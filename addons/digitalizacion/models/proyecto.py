@@ -7,10 +7,10 @@ Cada proyecto representa un contrato o encargo de digitalización de documentos
 físicos. Gestionado exclusivamente por el Administrador desde el backend.
 
 Referenciado por:
-  - digitalizacion.asignacion      (proyecto_id)  → T-04
-  - digitalizacion.miembro_proyecto (proyecto_id)  → T-05
-  - digitalizacion.registro         (proyecto_id)  → T-06
-"""
+    - digitalizacion.asignacion      (proyecto_id)  → T-04
+    - digitalizacion.miembro_proyecto (proyecto_id)  → T-05
+    - digitalizacion.registro         (proyecto_id)  → T-06
+    """
 
 from odoo import api, fields, models
 from odoo.exceptions import ValidationError
@@ -48,7 +48,10 @@ class Proyecto(models.Model):
 
     duracion_estimada = fields.Integer(
         string="Duración estimada",
-        help="Días entre fecha_inicio y fecha_fin.",
+        compute="_compute_duracion_estimada",
+        store=True,
+        help="Días entre fecha_inicio y fecha_fin_estimada. "
+        "Calculado automáticamente al guardar.",
     )
 
     state = fields.Selection(
@@ -159,15 +162,30 @@ class Proyecto(models.Model):
             if rec.fecha_fin_estimada and rec.fecha_inicio:
                 if rec.fecha_fin_estimada < rec.fecha_inicio:
                     raise ValidationError(
-                        "La fecha de fin estimada no puede ser anterior a la fecha de inicio."
-                    )
+                "La fecha de fin estimada no puede ser anterior a la fecha de inicio."
+            )
 
     @api.onchange('fecha_inicio', 'fecha_fin_estimada')
     def _onchange_fechas(self):
-        """Calcula la duración estimada al modificar fechas."""
+        """Preview de duración en el formulario antes de guardar."""
         if self.fecha_inicio and self.fecha_fin_estimada:
             delta = self.fecha_fin_estimada - self.fecha_inicio
             self.duracion_estimada = delta.days
+
+    @api.depends("fecha_inicio", "fecha_fin_estimada")
+    def _compute_duracion_estimada(self):
+        """
+        Calcula y persiste la duración en días entre inicio y fin estimado.
+        Usar compute+store garantiza que el valor quede guardado incluso si
+        el registro se crea o modifica desde código o API (sin pasar por el form).
+        """
+        for rec in self:
+            if rec.fecha_inicio and rec.fecha_fin_estimada:
+                rec.duracion_estimada = (rec.fecha_fin_estimada - rec.fecha_inicio).days
+            else:
+                rec.duracion_estimada = 0
+
+    @api.depends("asignacion_ids", "asignacion_ids.active")
     def _compute_lider_ids(self):
         for proyecto in self:
             proyecto.lider_ids = proyecto.asignacion_ids.filtered(
@@ -194,7 +212,7 @@ class Proyecto(models.Model):
             else:
                 proyecto.progreso = 0.0
 
-    # ── Métodos de negocio ────────────────────────────────────────────────────
+                # ── Métodos de negocio ────────────────────────────────────────────────────
 
     def action_archivar(self):
         """Archiva el proyecto (soft delete). Desactiva asignaciones activas."""
@@ -214,22 +232,22 @@ class Proyecto(models.Model):
         """Abre la lista de registros filtrada por este proyecto."""
         self.ensure_one()
         return {
-            "type": "ir.actions.act_window",
-            "name": f"Registros — {self.name}",
-            "res_model": "digitalizacion.registro",
-            "view_mode": "list,form",
-            "domain": [("proyecto_id", "=", self.id)],
-            "context": {"default_proyecto_id": self.id},
-        }
+    "type": "ir.actions.act_window",
+    "name": f"Registros — {self.name}",
+    "res_model": "digitalizacion.registro",
+    "view_mode": "list,form",
+    "domain": [("proyecto_id", "=", self.id)],
+    "context": {"default_proyecto_id": self.id},
+}
 
     def action_ver_miembros(self):
         """Abre la lista de miembros del equipo de este proyecto."""
         self.ensure_one()
         return {
-            "type": "ir.actions.act_window",
-            "name": f"Equipo — {self.name}",
-            "res_model": "digitalizacion.miembro_proyecto",
-            "view_mode": "list,form",
-            "domain": [("proyecto_id", "=", self.id)],
-            "context": {"default_proyecto_id": self.id},
-        }
+    "type": "ir.actions.act_window",
+    "name": f"Equipo — {self.name}",
+    "res_model": "digitalizacion.miembro_proyecto",
+    "view_mode": "list,form",
+    "domain": [("proyecto_id", "=", self.id)],
+    "context": {"default_proyecto_id": self.id},
+}
