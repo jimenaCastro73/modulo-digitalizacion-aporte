@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Menu del Portal: Injectar 'Digitalizacion' en home -->
+    <template id="portal_my_home_menu_digitalizacion" name="Portal layout : digitalizacion menu entries" inherit_id="portal.portal_breadcrumbs" priority="20">
+        <xpath expr="//ol[hasclass('o_portal_submenu')]" position="inside">
+            <li t-if="page_name == 'digitalizacion_dashboard'" class="breadcrumb-item">
+                <a href="/digitalizacion">Producción</a>
+            </li>
+            <li t-if="page_name == 'digitalizacion_formulario'" class="breadcrumb-item">
+                <a href="/digitalizacion">Producción</a>
+            </li>
+            <li t-if="page_name == 'digitalizacion_formulario'" class="breadcrumb-item">
+                Registro Diario
+            </li>
+        </xpath>
+    </template>
+
+    <template id="portal_my_home_digitalizacion" name="Displays Digitalizacion in Portal Home" inherit_id="portal.portal_my_home" customize_show="True" priority="20">
+        <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
+            <t t-call="portal.portal_docs_entry">
+                <t t-set="title">Registro de Producción</t>
+                <t t-set="url" t-value="'/digitalizacion'"/>
+                <t t-set="placeholder_count" t-value="'digitalizacion_count'"/>
+            </t>
+        </xpath>
+    </template>
+
+    <!-- DASHBOARD LIDER (PORTAL) - /digitalizacion -->
+    <template id="wf02_dashboard" name="Dashboard Líder">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+            
+            <div t-if="not asignaciones" class="alert alert-warning mt-4" role="alert">
+                <i class="fa fa-exclamation-triangle mr-2"></i>
+                Actualmente no tienes proyectos asignados o activos. Contacta al administrador.
+            </div>
+
+            <div t-if="asignaciones" class="o_portal_digitalizacion_dashboard mt-4">
+                
+                <!-- Encabezado y Filtros -->
+                <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
+                    <div>
+                        <h3 class="mb-1 text-primary">Mi Producción</h3>
+                        <p class="text-muted mb-0"><i class="fa fa-calendar-alt mr-1"></i> <t t-esc="periodo_actual"/></p>
+                    </div>
+                    
+                    <form method="GET" action="/digitalizacion" class="form-inline d-flex gap-2">
+                        <select name="proyecto_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <t t-foreach="asignaciones" t-as="asig">
+                                <option t-att-value="asig.proyecto_id.id" t-att-selected="request.params.get('proyecto_id') == str(asig.proyecto_id.id)">
+                                    <t t-esc="asig.proyecto_id.name"/>
+                                </option>
+                            </t>
+                        </select>
+                        <select name="periodo" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="hoy" t-att-selected="request.params.get('periodo') == 'hoy'">Hoy</option>
+                            <option value="semana" t-att-selected="request.params.get('periodo') == 'semana'">Esta Semana</option>
+                            <option value="mes" t-att-selected="not request.params.get('periodo') or request.params.get('periodo') == 'mes'">Este Mes</option>
+                        </select>
+                        <a t-if="asignaciones" t-attf-href="/digitalizacion/registro/#{request.params.get('proyecto_id') or asignaciones[0].proyecto_id.id}" class="btn btn-primary btn-sm">
+                            <i class="fa fa-plus mr-1"></i> Registrar Trabajo
+                        </a>
+                    </form>
+                </div>
+
+                <!-- SECCIÓN A: KPIs -->
+                <div class="row g-3 mb-4">
+                    <!-- Escaneos -->
+                    <div class="col-6 col-md-3">
+                        <div class="card h-100 border-start border-4 border-warning shadow-sm">
+                            <div class="card-body py-3">
+                                <h6 class="text-muted text-uppercase fw-bold mb-1" style="font-size: 0.75rem;">Mis Escaneos</h6>
+                                <h3 class="mb-0 text-dark font-weight-bold">
+                                    <t t-esc="kpis.get('escaneos', 0)"/>
+                                </h3>
+                                <small class="text-muted">Hojas digitales</small>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Folios físicos -->
+                    <div class="col-6 col-md-3">
+                        <div class="card h-100 border-start border-4 border-primary shadow-sm">
+                            <div class="card-body py-3">
+                                <h6 class="text-muted text-uppercase fw-bold mb-1" style="font-size: 0.75rem;">Folios Físicos</h6>
+                                <h3 class="mb-0 text-dark font-weight-bold">
+                                    <t t-esc="kpis.get('folios_fisicos', 0)"/>
+                                </h3>
+                                <small class="text-muted">Procesados</small>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Expedientes Indexados -->
+                    <div class="col-6 col-md-3">
+                        <div class="card h-100 border-start border-4 border-success shadow-sm">
+                            <div class="card-body py-3">
+                                <h6 class="text-muted text-uppercase fw-bold mb-1" style="font-size: 0.75rem;">Exp. Indexados</h6>
+                                <h3 class="mb-0 text-dark font-weight-bold">
+                                    <t t-esc="kpis.get('exp_indexados', 0)"/>
+                                </h3>
+                                <small class="text-muted">Expedientes</small>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Registros (Total forms) -->
+                    <div class="col-6 col-md-3">
+                        <div class="card h-100 border-start border-4 border-info shadow-sm">
+                            <div class="card-body py-3">
+                                <h6 class="text-muted text-uppercase fw-bold mb-1" style="font-size: 0.75rem;">Registros</h6>
+                                <h3 class="mb-0 text-dark font-weight-bold">
+                                    <t t-esc="kpis.get('total_registros', 0)"/>
+                                </h3>
+                                <small class="text-muted">Envíos realizados</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <!-- SECCIÓN B: Progreso del Proyecto (Referencia) -->
+                    <!-- NOTA: En la realidad esto iría con una lógica de la meta del proyecto, aquí simulamos que el Admin setea Meta -->
+                    <!-- SECCIÓN C: Barras de producción simuladas por CSS -->
+                    <div class="col-lg-5">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">Producción por Etapa</h5>
+                            </div>
+                            <div class="card-body">
+                                <t t-if="not resumen_etapas">
+                                    <p class="text-muted text-center my-4">No hay datos en este período.</p>
+                                </t>
+                                <t t-foreach="resumen_etapas" t-as="etapa">
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span><t t-esc="etapa.get('nombre')"/></span>
+                                            <span class="fw-bold"><t t-esc="etapa.get('cantidad')"/></span>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar bg-primary" role="progressbar" 
+                                                 t-attf-style="width: #{etapa.get('porcentaje')}%;" 
+                                                 t-att-aria-valuenow="etapa.get('porcentaje')" 
+                                                 aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECCIÓN E: Últimos Registros -->
+                    <div class="col-lg-7">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Envíos Recientes</h5>
+                            </div>
+                            <div class="card-body p-0 table-responsive">
+                                <t t-if="not ultimos_registros">
+                                    <p class="text-muted text-center my-4">No hay registros recientes.</p>
+                                </t>
+                                <table t-if="ultimos_registros" class="table table-sm table-hover mb-0 align-middle">
+                                    <thead class="table-light text-muted" style="font-size: 0.85rem;">
+                                        <tr>
+                                            <th class="ps-3">Fecha</th>
+                                            <th>Miembro</th>
+                                            <th>Etapa</th>
+                                            <th>Producción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody style="font-size: 0.9rem;">
+                                        <t t-foreach="ultimos_registros" t-as="reg">
+                                            <tr>
+                                                <td class="ps-3"><t t-esc="reg.fecha.strftime('%d/%m') if reg.fecha else ''"/></td>
+                                                <td><t t-esc="reg.miembro_id.partner_id.name.split(' ')[0] if reg.miembro_id else '?'"/></td>
+                                                <td>
+                                                    <span class="badge bg-secondary text-dark border"><t t-esc="reg.etapa_id.name"/></span>
+                                                </td>
+                                                <td class="fw-bold">
+                                                    <t t-esc="reg.produccion_principal"/> <small class="text-muted fw-normal"><t t-esc="reg.unidad_produccion"/></small>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </t>
+    </template>
+</odoo>

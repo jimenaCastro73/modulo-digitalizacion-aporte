@@ -1,0 +1,13 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_etapa_admin,etapa.admin,model_digitalizacion_etapa,digitalizacion.group_digitalizacion_admin,1,1,1,1
+access_etapa_lider,etapa.lider,model_digitalizacion_etapa,digitalizacion.group_digitalizacion_lider,1,0,0,0
+access_escaner_admin,tipo_escaner.admin,model_digitalizacion_tipo_escaner,digitalizacion.group_digitalizacion_admin,1,1,1,1
+access_escaner_lider,tipo_escaner.lider,model_digitalizacion_tipo_escaner,digitalizacion.group_digitalizacion_lider,1,0,0,0
+access_proyecto_admin,proyecto.admin,model_digitalizacion_proyecto,digitalizacion.group_digitalizacion_admin,1,1,1,1
+access_proyecto_lider,proyecto.lider,model_digitalizacion_proyecto,digitalizacion.group_digitalizacion_lider,1,0,0,0
+access_asignacion_admin,asignacion.admin,model_digitalizacion_asignacion,digitalizacion.group_digitalizacion_admin,1,1,1,1
+access_asignacion_lider,asignacion.lider,model_digitalizacion_asignacion,digitalizacion.group_digitalizacion_lider,1,0,0,0
+access_miembro_admin,miembro.admin,model_digitalizacion_miembro_proyecto,digitalizacion.group_digitalizacion_admin,1,1,1,1
+access_miembro_lider,miembro.lider,model_digitalizacion_miembro_proyecto,digitalizacion.group_digitalizacion_lider,1,1,1,0
+access_registro_admin,registro.admin,model_digitalizacion_registro,digitalizacion.group_digitalizacion_admin,1,1,1,1
+access_registro_lider,registro.lider,model_digitalizacion_registro,digitalizacion.group_digitalizacion_lider,1,1,1,0

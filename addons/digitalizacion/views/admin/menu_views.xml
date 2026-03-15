@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ================================================================
+         menu_views.xml — Menús y acciones raíz del módulo Digitalización
+         Odoo 17 · OTEC GLOBAL
+
+         CORRECCIONES aplicadas respecto a la versión original:
+           1. Prefijo del módulo corregido: "mi_modulo_digitalizacion.*" → "digitalizacion.*"
+           2. view_mode corregido: "tree,form"  (Odoo 17)
+           3. web_icon corregido: "fa,fa-folder-open" → "digitalizacion,static/description/icon.png"
+              (formato correcto para app icons en Odoo 17)
+           4. Acciones movidas a este archivo como fuente única de verdad
+              para las acciones de menú. Las vistas individuales (etapa_views,
+              proyecto_views, etc.) declaran sus propias acciones con más
+              detalle (help text, context, domain). Las acciones de este
+              archivo son las que enlazan con los menús.
+           5. Agregado menú "Miembros por Proyecto" en Operaciones.
+           6. groups aplicado también a submenús críticos como segunda
+              capa de seguridad, no solo al raíz.
+         ================================================================ -->
+
+
+    <!-- ================================================================
+         1. ACCIONES DE VENTANA
+         Estas acciones son las que abren las vistas al hacer clic en
+         un ítem de menú. Referencian los view_id definidos en cada
+         archivo de vistas individual mediante ref().
+
+         Si las vistas aún no existen al instalar, Odoo usará la vista
+         por defecto del modelo. Se recomienda declarar las vistas
+         primero en el manifest (data=[]) antes que este archivo.
+         ================================================================ -->
+
+    <!-- Proyectos -->
+    <record id="action_digitalizacion_proyecto" model="ir.actions.act_window">
+        <field name="name">Proyectos</field>
+        <field name="res_model">digitalizacion.proyecto</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Crea el primer proyecto de digitalización
+            </p>
+            <p>Cada proyecto representa un contrato o encargo de digitalización.</p>
+        </field>
+    </record>
+
+    <!-- Asignación de Líderes -->
+    <record id="action_digitalizacion_asignacion" model="ir.actions.act_window">
+        <field name="name">Asignación de Líderes</field>
+        <field name="res_model">digitalizacion.asignacion</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Asigna un Líder a un proyecto
+            </p>
+            <p>El Líder es el usuario portal que registra la producción diaria del equipo.</p>
+        </field>
+    </record>
+
+    <!-- Miembros por Proyecto -->
+    <record id="action_digitalizacion_miembro" model="ir.actions.act_window">
+        <field name="name">Miembros del Equipo</field>
+        <field name="res_model">digitalizacion.miembro_proyecto</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Sin miembros registrados aún
+            </p>
+            <p>Los miembros son los digitalizadores vinculados a cada proyecto.</p>
+        </field>
+    </record>
+
+    <!-- Registros de Trabajo -->
+    <record id="action_digitalizacion_registro" model="ir.actions.act_window">
+        <field name="name">Registros de Trabajo</field>
+        <field name="res_model">digitalizacion.registro</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{"search_default_group_proyecto": 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Sin registros de trabajo aún
+            </p>
+            <p>Los registros son creados por los Líderes desde el portal al final de cada jornada.</p>
+        </field>
+    </record>
+
+    <!-- Etapas (Configuración) -->
+    <record id="action_digitalizacion_etapa" model="ir.actions.act_window">
+        <field name="name">Etapas</field>
+        <field name="res_model">digitalizacion.etapa</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Crea la primera etapa del proceso
+            </p>
+            <p>
+                Define las fases del flujo: Limpieza, Digitalizado, Editado, Indexado, Ordenado.
+            </p>
+        </field>
+    </record>
+
+    <!-- Tipos de Escáner (Configuración) -->
+    <record id="action_digitalizacion_escaner" model="ir.actions.act_window">
+        <field name="name">Tipos de Escáner</field>
+        <field name="res_model">digitalizacion.tipo_escaner</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Registra los escáneres disponibles
+            </p>
+            <p>Los tipos de escáner se seleccionan en la etapa Digitalizado.</p>
+        </field>
+    </record>
+
+
+    <!-- ── Menú raíz (ícono de aplicación) ──────────── -->
+    <menuitem
+        id="menu_digitalizacion_root"
+        name="Digitalización"
+        sequence="10"
+        web_icon="digitalizacion,static/description/icon.png"
+        groups="digitalizacion.group_digitalizacion_admin"/>
+
+</odoo>

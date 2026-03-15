@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ================================================================
+         tipo_escaner_views.xml — Vistas backend: digitalizacion.tipo_escaner
+         Modelo T-02 · Catalogo global de tipos de escaneres
+         Acceso exclusivo: grupo Administrador (group_digitalizacion_admin)
+
+         Vistas incluidas:
+           1. Vista lista  (list)
+           2. Vista formulario (form)
+           3. Enlace view_id a la accion central de menu_views.xml
+         ================================================================ -->
+
+
+    <!-- ================================================================
+         1. VISTA LISTA
+         Catalogo simple: editable directamente en fila.
+         decoration-muted atenua los escaneres archivados/fuera de uso.
+         ================================================================ -->
+    <record id="view_tipo_escaner_list" model="ir.ui.view">
+        <field name="name">digitalizacion.tipo_escaner.list</field>
+        <field name="model">digitalizacion.tipo_escaner</field>
+        <field name="arch" type="xml">
+            <tree
+                string="Tipos de Escaner"
+                editable="bottom"
+                decoration-muted="not active">
+
+                <field name="name"
+                       string="Nombre / Modelo"
+                       required="1"/>
+
+                <field name="description"
+                       string="Descripcion"
+                       optional="show"/>
+
+                <field name="active"
+                       string="Activo"
+                       widget="boolean_toggle"/>
+
+            </tree>
+        </field>
+    </record>
+
+
+    <!-- ================================================================
+         2. VISTA FORMULARIO
+         ================================================================ -->
+    <record id="view_tipo_escaner_form" model="ir.ui.view">
+        <field name="name">digitalizacion.tipo_escaner.form</field>
+        <field name="model">digitalizacion.tipo_escaner</field>
+        <field name="arch" type="xml">
+            <form string="Tipo de Escaner">
+
+                <header/>
+
+                <field name="active" widget="boolean_toggle" invisible="1"/>
+
+                <sheet>
+
+                    <div class="oe_title">
+                        <label for="name" string="Nombre del escaner"/>
+                        <h1>
+                            <field
+                                name="name"
+                                placeholder="Ej: Fujitsu fi-7300NX, Epson GT-S85..."
+                                required="1"/>
+                        </h1>
+                    </div>
+
+                    <group>
+                        <group string="Informacion del equipo">
+                            <field name="active"
+                                   string="Activo"
+                                   widget="boolean_toggle"
+                                   help="Desactivar archiva el escaner. No aparecera en el formulario de registro del portal."/>
+                        </group>
+                    </group>
+
+                    <group string="Descripcion adicional">
+                        <field name="description"
+                               string="Descripcion"
+                               placeholder="Velocidad, formato de hojas soportado, ubicacion fisica, observaciones..."
+                               nolabel="1"/>
+                    </group>
+
+                    <!-- Alerta: escaner archivado -->
+                    <div class="alert alert-warning" role="alert"
+                         invisible="active">
+                        <i class="fa fa-archive"/> Este escaner esta archivado y no aparecera
+                        en el selector de la etapa Digitalizado.
+                    </div>
+
+                </sheet>
+
+                <!-- chatter eliminado: modelo no hereda mail.thread -->
+
+            </form>
+        </field>
+    </record>
+
+
+    <!-- ================================================================
+         3. ENLACE DE VISTA A LA ACCION CENTRAL (menu_views.xml)
+         ================================================================ -->
+    <record id="action_digitalizacion_escaner" model="ir.actions.act_window">
+        <field name="view_id" ref="view_tipo_escaner_list"/>
+    </record>
+
+</odoo>

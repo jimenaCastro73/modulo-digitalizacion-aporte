@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ================================================================
+         etapa_views.xml — Vistas del backend para digitalizacion.etapa
+         Modelo T-01 - Catalogo de etapas del proceso de digitalizacion
+         Acceso exclusivo: grupo Administrador (group_digitalizacion_admin)
+
+         La accion de ventana y el item de menu se declaran en
+         menu_views.xml (fuente unica de verdad para la navegacion).
+         Este archivo solo define las vistas list y form.
+         ================================================================ -->
+
+
+    <!-- ================================================================
+         1. VISTA LISTA
+         editable="bottom": edicion directa en fila (ideal para catalogos).
+         widget="handle" en sequence: drag-and-drop para reordenar.
+         decoration-muted: atenua visualmente las etapas archivadas.
+         ================================================================ -->
+    <record id="view_etapa_list" model="ir.ui.view">
+        <field name="name">digitalizacion.etapa.list</field>
+        <field name="model">digitalizacion.etapa</field>
+        <field name="arch" type="xml">
+            <tree
+                string="Etapas"
+                default_order="sequence asc"
+                editable="bottom"
+                decoration-muted="not active">
+
+                <field name="sequence" widget="handle"/>
+                <field name="name"           string="Nombre de la etapa"/>
+                <field name="registro_count" string="Registros" optional="show"/>
+                <field name="active"         widget="boolean_toggle" string="Activo"/>
+
+            </tree>
+        </field>
+    </record>
+
+
+    <!-- ================================================================
+         2. VISTA FORMULARIO
+         ================================================================ -->
+    <record id="view_etapa_form" model="ir.ui.view">
+        <field name="name">digitalizacion.etapa.form</field>
+        <field name="model">digitalizacion.etapa</field>
+        <field name="arch" type="xml">
+            <form string="Etapa de Digitalizacion">
+
+                <header/>
+
+                <!-- Stat button: visible solo si ya tiene registros -->
+                <div class="oe_button_box" name="button_box">
+                    <button
+                        name="action_ver_registros"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-list-ul"
+                        invisible="registro_count == 0">
+                        <field
+                            name="registro_count"
+                            widget="statinfo"
+                            string="Registros"/>
+                    </button>
+                </div>
+
+                <field name="active" widget="boolean_toggle" invisible="1"/>
+
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" string="Nombre de la etapa"/>
+                        <h1>
+                            <field
+                                name="name"
+                                placeholder="Ej: Limpieza, Digitalizado, Editado..."
+                                required="1"/>
+                        </h1>
+                    </div>
+
+                    <group>
+                        <group string="Configuracion">
+                            <field name="sequence"
+                                   string="Secuencia"
+                                   help="Orden de aparicion en listas y selectores. Menor numero = primera posicion."/>
+                            <field name="active"
+                                   string="Activo"
+                                   widget="boolean_toggle"/>
+                        </group>
+                        <group string="Estadisticas" invisible="registro_count == 0">
+                            <field name="registro_count"
+                                   string="Total de registros"
+                                   readonly="1"/>
+                        </group>
+                    </group>
+
+                    <!-- Alerta: etapa nueva sin registros -->
+                    <div class="alert alert-info" role="alert"
+                         invisible="registro_count != 0">
+                        <i class="fa fa-info-circle"/> Esta etapa aun no tiene registros de trabajo asociados.
+                        Aparecera en el formulario del Lider una vez que este activa.
+                    </div>
+
+                    <!-- Alerta: etapa archivada -->
+                    <div class="alert alert-warning" role="alert"
+                         invisible="active">
+                        <i class="fa fa-archive"/> Esta etapa esta archivada y no aparecera
+                        en el formulario de registro del portal.
+                    </div>
+
+                </sheet>
+
+                <!-- chatter eliminado: modelo no hereda mail.thread -->
+
+            </form>
+        </field>
+    </record>
+
+
+    <!-- ================================================================
+         3. ENLACE DE VISTA A LA ACCION CENTRAL
+         La accion de ventana vive en menu_views.xml.
+         Aqui solo asignamos la vista lista como view_id por defecto.
+         ================================================================ -->
+    <record id="action_digitalizacion_etapa" model="ir.actions.act_window">
+        <field name="view_id" ref="view_etapa_list"/>
+    </record>
+
+</odoo>

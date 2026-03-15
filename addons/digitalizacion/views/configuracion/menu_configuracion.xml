@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- ── Sección: Configuración ───────────────────────────────────────── -->
+        <menuitem
+            id="menu_digitalizacion_configuracion"
+            name="Configuración"
+            parent="digitalizacion.menu_digitalizacion_root"
+            sequence="20"
+            groups="digitalizacion.group_digitalizacion_admin"/>
+
+        <menuitem
+            id="menu_digitalizacion_etapa"
+            name="Etapas"
+            parent="menu_digitalizacion_configuracion"
+            action="digitalizacion.action_digitalizacion_etapa"
+            sequence="10"
+            groups="digitalizacion.group_digitalizacion_admin"/>
+
+        <menuitem
+            id="menu_digitalizacion_escaner"
+            name="Tipos de Escáner"
+            parent="menu_digitalizacion_configuracion"
+            action="digitalizacion.action_digitalizacion_escaner"
+            sequence="20"
+            groups="digitalizacion.group_digitalizacion_admin"/>
+    </data>
+</odoo>

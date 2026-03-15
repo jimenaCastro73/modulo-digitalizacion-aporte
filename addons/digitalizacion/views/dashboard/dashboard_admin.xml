@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ================================================================
+         dashboard_admin.xml — Dashboard 1
+         Referencia técnica: DASHBOARD_SPEC.md (Secciones A, B, C, y D)
+         Acceso: Digitalización / Admin
+         ================================================================ -->
+
+    <!-- VISTA FORMULARIO COMO DASHBOARD KPI (Sección A) -->
+    <!-- Como Odoo Community no tiene un "Dashboard Builder" nativo sin apps de terceros,
+         simularemos las tarjetas usando una vista form customizada con CSS y Stats Buttons
+         o directamente las agruparemos en la vista Graph/Pivot principal.
+         
+         Optaremos por una vista "Pivot" y "Graph" principal, 
+         ya que el requerimiento habla de gráficas de Barras (C) y Líneas (D). -->
+
+    <!-- Gráfico por Digitalizador (Sección C) -->
+    <record id="view_registro_graph_por_digitalizador" model="ir.ui.view">
+        <field name="name">digitalizacion.registro.graph.digitalizador</field>
+        <field name="model">digitalizacion.registro</field>
+        <field name="arch" type="xml">
+            <graph string="Producción por Digitalizador" type="bar" stacked="0">
+                <field name="miembro_id" type="row"/>
+                <field name="total_escaneos" type="measure"/>
+                <field name="total_folios" type="measure"/>
+                <field name="expedientes_indexados" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- Gráfico de Tendencia (Sección D) -->
+    <record id="view_registro_graph_tendencia" model="ir.ui.view">
+        <field name="name">digitalizacion.registro.graph.tendencia</field>
+        <field name="model">digitalizacion.registro</field>
+        <field name="arch" type="xml">
+            <graph string="Producción Diaria" type="line">
+                <field name="fecha" type="row"/>
+                <field name="total_escaneos" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- Filtros Específicos del Dashboard (Sección E) -->
+    <record id="view_registro_search_dashboard" model="ir.ui.view">
+        <field name="name">digitalizacion.registro.search.dashboard</field>
+        <field name="model">digitalizacion.registro</field>
+        <field name="arch" type="xml">
+            <search string="Filtros Dashboard">
+                <filter name="este_mes" string="Este mes"
+                        domain="[('fecha', '&gt;=', (context_today()).strftime('%Y-%m-01'))]"/>
+                
+                <group expand="0" string="Agrupar por">
+                    <filter name="por_proyecto" string="Proyecto" context="{'group_by': 'proyecto_id'}"/>
+                    <filter name="por_digitalizador" string="Digitalizador" context="{'group_by': 'miembro_id'}"/>
+                    <filter name="por_fecha" string="Fecha" context="{'group_by': 'fecha:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Acción del Dashboard Admin -->
+    <record id="action_digitalizacion_dashboard_admin" model="ir.actions.act_window">
+        <field name="name">Dashboard de Producción</field>
+        <field name="res_model">digitalizacion.registro</field>
+        <field name="view_mode">graph,pivot,list</field>
+        <field name="search_view_id" ref="view_registro_search_dashboard"/>
+        <field name="context">{
+            'search_default_este_mes': 1,
+            'search_default_por_proyecto': 1
+        }</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Aún no hay registros de producción.
+            </p>
+            <p>
+                Los líderes del portal alimentarán este dashboard diariamente.
+            </p>
+        </field>
+    </record>
+    
+
+
+    <!-- Menú Item del Dashboard -->
+    <menuitem id="menu_dashboard_admin"
+              name="Dashboard"
+              parent="digitalizacion.menu_operaciones_root"
+              action="action_digitalizacion_dashboard_admin"
+              sequence="1"/>
+
+</odoo>

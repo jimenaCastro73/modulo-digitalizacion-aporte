@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ================================================================
+         wf03_formulario — Formulario de Registro Multi-fila
+         ================================================================ -->
+    <template id="wf03_formulario" name="Formulario de Registro de Trabajo">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <div class="o_portal_digitalizacion_formulario mt-4 pb-5">
+                <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+                    <div>
+                        <h2 class="mb-0 text-primary">Registro de Producción</h2>
+                        <h5 class="text-muted font-weight-normal mt-1">
+                            <i class="fa fa-folder-open-o mr-1"></i> <t t-esc="proyecto.name"/>
+                        </h5>
+                    </div>
+                </div>
+
+                <div class="alert alert-info d-none" id="msg-guardando" role="alert">
+                    <i class="fa fa-spinner fa-spin mr-2"></i> Guardando registros, por favor espere...
+                </div>
+                <div class="alert alert-success d-none" id="msg-exito" role="alert">
+                    <i class="fa fa-check-circle mr-2"></i> ¡Registros guardados exitosamente!
+                </div>
+                <!-- Div donde se inyectan las advertencias desde JS -->
+                <div id="msg-advertencias" class="d-none"></div>
+
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <!-- Cabecera Común (Fecha) -->
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <label for="inputFecha" class="form-label font-weight-bold">Fecha de Producción</label>
+                                <input type="date" id="inputFecha" class="form-control" t-att-value="datetime.date.today().strftime('%Y-%m-%d')"/>
+                            </div>
+                        </div>
+
+                        <!-- Info oculta para JS -->
+                        <input type="hidden" id="proyecto_id" t-att-value="proyecto.id"/>
+                        <input type="hidden" id="etapas_data" t-att-value="etapas_json"/>
+                        <input type="hidden" id="miembros_data" t-att-value="miembros_json"/>
+                        <input type="hidden" id="escaneres_data" t-att-value="escaneres_json"/>
+
+                        <!-- Contenedor de filas dinámicas -->
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm align-middle" id="tabla-registros" style="min-width: 900px;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 20%;">Digitalizador <span class="text-danger">*</span></th>
+                                        <th style="width: 15%;">Etapa <span class="text-danger">*</span></th>
+                                        <th style="width: 15%;">Caja / ID</th>
+                                        <th style="width: 10%;">Cant. Cajas</th>
+                                        <th style="width: 10%;">Expedientes</th>
+                                        <th style="width: 10%;">Folios</th>
+                                        <th style="width: 10%;">Escaneos</th>
+                                        <th style="width: 15%;">Escáner</th>
+                                        <th style="width: 5%;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-registros">
+                                    <!-- Las filas se inyectan acá con JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-3">
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="btn-agregar-fila">
+                                <i class="fa fa-plus"></i> Añadir Fila
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-white text-end">
+                        <button type="button" class="btn btn-primary px-4" id="btn-guardar-registros">
+                            <i class="fa fa-save mr-1"></i> Enviar a Odoo
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- CSS Específico -->
+            <style>
+                .o_portal_digitalizacion_formulario select.form-select, 
+                .o_portal_digitalizacion_formulario input.form-control {
+                    font-size: 0.85rem;
+                    padding: 0.25rem 0.5rem;
+                }
+                .col-deshabilitada {
+                    background-color: #f8f9fa;
+                    opacity: 0.6;
+                    pointer-events: none;
+                }
+            </style>
+
+            <!-- Lógica JavaScript Principal -->
+            <script type="text/javascript">
+                document.addEventListener('DOMContentLoaded', function() {
+                    console.log("[Portal Digitalizacion] Inicializando Formulario...");
+
+                    const proyectoId = document.getElementById('proyecto_id').value;
+                    const inputFecha = document.getElementById('inputFecha');
+                    const tbody = document.getElementById('tbody-registros');
+                    const btnAgregarFila = document.getElementById('btn-agregar-fila');
+                    const btnGuardar = document.getElementById('btn-guardar-registros');
+
+                    // Parsear Data JSON inyectada por el Controller (Evita Fetch extra)
+                    const etapas = JSON.parse(document.getElementById('etapas_data').value || '[]');
+                    const miembros = JSON.parse(document.getElementById('miembros_data').value || '[]');
+                    const escaneres = JSON.parse(document.getElementById('escaneres_data').value || '[]');
+
+                    // ── Mapeo de reglas de visibilidad según Etapa (DASHBOARD_SPEC.md / Diccionario de Datos) ──
+                    const reglasEtapa = {
+                        'limpieza': ['col-caja', 'col-cantidad-cajas', 'col-expedientes', 'col-folios'],
+                        'ordenado': ['col-caja', 'col-cantidad-cajas', 'col-expedientes', 'col-folios'],
+                        'digitalizado': ['col-folios', 'col-escaneos', 'col-escaner']
+                    };
+
+                    // Si no hay miembros, advertencia
+                    if(miembros.length === 0) {
+                        tbody.innerHTML = `&lt;tr&gt;&lt;td colspan="9" class="text-center text-danger py-4"&gt;
+                            &lt;i class="fa fa-exclamation-triangle mr-2"&gt;&lt;/i&gt; 
+                            No hay digitalizadores agregados a este proyecto. 
+                            Ve a 'Gestionar Equipo' para agregarlos primero.
+                            &lt;/td&gt;&lt;/tr&gt;`;
+                        btnAgregarFila.disabled = true;
+                        btnGuardar.disabled = true;
+                        return;
+                    }
+
+                    let rowCounter = 0;
+
+                    function crearHTMLFila(idFila) {
+                        // Options Miembros
+                        let opcionesMiembros = `&lt;option value=""&gt;Seleccione...&lt;/option&gt;`;
+                        miembros.forEach(m =&gt; {
+                            opcionesMiembros += `&lt;option value="${m.id}"&gt;${m.name}&lt;/option&gt;`;
+                        });
+
+                        // Options Etapas
+                        let opcionesEtapas = `&lt;option value=""&gt;Seleccione...&lt;/option&gt;`;
+                        etapas.forEach(e =&gt; {
+                            opcionesEtapas += `&lt;option value="${e.id}" data-name="${e.name.toLowerCase()}"&gt;${e.name}&lt;/option&gt;`;
+                        });
+
+                        // Options Escáner (Multiple idealmente, pero para simplificar UI web, listado simple)
+                        let opcionesEscaner = `&lt;option value=""&gt;No aplica&lt;/option&gt;`;
+                        escaneres.forEach(eq =&gt; {
+                            opcionesEscaner += `&lt;option value="${eq.id}"&gt;${eq.name}&lt;/option&gt;`;
+                        });
+
+                        return `
+                            &lt;tr id="fila-${idFila}" class="fila-registro"&gt;
+                                &lt;td&gt;
+                                    &lt;select class="form-select input-miembro" required&gt;
+                                        ${opcionesMiembros}
+                                    &lt;/select&gt;
+                                &lt;/td&gt;
+                                &lt;td&gt;
+                                    &lt;select class="form-select input-etapa" required onchange="actualizarCamposFila(${idFila})"&gt;
+                                        ${opcionesEtapas}
+                                    &lt;/select&gt;
+                                &lt;/td&gt;
+                                &lt;td class="td-caja"&gt;&lt;input type="text" class="form-control input-caja" placeholder="Ej. A-1"/&gt;&lt;/td&gt;
+                                &lt;td class="td-cantidad-cajas"&gt;&lt;input type="number" class="form-control input-cant-cajas" min="0"/&gt;&lt;/td&gt;
+                                &lt;td class="td-expedientes"&gt;&lt;input type="number" class="form-control input-expedientes" min="0"/&gt;&lt;/td&gt;
+                                &lt;td class="td-folios"&gt;&lt;input type="number" class="form-control input-folios" min="0"/&gt;&lt;/td&gt;
+                                &lt;td class="td-escaneos"&gt;&lt;input type="number" class="form-control input-escaneos" min="0"/&gt;&lt;/td&gt;
+                                &lt;td class="td-escaner"&gt;
+                                    &lt;select class="form-select input-escaner"&gt;
+                                        ${opcionesEscaner}
+                                    &lt;/select&gt;
+                                &lt;/td&gt;
+                                &lt;td class="text-center"&gt;
+                                    &lt;button type="button" class="btn btn-sm btn-outline-danger btn-eliminar" onclick="eliminarFila(${idFila})"&gt;
+                                        &lt;i class="oi oi-trash"&gt;&lt;/i&gt;
+                                    &lt;/button&gt;
+                                &lt;/td&gt;
+                            &lt;/tr&gt;
+                        `;
+                    }
+
+                    // --- Agregar Fila Base Inicial ---
+                    agregarFila();
+
+                    btnAgregarFila.addEventListener('click', function() {
+                        agregarFila();
+                    });
+
+                    function agregarFila() {
+                        rowCounter++;
+                        tbody.insertAdjacentHTML('beforeend', crearHTMLFila(rowCounter));
+                        actualizarCamposFila(rowCounter); // Deshabilitar todo hasta que elija etapa
+                    }
+
+                    window.eliminarFila = function(idFila) {
+                        const fila = document.getElementById(`fila-${idFila}`);
+                        if (fila) fila.remove();
+                        // Si eliminó todas, agregar una vacía
+                        if (document.querySelectorAll('.fila-registro').length === 0) {
+                            agregarFila();
+                        }
+                    };
+
+                    window.actualizarCamposFila = function(idFila) {
+                        const fila = document.getElementById(`fila-${idFila}`);
+                        if (!fila) return;
+
+                        const selectEtapa = fila.querySelector('.input-etapa');
+                        const nombreEtapa = selectEtapa.options[selectEtapa.selectedIndex].getAttribute('data-name') || '';
+
+                        // Reset visual state (bloquear por default)
+                        const cells = fila.querySelectorAll('td');
+                        cells.forEach(c =&gt; {
+                            if(c.className.includes('td-')) {
+                                c.classList.add('col-deshabilitada');
+                                const input = c.querySelector('input, select');
+                                if(input) { input.disabled = true; input.value = ''; }
+                            }
+                        });
+
+                        // Habilitar según regla dinámica
+                        for (const [key, clases] of Object.entries(reglasEtapa)) {
+                            if (nombreEtapa.includes(key)) {
+                                clases.forEach(clase =&gt; {
+                                    // ejemplo: clase = 'col-escaneos', buscar td-escaneos
+                                    const claseTd = 'td-' + clase.split('-')[1] + (clase.split('-')[2] ? '-' + clase.split('-')[2] : '');
+                                    
+                                    const tdTarget = fila.querySelector('.' + claseTd);
+                                    if(tdTarget) {
+                                        tdTarget.classList.remove('col-deshabilitada');
+                                        const input = tdTarget.querySelector('input, select');
+                                        if(input) input.disabled = false;
+                                    }
+                                });
+                                break;
+                            }
+                        }
+                    };
+
+                    // --- Guardado de Registros (API) ---
+                    btnGuardar.addEventListener('click', function() {
+                        
+                        const filasTR = document.querySelectorAll('.fila-registro');
+                        let payloadFilas = [];
+                        let isValid = true;
+
+                        filasTR.forEach((tr, index) =&gt; {
+                            const miembroId = tr.querySelector('.input-miembro').value;
+                            const etapaId = tr.querySelector('.input-etapa').value;
+                            
+                            if(!miembroId || !etapaId) {
+                                isValid = false;
+                                tr.style.border = "2px solid red";
+                                return;
+                            } else {
+                                tr.style.border = "none";
+                            }
+
+                            // Construir objeto para JSON-RPC alineado al Diccionario de Datos del Spec
+                            let filaObj = {
+                                miembro_id: parseInt(miembroId),
+                                etapa_id: parseInt(etapaId),
+                                no_caja: tr.querySelector('.input-caja').value || "",
+                                cantidad_cajas: parseInt(tr.querySelector('.input-cant-cajas').value) || 0,
+                                no_expedientes: parseInt(tr.querySelector('.input-expedientes').value) || 0,
+                                total_folios: parseInt(tr.querySelector('.input-folios').value) || 0,
+                                total_escaneos: parseInt(tr.querySelector('.input-escaneos').value) || 0,
+                            };
+
+                            const escanerId = tr.querySelector('.input-escaner').value;
+                            if(escanerId) {
+                                filaObj.tipo_escaner_id = [parseInt(escanerId)];
+                            }
+
+                            payloadFilas.push(filaObj);
+                        });
+
+                        if(!isValid) {
+                            alert("Faltan campos obligatorios (Digitalizador o Etapa) en algunas filas.");
+                            return;
+                        }
+
+                        if(payloadFilas.length === 0) return;
+
+                        // UI Loading
+                        btnGuardar.disabled = true;
+                        document.getElementById('msg-guardando').classList.remove('d-none');
+                        document.getElementById('msg-exito').classList.add('d-none');
+                        document.getElementById('msg-advertencias').classList.add('d-none');
+
+                        // Enviar JSON-RPC POST
+                        odoo.define('digitalizacion.guardar_registro', function (require) {
+                            var rpc = require('web.rpc');
+
+                            rpc.query({
+                                route: '/digitalizacion/api/guardar_registros',
+                                params: {
+                                    proyecto_id: parseInt(proyectoId),
+                                    fecha: inputFecha.value,
+                                    filas: payloadFilas
+                                }
+                            }).then(function (result) {
+                                btnGuardar.disabled = false;
+                                document.getElementById('msg-guardando').classList.add('d-none');
+
+                                if(result.status === 'success') {
+                                    document.getElementById('msg-exito').classList.remove('d-none');
+                                    tbody.innerHTML = ''; // Limpiar
+                                    agregarFila(); // Fila en blanco
+                                    
+                                    if(result.advertencias &amp;&amp; result.advertencias.length &gt; 0) {
+                                        mostrarAdvertencia(result.advertencias);
+                                    }
+                                } else {
+                                    alert("Error del servidor: " + result.message);
+                                }
+                            }).catch(function (error) {
+                                btnGuardar.disabled = false;
+                                document.getElementById('msg-guardando').classList.add('d-none');
+                                alert("Error crítico al contactar el servidor Odoo.");
+                                console.error(error);
+                            });
+                        });
+                    });
+
+                    function mostrarAdvertencia(mensajes) {
+                        const divAdv = document.getElementById('msg-advertencias');
+                        divAdv.classList.remove('d-none');
+                        let ul = '&lt;ul class="mb-0"&gt;';
+                        mensajes.forEach(m =&gt; { ul += `&lt;li&gt;${m}&lt;/li&gt;`; });
+                        ul += '&lt;/ul&gt;';
+                        divAdv.innerHTML = `
+                            &lt;div class="alert alert-warning"&gt;
+                                &lt;strong&gt;Guardado Parcial:&lt;/strong&gt; Algunos registros tuvieron problemas:
+                                ${ul}
+                            &lt;/div&gt;`;
+                    }
+
+                });
+            </script>
+        </t>
+    </template>
+</odoo>

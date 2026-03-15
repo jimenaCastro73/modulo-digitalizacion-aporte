@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <!-- Grupos definidos -->
+        <record id="group_digitalizacion_admin" model="res.groups">
+            <field name="name">Admin</field>
+            <field name="category_id" ref="base.module_category_hidden"/>
+        </record>
+
+        <record id="group_digitalizacion_lider" model="res.groups">
+            <field name="name">Líder (Portal)</field>
+            <field name="category_id" ref="base.module_category_hidden"/>
+        </record>
+
+        <!-- El líder solo ve proyectos donde tiene asignación activa -->
+        <record id="rule_lider_solo_sus_proyectos" model="ir.rule">
+            <field name="name">Líder ve sus proyectos activos</field>
+            <field name="model_id" ref="model_digitalizacion_proyecto"/>
+            <field name="groups" eval="[(4, ref('group_digitalizacion_lider'))]"/>
+            <field name="domain_force">
+                [('asignacion_ids.lider_id', '=', user.id),
+                 ('asignacion_ids.active', '=', True)]
+            </field>
+        </record>
+
+        <!-- El líder solo ve registros de sus proyectos -->
+        <record id="rule_lider_solo_sus_registros" model="ir.rule">
+            <field name="name">Líder ve sus registros</field>
+            <field name="model_id" ref="model_digitalizacion_registro"/>
+            <field name="groups" eval="[(4, ref('group_digitalizacion_lider'))]"/>
+            <field name="domain_force">
+                [('proyecto_id.asignacion_ids.lider_id', '=', user.id)]
+            </field>
+        </record>
+    </data>
+</odoo>

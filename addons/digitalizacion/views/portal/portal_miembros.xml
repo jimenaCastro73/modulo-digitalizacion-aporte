@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="wf05_miembros_equipo" name="Miembros del Proyecto">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+            <div class="o_portal_digitalizacion_miembros mt-4">
+                
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3>Equipo de <t t-esc="proyecto.name"/></h3>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarMiembro">
+                        <i class="fa fa-user-plus mr-1"></i> Agregar Miembro
+                    </button>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-body p-0 table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Digitalizador</th>
+                                    <th>Fecha de Ingreso</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="miembros" t-as="m">
+                                    <tr>
+                                        <td class="ps-3 fw-bold"><t t-esc="m.partner_id.name"/></td>
+                                        <td><t t-esc="m.fecha_ingreso"/></td>
+                                        <td>
+                                            <span t-if="m.active" class="badge bg-success">Activo</span>
+                                            <span t-else="" class="badge bg-danger">Baja</span>
+                                        </td>
+                                        <td>
+                                            <!-- Las acciones de dar de baja podrían implementarse vía JS API o directamente en el portal -->
+                                            <button t-if="m.active" class="btn btn-sm btn-outline-danger" title="Dar de baja">
+                                                <i class="fa fa-user-times"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Agregar Miembro (Esqueleto, requiere JS para funcionar completamente con /digitalizacion/api/agregar_miembro) -->
+            <div class="modal fade" id="modalAgregarMiembro" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Agregar miembro al proyecto</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Buscar o crear contacto</label>
+                                <input type="text" id="inputBuscarMiembro" class="form-control" placeholder="Escriba el nombre..."/>
+                                <div id="resultadosMiembros" class="list-group mt-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </t>
+    </template>
+</odoo>

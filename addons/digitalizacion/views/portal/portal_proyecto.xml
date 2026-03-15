@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="wf04_proyecto_detalle" name="Detalle del Proyecto">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+            <t t-call="portal.portal_record_layout">
+                <t t-set="card_header">
+                    <div class="row no-gutters">
+                        <div class="col-12">
+                            <h5 class="d-flex mb-1 mb-md-0 row">
+                                <div class="col-9">
+                                    <span t-field="proyecto.name" class="text-truncate"/>
+                                    <small class="text-muted d-block d-md-inline" t-if="proyecto.state == 'activo'">
+                                        (<span class="badge badge-success text-white"><i class="fa fa-fw fa-check align-middle"></i> Activo</span>)
+                                    </small>
+                                </div>
+                                <div class="col-3 text-right">
+                                    <small class="text-right">Progreso:</small>
+                                    <span t-field="proyecto.progreso" t-options='{"widget": "float", "precision": 1}'/>%
+                                </div>
+                            </h5>
+                        </div>
+                    </div>
+                </t>
+                <t t-set="card_body">
+                    <div class="row mb-4">
+                        <div class="col-12 col-md-6 mb-2">
+                            <strong>Fecha Inicio:</strong> <span t-field="proyecto.fecha_inicio"/>
+                        </div>
+                        <div class="col-12 col-md-6 mb-2">
+                            <strong>Fecha Fin Estimada:</strong> <span t-field="proyecto.fecha_fin_estimada"/>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <p t-field="proyecto.descripcion"/>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-12 text-center">
+                            <a t-attf-href="/digitalizacion/registro/#{proyecto.id}" class="btn btn-primary">
+                                Registrar Trabajo de Hoy
+                            </a>
+                            <a t-attf-href="/digitalizacion/proyecto/#{proyecto.id}/miembros" class="btn btn-secondary ml-2">
+                                Gestionar Equipo
+                            </a>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

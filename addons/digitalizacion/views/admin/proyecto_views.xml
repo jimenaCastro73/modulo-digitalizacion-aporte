@@ -1,0 +1,418 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ================================================================
+         proyecto_views.xml — Vistas backend: digitalizacion.proyecto
+         Modelo T-03 · Registro central de proyectos de digitalizacion
+         Acceso exclusivo: grupo Administrador (group_digitalizacion_admin)
+
+         Vistas incluidas:
+           1. Vista lista    (list)
+           2. Vista kanban   (kanban)  — vision rapida de estado/progreso
+           3. Vista formulario (form)
+           4. Vista busqueda (search) — filtros y agrupaciones
+           5. Enlace view_id a la accion central de menu_views.xml
+         ================================================================ -->
+
+
+    <!-- ================================================================
+         1. VISTA LISTA
+         Columnas clave para gestion operativa del Admin:
+         nombre, fechas, estado, progreso, contadores de miembros
+         y registros como referencia rapida.
+         ================================================================ -->
+    <record id="view_proyecto_list" model="ir.ui.view">
+        <field name="name">digitalizacion.proyecto.list</field>
+        <field name="model">digitalizacion.proyecto</field>
+        <field name="arch" type="xml">
+            <tree
+                string="Proyectos"
+                default_order="fecha_inicio desc"
+                decoration-success="state == 'activo'"
+                decoration-muted="not active"
+                decoration-warning="state == 'inactivo'">
+
+                <field name="name"               string="Proyecto"/>
+                <field name="fecha_inicio"       string="Inicio"/>
+                <field name="fecha_fin_estimada" string="Fin estimado" optional="show"/>
+                <field name="state"              string="Estado"
+                       widget="badge"
+                       decoration-success="state == 'activo'"
+                       decoration-warning="state == 'inactivo'"/>
+                <field name="total_miembros"     string="Miembros"    optional="show"/>
+                <field name="total_registros"    string="Registros"   optional="show"/>
+                <field name="total_escaneos"     string="Escaneos"    optional="show"/>
+                <field name="progreso"           string="Progreso %"
+                       widget="progressbar"
+                       optional="show"/>
+                <field name="active"             column_invisible="1"/>
+
+            </tree>
+        </field>
+    </record>
+
+
+    <!-- ================================================================
+         2. VISTA KANBAN
+         Tarjeta por proyecto con estado, progreso y accesos rapidos.
+         Util para el Admin cuando gestiona pocos proyectos activos.
+         ================================================================ -->
+    <record id="view_proyecto_kanban" model="ir.ui.view">
+        <field name="name">digitalizacion.proyecto.kanban</field>
+        <field name="model">digitalizacion.proyecto</field>
+        <field name="arch" type="xml">
+            <kanban
+                default_group_by="state"
+                class="o_kanban_small_column">
+
+                <field name="name"/>
+                <field name="state"/>
+                <field name="fecha_inicio"/>
+                <field name="fecha_fin_estimada"/>
+                <field name="progreso"/>
+                <field name="total_miembros"/>
+                <field name="total_escaneos"/>
+                <field name="meta_escaneos"/>
+                <field name="active"/>
+                <field name="color"/>
+
+                <templates>
+                    <t t-name="card">
+                        <!-- Cabecera de tarjeta: nombre + badge de estado -->
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <strong class="o_kanban_record_title fs-5">
+                                <field name="name"/>
+                            </strong>
+                            <field name="state"
+                                   widget="badge"
+                                   decoration-success="state == 'activo'"
+                                   decoration-warning="state == 'inactivo'"/>
+                        </div>
+
+                        <!-- Fechas -->
+                        <div class="text-muted small mb-2">
+                            <i class="fa fa-calendar-o me-1"/>
+                            Inicio: <field name="fecha_inicio"/>
+                            <t t-if="record.fecha_fin_estimada.raw_value">
+                                &amp;nbsp;·&amp;nbsp; Fin est.: <field name="fecha_fin_estimada"/>
+                            </t>
+                        </div>
+
+                        <!-- Barra de progreso -->
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span class="text-muted">Progreso</span>
+                                <span>
+                                    <field name="total_escaneos"/>
+                                    <t t-if="record.meta_escaneos.raw_value">
+                                        / <field name="meta_escaneos"/> esc.
+                                    </t>
+                                </span>
+                            </div>
+                            <field name="progreso"
+                                   widget="progressbar"
+                                   options="{'editable': false}"/>
+                        </div>
+
+                        <!-- KPIs del proyecto -->
+                        <div class="d-flex gap-3 mt-2 pt-2"
+                             style="border-top: 1px solid #e0ddd6;">
+                            <div class="text-center">
+                                <div class="fw-bold">
+                                    <field name="total_miembros"/>
+                                </div>
+                                <div class="text-muted" style="font-size:10px;">Miembros</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="fw-bold">
+                                    <field name="total_escaneos"/>
+                                </div>
+                                <div class="text-muted" style="font-size:10px;">Escaneos</div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+
+            </kanban>
+        </field>
+    </record>
+
+
+    <!-- ================================================================
+         3. VISTA FORMULARIO
+         Organizada en secciones:
+           - Encabezado con statusbar y botones de accion
+           - Stat buttons: registros, miembros, escaneos
+           - Datos generales del proyecto
+           - Pestana: Asignaciones de Lideres
+           - Pestana: Miembros del equipo
+         ================================================================ -->
+    <record id="view_proyecto_form" model="ir.ui.view">
+        <field name="name">digitalizacion.proyecto.form</field>
+        <field name="model">digitalizacion.proyecto</field>
+        <field name="arch" type="xml">
+            <form string="Proyecto de Digitalizacion">
+
+                <!-- ── Statusbar con flujo de estados ────────────────── -->
+                <header>
+                    <button name="action_inactivar"
+                            string="Marcar Inactivo"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="state != 'activo' or not active"
+                            confirm="El proyecto pasara a estado Inactivo. Los lideres seguiran viendo el proyecto pero no podran crear nuevos registros. Continuar?"/>
+
+                    <button name="action_activar"
+                            string="Reactivar"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state == 'activo' and active"/>
+
+                    <button name="action_archivar"
+                            string="Archivar Proyecto"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="not active"
+                            confirm="Se archivara el proyecto y se desactivaran todas sus asignaciones de lider. Esta accion es reversible. Continuar?"/>
+
+                    <field name="state"
+                           widget="statusbar"
+                           statusbar_visible="activo,inactivo"/>
+                </header>
+
+                <!-- ── Stat buttons ───────────────────────────────────── -->
+                <div class="oe_button_box" name="button_box">
+
+                    <button name="action_ver_registros"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-list-ul">
+                        <field name="total_registros"
+                               widget="statinfo"
+                               string="Registros"/>
+                    </button>
+
+                    <button name="action_ver_miembros"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-users">
+                        <field name="total_miembros"
+                               widget="statinfo"
+                               string="Miembros"/>
+                    </button>
+
+                    <button name="%(action_digitalizacion_registro)d"
+                            type="action"
+                            class="oe_stat_button"
+                            icon="fa-barcode"
+                            invisible="total_escaneos == 0">
+                        <field name="total_escaneos"
+                               widget="statinfo"
+                               string="Escaneos"/>
+                    </button>
+
+                </div>
+
+                <!-- Toggle archivado (invisible, controlado por botones) -->
+                <field name="active" widget="boolean_toggle" invisible="1"/>
+
+                <!-- Alerta: proyecto archivado -->
+                <div class="alert alert-warning" role="alert"
+                     invisible="active">
+                    <i class="fa fa-archive me-1"/>
+                    Este proyecto esta archivado. No aparece en el portal
+                    ni en los selectores de registro. Usa "Reactivar" para restaurarlo.
+                </div>
+
+                <!-- Alerta: proyecto inactivo -->
+                <div class="alert alert-info" role="alert"
+                     invisible="state != 'inactivo' or not active">
+                    <i class="fa fa-pause-circle me-1"/>
+                    Proyecto en estado <strong>Inactivo</strong>.
+                    Los lideres asignados no pueden crear nuevos registros.
+                </div>
+
+                <!-- ── Cuerpo principal ───────────────────────────────── -->
+                <sheet>
+
+                    <div class="oe_title">
+                        <label for="name" string="Nombre del proyecto"/>
+                        <h1>
+                            <field name="name"
+                                   placeholder="Ej: Imprema 2026, Centro Civico Expedientes..."
+                                   required="1"/>
+                        </h1>
+                    </div>
+
+                    <group>
+                        <!-- Columna izquierda: datos del proyecto -->
+                        <group string="Datos del proyecto">
+                            <field name="fecha_inicio"
+                                   string="Fecha de inicio"
+                                   required="1"/>
+                            <field name="fecha_fin_estimada"
+                                   string="Fecha fin estimada"/>
+                            <field name="duracion_estimada"
+                                   string="Duracion estimada"
+                                   readonly="1"
+                                   invisible="duracion_estimada == 0"/>
+                        </group>
+
+                        <!-- Columna derecha: meta y progreso -->
+                        <group string="Meta y progreso">
+                            <field name="meta_escaneos"
+                                   string="Meta de escaneos"
+                                   help="Cantidad objetivo de escaneos para calcular el porcentaje de progreso. 0 = sin meta definida."/>
+                            <field name="progreso"
+                                   string="Progreso (%)"
+                                   widget="progressbar"
+                                   readonly="1"
+                                   invisible="meta_escaneos == 0"/>
+                            <field name="lider_ids"
+                                   string="Lideres activos"
+                                   readonly="1"
+                                   widget="many2many_tags"
+                                   invisible="not lider_ids"/>
+                        </group>
+                    </group>
+
+                    <!-- Descripcion del proyecto -->
+                    <group string="Descripcion">
+                        <field name="description"
+                               string="Descripcion"
+                               placeholder="Alcance del proyecto, cliente, ubicacion fisica de los documentos..."
+                               nolabel="1"/>
+                    </group>
+
+                    <!-- ── Pestanas ───────────────────────────────────── -->
+                    <notebook>
+
+                        <!-- Pestana 1: Asignaciones de Lideres -->
+                        <page string="Lideres asignados"
+                              name="page_asignaciones">
+                            <field name="asignacion_ids"
+                                   context="{'default_proyecto_id': active_id}">
+                                <tree editable="bottom" decoration-muted="not active">
+                                    <field name="lider_id"
+                                           string="Lider (usuario portal)"
+                                           required="1"
+                                           options="{'no_create': True, 'no_create_edit': True}"
+                                           domain="[('share', '=', True), ('active', '=', True)]"/>
+                                    <field name="fecha_asignacion"
+                                           string="Desde"/>
+                                    <field name="active"
+                                           string="Activo"
+                                           widget="boolean_toggle"/>
+                                </tree>
+                            </field>
+                        </page>
+
+                        <!-- Pestana 2: Miembros del equipo -->
+                        <page string="Miembros del equipo"
+                              name="page_miembros">
+                            <field name="miembro_ids"
+                                   context="{'default_proyecto_id': active_id}">
+                                <tree editable="bottom"
+                                      decoration-muted="not active">
+                                    <field name="partner_id"
+                                           string="Contacto / Digitalizador"
+                                           required="1"/>
+                                    <field name="fecha_integracion"
+                                           string="Ingreso"/>
+                                    <field name="fecha_salida"
+                                           string="Salida"
+                                           optional="show"/>
+                                    <field name="es_lider"
+                                           string="Es lider"
+                                           widget="boolean_toggle"
+                                           readonly="1"
+                                           optional="show"/>
+                                    <field name="total_registros"
+                                           string="Registros"
+                                           optional="show"/>
+                                    <field name="active"
+                                           string="Activo"
+                                           widget="boolean_toggle"/>
+                                </tree>
+                            </field>
+                        </page>
+
+                    </notebook>
+
+                </sheet>
+
+                <!-- chatter eliminado: modelo no hereda mail.thread -->
+
+            </form>
+        </field>
+    </record>
+
+
+    <!-- ================================================================
+         4. VISTA BUSQUEDA
+         Filtros predefinidos y agrupaciones para la vista lista/kanban.
+         ================================================================ -->
+    <record id="view_proyecto_search" model="ir.ui.view">
+        <field name="name">digitalizacion.proyecto.search</field>
+        <field name="model">digitalizacion.proyecto</field>
+        <field name="arch" type="xml">
+            <search string="Buscar proyectos">
+
+                <!-- Campos de busqueda por texto -->
+                <field name="name"
+                       string="Nombre del proyecto"
+                       filter_domain="[('name', 'ilike', self)]"/>
+
+                <field name="description"
+                       string="Descripcion"
+                       filter_domain="[('description', 'ilike', self)]"/>
+
+                <!-- Filtros rapidos -->
+                <filter name="filter_activos"
+                        string="Activos"
+                        domain="[('state', '=', 'activo'), ('active', '=', True)]"/>
+
+                <filter name="filter_inactivos"
+                        string="Inactivos"
+                        domain="[('state', '=', 'inactivo')]"/>
+
+                <filter name="filter_archivados"
+                        string="Archivados"
+                        domain="[('active', '=', False)]"/>
+
+                <separator/>
+
+                <filter name="filter_sin_meta"
+                        string="Sin meta definida"
+                        domain="[('meta_escaneos', '=', 0)]"/>
+
+                <filter name="filter_este_anio"
+                        string="Iniciados este anio"
+                        domain="[('fecha_inicio', '&gt;=', (context_today() + relativedelta(month=1, day=1)).strftime('%Y-%m-%d'))]"/>
+
+                <!-- Agrupaciones -->
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_estado"
+                            string="Estado"
+                            context="{'group_by': 'state'}"/>
+                    <filter name="group_fecha_inicio"
+                            string="Mes de inicio"
+                            context="{'group_by': 'fecha_inicio:month'}"/>
+                </group>
+
+            </search>
+        </field>
+    </record>
+
+
+    <!-- ================================================================
+         5. ENLACE DE VISTAS A LA ACCION CENTRAL (menu_views.xml)
+         Asignamos list y kanban como vistas por defecto.
+         ================================================================ -->
+    <record id="action_digitalizacion_proyecto" model="ir.actions.act_window">
+        <field name="view_id" ref="view_proyecto_list"/>
+        <field name="search_view_id" ref="view_proyecto_search"/>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="context">{"search_default_filter_activos": 1}</field>
+    </record>
+
+</odoo>

@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ================================================================
+         miembro_proyecto_views.xml — Vistas backend:
+         digitalizacion.miembro_proyecto
+         Modelo T-05 · Integrantes del equipo de digitalizacion
+         Acceso: Admin (CRUD) / Lider (R+W+C desde portal, no desde aqui)
+
+         Vistas incluidas:
+           1. Vista lista     (list)
+           2. Vista formulario (form)
+           3. Vista busqueda  (search)
+           4. Enlace view_id a la accion central de menu_views.xml
+
+         Nota de negocio:
+           El Admin gestiona miembros desde aqui o desde la pestana
+           "Miembros del equipo" del formulario de proyecto.
+           El Lider los gestiona desde el portal (WF-03, modal agregar
+           miembro). Los registros con fecha_salida no aparecen en el
+           selector del formulario de registro.
+         ================================================================ -->
+
+
+    <!-- ================================================================
+         1. VISTA LISTA
+         Muestra todos los miembros agrupados por proyecto.
+         Columnas clave: contacto, proyecto, fechas de entrada/salida,
+         indicador de lider y contador de registros de trabajo.
+         ================================================================ -->
+    <record id="view_miembro_list" model="ir.ui.view">
+        <field name="name">digitalizacion.miembro_proyecto.list</field>
+        <field name="model">digitalizacion.miembro_proyecto</field>
+        <field name="arch" type="xml">
+            <tree
+                string="Miembros del Equipo"
+                default_order="proyecto_id asc, partner_id asc"
+                decoration-muted="not active"
+                decoration-info="es_lider">
+
+                <field name="partner_id"
+                       string="Digitalizador / Contacto"
+                       required="1"/>
+
+                <field name="proyecto_id"
+                       string="Proyecto"
+                       required="1"/>
+
+                <field name="fecha_integracion"
+                       string="Ingreso"/>
+
+                <field name="fecha_salida"
+                       string="Salida"
+                       optional="show"/>
+
+                <field name="es_lider"
+                       string="Lider"
+                       widget="boolean_toggle"
+                       readonly="1"
+                       optional="show"/>
+
+                <field name="total_registros"
+                       string="Registros"
+                       optional="show"/>
+
+                <field name="active"
+                       string="Activo"
+                       widget="boolean_toggle"/>
+
+                <!-- Invisible: necesario para decoration-info -->
+                <field name="es_lider"   column_invisible="1"/>
+                <field name="active"     column_invisible="1"/>
+
+            </tree>
+        </field>
+    </record>
+
+
+    <!-- ================================================================
+         2. VISTA FORMULARIO
+         ================================================================ -->
+    <record id="view_miembro_form" model="ir.ui.view">
+        <field name="name">digitalizacion.miembro_proyecto.form</field>
+        <field name="model">digitalizacion.miembro_proyecto</field>
+        <field name="arch" type="xml">
+            <form string="Miembro del Equipo">
+
+                <header>
+                    <!-- Registrar salida del miembro -->
+                    <button name="action_registrar_salida"
+                            string="Registrar Salida"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="fecha_salida or not active"
+                            confirm="Se registrara la salida del miembro con fecha de hoy. Dejara de aparecer en el formulario de registro del portal. Continuar?"/>
+
+                    <!-- Reintegrar miembro que ya tenia fecha_salida -->
+                    <button name="action_reintegrar"
+                            string="Reintegrar al Proyecto"
+                            type="object"
+                            class="btn-primary"
+                            invisible="not fecha_salida and active"
+                            confirm="Se cancelara la fecha de salida y el miembro volvera a aparecer en el selector del formulario de registro. Continuar?"/>
+
+                    <!-- Ver registros de trabajo de este miembro -->
+                    <button name="action_ver_registros"
+                            string="Ver Registros"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="total_registros == 0"/>
+                </header>
+
+                <!-- ── Stat button ────────────────────────────────────── -->
+                <div class="oe_button_box" name="button_box">
+                    <button name="action_ver_registros"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-list-ul"
+                            invisible="total_registros == 0">
+                        <field name="total_registros"
+                               widget="statinfo"
+                               string="Registros"/>
+                    </button>
+
+                    <!-- Badge de lider -->
+                    <div class="oe_stat_button o_not_btn"
+                         invisible="not es_lider">
+                        <span class="o_stat_info">
+                            <span class="o_stat_text text-primary">
+                                <i class="fa fa-star me-1"/>Lider del proyecto
+                            </span>
+                        </span>
+                    </div>
+                </div>
+
+                <field name="active" widget="boolean_toggle" invisible="1"/>
+
+                <!-- Alertas contextuales -->
+                <div class="alert alert-warning" role="alert"
+                     invisible="not fecha_salida">
+                    <i class="fa fa-user-times me-1"/>
+                    Este miembro tiene fecha de salida registrada (<field name="fecha_salida" readonly="1" class="d-inline" invisible="not fecha_salida"/>).
+                    No aparece en el selector del formulario de registro.
+                    Usa <strong>"Reintegrar al Proyecto"</strong> para reactivarlo.
+                </div>
+                <div class="alert alert-warning" role="alert"
+                     invisible="active or fecha_salida">
+                    <i class="fa fa-user-times me-1"/>
+                    Este miembro esta archivado y no aparece en el selector
+                    del formulario de registro del portal.
+                </div>
+
+                <sheet>
+
+                    <div class="oe_title">
+                        <label for="partner_id" string="Digitalizador"/>
+                        <h1>
+                            <field name="partner_id"
+                                   required="1"
+                                   options="{'no_create_edit': False}"
+                                   placeholder="Selecciona o crea un contacto..."/>
+                        </h1>
+                        <div class="o_field_widget o_field_char"
+                             invisible="not proyecto_id">
+                            <span class="text-muted">
+                                Proyecto: <field name="proyecto_id"
+                                                 readonly="1"
+                                                 class="d-inline fw-semibold"/>
+                            </span>
+                        </div>
+                    </div>
+
+                    <group>
+                        <group string="Datos del miembro">
+                            <field name="proyecto_id"
+                                   string="Proyecto"
+                                   required="1"
+                                   domain="[('active', '=', True)]"
+                                   options="{'no_create': True, 'no_create_edit': True}"/>
+
+                            <field name="fecha_integracion"
+                                   string="Fecha de integracion"
+                                   help="Fecha en que el integrante se sumo al proyecto. Permite incorporaciones tardias."/>
+
+                            <field name="fecha_salida"
+                                   string="Fecha de salida"
+                                   help="Si se completa, el miembro deja de aparecer en el selector del formulario de registro."/>
+                        </group>
+
+                        <group string="Estado">
+                            <field name="active"
+                                   string="Activo"
+                                   widget="boolean_toggle"/>
+                            <field name="es_lider"
+                                   string="Es lider del proyecto"
+                                   readonly="1"
+                                   widget="boolean_toggle"
+                                   help="Calculado automaticamente. True si este contacto es el partner del lider asignado al proyecto."/>
+                            <field name="total_registros"
+                                   string="Registros de trabajo"
+                                   readonly="1"/>
+                        </group>
+                    </group>
+
+                    <!-- Nota sobre UNIQUE -->
+                    <div class="alert alert-info" role="alert">
+                        <i class="fa fa-info-circle me-1"/>
+                        Un mismo contacto no puede aparecer dos veces en el mismo
+                        proyecto (restriccion UNIQUE proyecto_id + partner_id).
+                        El Lider tambien aparece aqui: fue agregado automaticamente
+                        al asignarlo al proyecto.
+                    </div>
+
+                </sheet>
+
+                <!-- chatter eliminado: modelo no hereda mail.thread -->
+
+            </form>
+        </field>
+    </record>
+
+
+    <!-- ================================================================
+         3. VISTA BUSQUEDA
+         ================================================================ -->
+    <record id="view_miembro_search" model="ir.ui.view">
+        <field name="name">digitalizacion.miembro_proyecto.search</field>
+        <field name="model">digitalizacion.miembro_proyecto</field>
+        <field name="arch" type="xml">
+            <search string="Buscar miembros">
+
+                <field name="partner_id"
+                       string="Contacto"
+                       filter_domain="[('partner_id.name', 'ilike', self)]"/>
+
+                <field name="proyecto_id"
+                       string="Proyecto"
+                       filter_domain="[('proyecto_id.name', 'ilike', self)]"/>
+
+                <!-- Filtros rapidos -->
+                <filter name="filter_activos"
+                        string="Activos"
+                        domain="[('active', '=', True), ('fecha_salida', '=', False)]"/>
+
+                <filter name="filter_con_salida"
+                        string="Con fecha de salida"
+                        domain="[('fecha_salida', '!=', False)]"/>
+
+                <filter name="filter_inactivos"
+                        string="Archivados"
+                        domain="[('active', '=', False)]"/>
+
+                <separator/>
+
+                <filter name="filter_lideres"
+                        string="Solo lideres"
+                        domain="[('es_lider', '=', True)]"/>
+
+                <filter name="filter_sin_registros"
+                        string="Sin registros aun"
+                        domain="[('total_registros', '=', 0)]"/>
+
+                <!-- Agrupaciones -->
+                <group expand="1" string="Agrupar por">
+                    <filter name="group_proyecto"
+                            string="Proyecto"
+                            context="{'group_by': 'proyecto_id'}"/>
+                    <filter name="group_partner"
+                            string="Contacto"
+                            context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_integracion"
+                            string="Mes de integracion"
+                            context="{'group_by': 'fecha_integracion:month'}"/>
+                </group>
+
+            </search>
+        </field>
+    </record>
+
+
+    <!-- ================================================================
+         4. ENLACE DE VISTAS A LA ACCION CENTRAL (menu_views.xml)
+         Agrupacion por proyecto por defecto + solo activos.
+         ================================================================ -->
+    <record id="action_digitalizacion_miembro" model="ir.actions.act_window">
+        <field name="view_id" ref="view_miembro_list"/>
+        <field name="search_view_id" ref="view_miembro_search"/>
+        <field name="context">{
+            "search_default_filter_activos": 1,
+            "search_default_group_proyecto": 1
+        }</field>
+    </record>
+
+</odoo>

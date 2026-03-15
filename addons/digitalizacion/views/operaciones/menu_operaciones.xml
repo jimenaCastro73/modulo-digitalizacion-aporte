@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- ── Sección: Operaciones ───────────────────────────────────────── -->
+        <menuitem
+            id="menu_digitalizacion_operaciones"
+            name="Operaciones"
+            parent="digitalizacion.menu_digitalizacion_root"
+            sequence="10"
+            groups="digitalizacion.group_digitalizacion_admin"/>
+
+        <menuitem
+            id="menu_digitalizacion_proyecto"
+            name="Proyectos"
+            parent="menu_digitalizacion_operaciones"
+            action="digitalizacion.action_digitalizacion_proyecto"
+            sequence="10"
+            groups="digitalizacion.group_digitalizacion_admin"/>
+
+        <menuitem
+            id="menu_digitalizacion_asignacion"
+            name="Asignar Líderes"
+            parent="menu_digitalizacion_operaciones"
+            action="digitalizacion.action_digitalizacion_asignacion"
+            sequence="20"
+            groups="digitalizacion.group_digitalizacion_admin"/>
+
+        <menuitem
+            id="menu_digitalizacion_miembro"
+            name="Miembros del Equipo"
+            parent="menu_digitalizacion_operaciones"
+            action="digitalizacion.action_digitalizacion_miembro"
+            sequence="30"
+            groups="digitalizacion.group_digitalizacion_admin"/>
+
+        <menuitem
+            id="menu_digitalizacion_registro"
+            name="Registros de Trabajo"
+            parent="menu_digitalizacion_operaciones"
+            action="digitalizacion.action_digitalizacion_registro"
+            sequence="40"
+            groups="digitalizacion.group_digitalizacion_admin"/>
+    </data>
+</odoo>
