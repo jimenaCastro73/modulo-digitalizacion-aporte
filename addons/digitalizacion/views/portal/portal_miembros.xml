@@ -4,13 +4,19 @@
         <t t-call="portal.portal_layout">
             <t t-set="breadcrumbs_searchbar" t-value="True"/>
             <div class="o_portal_digitalizacion_miembros mt-4">
-                
+
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h3>Equipo de <t t-esc="proyecto.name"/></h3>
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarMiembro">
                         <i class="fa fa-user-plus mr-1"></i> Agregar Miembro
                     </button>
                 </div>
+
+                <!-- Mensajes de retroalimentacion -->
+                <div id="msg-miembro-exito" class="alert alert-success d-none" role="alert">
+                    <i class="fa fa-check-circle mr-1"></i> Miembro agregado correctamente.
+                </div>
+                <div id="msg-miembro-error" class="alert alert-danger d-none" role="alert"></div>
 
                 <div class="card shadow-sm">
                     <div class="card-body p-0 table-responsive">
@@ -20,26 +26,25 @@
                                     <th class="ps-3">Digitalizador</th>
                                     <th>Fecha de Ingreso</th>
                                     <th>Estado</th>
-                                    <th>Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="tbody-miembros">
                                 <t t-foreach="miembros" t-as="m">
                                     <tr>
                                         <td class="ps-3 fw-bold"><t t-esc="m.partner_id.name"/></td>
-                                        <td><t t-esc="m.fecha_ingreso"/></td>
+                                        <!-- fecha_integracion: nombre correcto del campo T-05 -->
+                                        <td><t t-esc="m.fecha_integracion"/></td>
                                         <td>
-                                            <span t-if="m.active" class="badge bg-success">Activo</span>
+                                            <span t-if="m.active and not m.fecha_salida" class="badge bg-success">Activo</span>
                                             <span t-else="" class="badge bg-danger">Baja</span>
-                                        </td>
-                                        <td>
-                                            <!-- Las acciones de dar de baja podrían implementarse vía JS API o directamente en el portal -->
-                                            <button t-if="m.active" class="btn btn-sm btn-outline-danger" title="Dar de baja">
-                                                <i class="fa fa-user-times"></i>
-                                            </button>
                                         </td>
                                     </tr>
                                 </t>
+                                <tr t-if="not miembros">
+                                    <td colspan="3" class="text-center text-muted py-4">
+                                        No hay miembros registrados en este proyecto.
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -47,7 +52,7 @@
 
             </div>
 
-            <!-- Modal Agregar Miembro (Esqueleto, requiere JS para funcionar completamente con /digitalizacion/api/agregar_miembro) -->
+            <!-- Modal Agregar Miembro -->
             <div class="modal fade" id="modalAgregarMiembro" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog">
                     <div class="modal-content">
@@ -58,13 +63,162 @@
                         <div class="modal-body">
                             <div class="mb-3">
                                 <label class="form-label">Buscar o crear contacto</label>
-                                <input type="text" id="inputBuscarMiembro" class="form-control" placeholder="Escriba el nombre..."/>
+                                <input type="text" id="inputBuscarMiembro" class="form-control"
+                                       placeholder="Escriba el nombre..." autocomplete="off"/>
+                                <!-- Resultados de busqueda -->
                                 <div id="resultadosMiembros" class="list-group mt-2"></div>
                             </div>
+                            <!-- Nombre nuevo si no existe -->
+                            <div class="mb-3 d-none" id="divNuevoMiembro">
+                                <div class="alert alert-info py-2 small">
+                                    No se encontro el contacto. Se creara uno nuevo con este nombre.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="button" class="btn btn-primary" id="btnConfirmarMiembro" disabled="1">
+                                Agregar
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- JS del modal: conectado a /digitalizacion/api/buscar_partner y /digitalizacion/api/agregar_miembro -->
+            <script type="text/javascript">
+            document.addEventListener('DOMContentLoaded', function() {
+
+                const proyectoId = <t t-esc="proyecto.id"/>;
+                const csrfToken  = '<t t-esc="request.csrf_token()"/>';
+
+                const inputBuscar     = document.getElementById('inputBuscarMiembro');
+                const divResultados   = document.getElementById('resultadosMiembros');
+                const btnConfirmar    = document.getElementById('btnConfirmarMiembro');
+                const divNuevo        = document.getElementById('divNuevoMiembro');
+                const msgExito        = document.getElementById('msg-miembro-exito');
+                const msgError        = document.getElementById('msg-miembro-error');
+
+                let partnerId   = null;   // ID del partner seleccionado (null = crear nuevo)
+                let nombreNuevo = null;   // Nombre para crear si no existe
+
+                // ── Busqueda con debounce ──────────────────────────────
+                let debounceTimer;
+                inputBuscar.addEventListener('input', function() {
+                    clearTimeout(debounceTimer);
+                    const term = this.value.trim();
+                    partnerId   = null;
+                    nombreNuevo = null;
+                    btnConfirmar.disabled = true;
+                    divResultados.innerHTML = '';
+                    divNuevo.classList.add('d-none');
+
+                    if (term.length < 2) return;
+
+                    debounceTimer = setTimeout(function() {
+                        fetch('/digitalizacion/api/buscar_partner', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': csrfToken
+                            },
+                            body: JSON.stringify({
+                                jsonrpc: '2.0', method: 'call', id: 1,
+                                params: { term: term, proyecto_id: proyectoId }
+                            })
+                        })
+                        .then(r => r.json())
+                        .then(data => {
+                            const partners = (data.result || {}).partners || [];
+                            divResultados.innerHTML = '';
+
+                            if (partners.length === 0) {
+                                // Permitir crear nuevo
+                                nombreNuevo = term;
+                                divNuevo.classList.remove('d-none');
+                                btnConfirmar.disabled = false;
+                            } else {
+                                partners.forEach(p => {
+                                    const item = document.createElement('button');
+                                    item.type = 'button';
+                                    item.className = 'list-group-item list-group-item-action';
+                                    item.textContent = p.name + (p.email ? ' (' + p.email + ')' : '');
+                                    item.addEventListener('click', function() {
+                                        partnerId   = p.id;
+                                        nombreNuevo = null;
+                                        inputBuscar.value = p.name;
+                                        divResultados.innerHTML = '';
+                                        divNuevo.classList.add('d-none');
+                                        btnConfirmar.disabled = false;
+                                    });
+                                    divResultados.appendChild(item);
+                                });
+                            }
+                        })
+                        .catch(() => {
+                            divResultados.innerHTML = '<div class="text-danger small mt-1">Error al buscar contactos.</div>';
+                        });
+                    }, 350);
+                });
+
+                // ── Confirmar agregar miembro ──────────────────────────
+                btnConfirmar.addEventListener('click', function() {
+                    btnConfirmar.disabled = true;
+                    const payload = {
+                        jsonrpc: '2.0', method: 'call', id: 1,
+                        params: {
+                            proyecto_id: proyectoId,
+                            partner_id:  partnerId   || null,
+                            nombre_nuevo: nombreNuevo || null
+                        }
+                    };
+
+                    fetch('/digitalizacion/api/agregar_miembro', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: JSON.stringify(payload)
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        const result = data.result || {};
+                        // Cerrar modal
+                        bootstrap.Modal.getInstance(
+                            document.getElementById('modalAgregarMiembro')
+                        ).hide();
+
+                        if (result.status === 'success') {
+                            msgExito.classList.remove('d-none');
+                            msgError.classList.add('d-none');
+                            // Recargar la pagina para mostrar el nuevo miembro en la tabla
+                            setTimeout(() => location.reload(), 800);
+                        } else {
+                            msgError.textContent = result.message || 'Error al agregar miembro.';
+                            msgError.classList.remove('d-none');
+                            msgExito.classList.add('d-none');
+                            btnConfirmar.disabled = false;
+                        }
+                    })
+                    .catch(() => {
+                        msgError.textContent = 'Error de conexion al servidor.';
+                        msgError.classList.remove('d-none');
+                        btnConfirmar.disabled = false;
+                    });
+                });
+
+                // Limpiar al cerrar el modal
+                document.getElementById('modalAgregarMiembro').addEventListener('hidden.bs.modal', function() {
+                    inputBuscar.value   = '';
+                    divResultados.innerHTML = '';
+                    divNuevo.classList.add('d-none');
+                    btnConfirmar.disabled = true;
+                    partnerId   = null;
+                    nombreNuevo = null;
+                });
+            });
+            </script>
 
         </t>
     </template>

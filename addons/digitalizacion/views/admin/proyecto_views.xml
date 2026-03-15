@@ -200,8 +200,8 @@
                                string="Miembros"/>
                     </button>
 
-                    <button name="%(action_digitalizacion_registro)d"
-                            type="action"
+                    <button name="action_ver_registros"
+                            type="object"
                             class="oe_stat_button"
                             icon="fa-barcode"
                             invisible="total_escaneos == 0">
@@ -405,14 +405,23 @@
 
 
     <!-- ================================================================
-         5. ENLACE DE VISTAS A LA ACCION CENTRAL (menu_views.xml)
-         Asignamos list y kanban como vistas por defecto.
+         5. ACCION PRINCIPAL DEL MODELO
+         Declaracion completa aqui. menu_views.xml la referencia
+         mediante action="digitalizacion.action_digitalizacion_proyecto".
          ================================================================ -->
     <record id="action_digitalizacion_proyecto" model="ir.actions.act_window">
+        <field name="name">Proyectos</field>
+        <field name="res_model">digitalizacion.proyecto</field>
+        <field name="view_mode">list,kanban,form</field>
         <field name="view_id" ref="view_proyecto_list"/>
         <field name="search_view_id" ref="view_proyecto_search"/>
-        <field name="view_mode">list,kanban,form</field>
         <field name="context">{"search_default_filter_activos": 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Crea el primer proyecto de digitalizacion
+            </p>
+            <p>Cada proyecto representa un contrato o encargo de digitalizacion.</p>
+        </field>
     </record>
 
 </odoo>

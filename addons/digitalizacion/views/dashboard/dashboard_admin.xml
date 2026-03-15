@@ -1,90 +1,236 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- ================================================================
-         dashboard_admin.xml — Dashboard 1
-         Referencia técnica: DASHBOARD_SPEC.md (Secciones A, B, C, y D)
-         Acceso: Digitalización / Admin
+         dashboard_admin.xml — Dashboard Admin (Dashboard 1)
+         Referencia tecnica: DASHBOARD_SPEC.md (Secciones A, B, C, D, E)
+         Acceso: grupo Digitalizacion / Administrador
+         Modelo base: digitalizacion.registro + digitalizacion.proyecto
+
+         Estrategia de implementacion en Odoo Community:
+           - Seccion A (KPIs): vista form con stat buttons sobre
+             digitalizacion.proyecto (suma acumulada de todos los proyectos)
+           - Seccion B (Progreso): vista list de proyectos con progressbar
+           - Seccion C (por digitalizador): graph type="bar"
+           - Seccion D (tendencia diaria): graph type="line"
+           - Seccion E (filtros): search view con filtros de mes y agrupaciones
          ================================================================ -->
 
-    <!-- VISTA FORMULARIO COMO DASHBOARD KPI (Sección A) -->
-    <!-- Como Odoo Community no tiene un "Dashboard Builder" nativo sin apps de terceros,
-         simularemos las tarjetas usando una vista form customizada con CSS y Stats Buttons
-         o directamente las agruparemos en la vista Graph/Pivot principal.
-         
-         Optaremos por una vista "Pivot" y "Graph" principal, 
-         ya que el requerimiento habla de gráficas de Barras (C) y Líneas (D). -->
 
-    <!-- Gráfico por Digitalizador (Sección C) -->
+    <!-- ================================================================
+         SECCION A + B — Vista form KPIs globales + progreso por proyecto
+         Modelo: digitalizacion.proyecto
+         Muestra los totales acumulados del mes y el progreso de cada
+         proyecto activo. Usamos una vista list de proyectos con
+         columnas de KPI y barra de progreso como aproximacion a la
+         Seccion A del spec (Odoo Community no tiene dashboard builder).
+         ================================================================ -->
+    <record id="view_dashboard_proyecto_list" model="ir.ui.view">
+        <field name="name">digitalizacion.proyecto.dashboard.list</field>
+        <field name="model">digitalizacion.proyecto</field>
+        <field name="arch" type="xml">
+            <tree
+                string="Resumen de Proyectos"
+                default_order="state asc, fecha_inicio desc"
+                decoration-muted="state == 'inactivo'"
+                create="0" delete="0" editable="0">
+
+                <field name="name"               string="Proyecto"/>
+                <field name="state"              string="Estado"
+                       widget="badge"
+                       decoration-success="state == 'activo'"
+                       decoration-warning="state == 'inactivo'"/>
+                <field name="total_miembros"     string="Miembros"/>
+                <field name="total_escaneos"     string="Escaneos acumulados"
+                       sum="Total escaneos"/>
+                <field name="meta_escaneos"      string="Meta"
+                       sum="Total meta"/>
+                <field name="progreso"           string="Progreso %"
+                       widget="progressbar"
+                       options="{'editable': false}"/>
+                <field name="fecha_fin_estimada" string="Fin estimado"
+                       optional="show"/>
+                <field name="total_registros"    string="Registros"
+                       optional="show"/>
+
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_dashboard_proyectos" model="ir.actions.act_window">
+        <field name="name">Resumen de Proyectos</field>
+        <field name="res_model">digitalizacion.proyecto</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_dashboard_proyecto_list"/>
+        <field name="domain">[('active', '=', True)]</field>
+        <field name="context">{"search_default_filter_activos": 1}</field>
+    </record>
+
+
+    <!-- ================================================================
+         SECCION C — Produccion por digitalizador (grafico de barras)
+         Referencia: DASHBOARD_SPEC.md Seccion C
+         Agrupa por miembro_id, mide total_escaneos / total_folios /
+         expedientes_indexados. Filtrado por mes actual por defecto.
+         ================================================================ -->
     <record id="view_registro_graph_por_digitalizador" model="ir.ui.view">
         <field name="name">digitalizacion.registro.graph.digitalizador</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
-            <graph string="Producción por Digitalizador" type="bar" stacked="0">
-                <field name="miembro_id" type="row"/>
-                <field name="total_escaneos" type="measure"/>
-                <field name="total_folios" type="measure"/>
-                <field name="expedientes_indexados" type="measure"/>
+            <graph string="Produccion por Digitalizador" type="bar" stacked="0">
+                <field name="miembro_id"            type="row"/>
+                <field name="total_escaneos"        type="measure" string="Escaneos"/>
+                <field name="total_folios"          type="measure" string="Folios fisicos"/>
+                <field name="expedientes_indexados" type="measure" string="Exp. indexados"/>
+                <field name="folios_indexados"      type="measure" string="Folios indexados"/>
             </graph>
         </field>
     </record>
 
-    <!-- Gráfico de Tendencia (Sección D) -->
+
+    <!-- ================================================================
+         SECCION D — Tendencia diaria de escaneos (grafico de linea)
+         Referencia: DASHBOARD_SPEC.md Seccion D
+         Eje X = fecha, Eje Y = total_escaneos del dia (todos los
+         digitalizadores). Separado por proyecto como segunda dimension.
+         ================================================================ -->
     <record id="view_registro_graph_tendencia" model="ir.ui.view">
         <field name="name">digitalizacion.registro.graph.tendencia</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
-            <graph string="Producción Diaria" type="line">
-                <field name="fecha" type="row"/>
-                <field name="total_escaneos" type="measure"/>
+            <graph string="Tendencia Diaria de Escaneos" type="line">
+                <field name="fecha"          type="row" interval="day"/>
+                <field name="proyecto_id"    type="col"/>
+                <field name="total_escaneos" type="measure" string="Escaneos"/>
             </graph>
         </field>
     </record>
 
-    <!-- Filtros Específicos del Dashboard (Sección E) -->
+
+    <!-- ================================================================
+         SECCION C — Pivot: analisis cruzado para el Admin
+         Complementa la grafica de barras con datos tabulares precisos.
+         ================================================================ -->
+    <record id="view_registro_pivot_dashboard" model="ir.ui.view">
+        <field name="name">digitalizacion.registro.pivot.dashboard</field>
+        <field name="model">digitalizacion.registro</field>
+        <field name="arch" type="xml">
+            <pivot string="Produccion por Digitalizador" disable_linking="false">
+                <field name="proyecto_id"           type="row"/>
+                <field name="miembro_id"            type="row"/>
+                <field name="etapa_id"              type="col"/>
+                <field name="total_escaneos"        type="measure" string="Escaneos"/>
+                <field name="total_folios"          type="measure" string="Folios fisicos"/>
+                <field name="expedientes_indexados" type="measure" string="Exp. indexados"/>
+                <field name="folios_indexados"      type="measure" string="Folios indexados"/>
+            </pivot>
+        </field>
+    </record>
+
+
+    <!-- ================================================================
+         SECCION E — Filtros del dashboard
+         Referencia: DASHBOARD_SPEC.md Seccion E
+         Filtros por periodo + agrupaciones por proyecto / digitalizador /
+         fecha. Separado del search de operaciones para no contaminar
+         la vista de registros del admin con defaults del dashboard.
+         ================================================================ -->
     <record id="view_registro_search_dashboard" model="ir.ui.view">
         <field name="name">digitalizacion.registro.search.dashboard</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
             <search string="Filtros Dashboard">
-                <filter name="este_mes" string="Este mes"
-                        domain="[('fecha', '&gt;=', (context_today()).strftime('%Y-%m-01'))]"/>
-                
-                <group expand="0" string="Agrupar por">
-                    <filter name="por_proyecto" string="Proyecto" context="{'group_by': 'proyecto_id'}"/>
-                    <filter name="por_digitalizador" string="Digitalizador" context="{'group_by': 'miembro_id'}"/>
-                    <filter name="por_fecha" string="Fecha" context="{'group_by': 'fecha:month'}"/>
+
+                <!-- Busqueda rapida por proyecto o digitalizador -->
+                <field name="proyecto_id"
+                       string="Proyecto"
+                       filter_domain="[('proyecto_id.name', 'ilike', self)]"/>
+                <field name="miembro_id"
+                       string="Digitalizador"
+                       filter_domain="[('miembro_id.partner_id.name', 'ilike', self)]"/>
+
+                <!-- Filtros de periodo -->
+                <filter name="este_mes"
+                        string="Este mes"
+                        domain="[('fecha', '&gt;=', context_today().strftime('%Y-%m-01')),
+                                 ('fecha', '&lt;=', context_today().strftime('%Y-%m-%d'))]"/>
+
+                <filter name="mes_anterior"
+                        string="Mes anterior"
+                        domain="[('fecha', '&gt;=', (context_today() + relativedelta(months=-1, day=1)).strftime('%Y-%m-%d')),
+                                 ('fecha', '&lt;=', (context_today() + relativedelta(day=1, days=-1)).strftime('%Y-%m-%d'))]"/>
+
+                <filter name="este_anio"
+                        string="Este año"
+                        domain="[('fecha', '&gt;=', context_today().strftime('%Y-01-01')),
+                                 ('fecha', '&lt;=', context_today().strftime('%Y-%m-%d'))]"/>
+
+                <separator/>
+
+                <!-- Agrupaciones -->
+                <group expand="1" string="Agrupar por">
+                    <filter name="por_proyecto"
+                            string="Proyecto"
+                            context="{'group_by': 'proyecto_id'}"/>
+                    <filter name="por_digitalizador"
+                            string="Digitalizador"
+                            context="{'group_by': 'miembro_id'}"/>
+                    <filter name="por_etapa"
+                            string="Etapa"
+                            context="{'group_by': 'etapa_id'}"/>
+                    <filter name="por_fecha_dia"
+                            string="Dia"
+                            context="{'group_by': 'fecha:day'}"/>
+                    <filter name="por_fecha_mes"
+                            string="Mes"
+                            context="{'group_by': 'fecha:month'}"/>
                 </group>
+
             </search>
         </field>
     </record>
 
-    <!-- Acción del Dashboard Admin -->
+
+    <!-- ================================================================
+         ACCION DEL DASHBOARD — registros con vistas especificas
+         view_ids: orden graph(digitalizador) → graph(tendencia) → pivot → list
+         Filtro por defecto: mes actual agrupado por proyecto.
+         ================================================================ -->
     <record id="action_digitalizacion_dashboard_admin" model="ir.actions.act_window">
-        <field name="name">Dashboard de Producción</field>
+        <field name="name">Dashboard de Produccion</field>
         <field name="res_model">digitalizacion.registro</field>
         <field name="view_mode">graph,pivot,list</field>
         <field name="search_view_id" ref="view_registro_search_dashboard"/>
+        <field name="view_ids"
+               eval="[(5, 0, 0),
+                      (0, 0, {'view_mode': 'graph', 'view_id': ref('view_registro_graph_por_digitalizador')}),
+                      (0, 0, {'view_mode': 'pivot', 'view_id': ref('view_registro_pivot_dashboard')})]"/>
         <field name="context">{
             'search_default_este_mes': 1,
             'search_default_por_proyecto': 1
         }</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                Aún no hay registros de producción.
+                Aun no hay registros de produccion.
             </p>
             <p>
-                Los líderes del portal alimentarán este dashboard diariamente.
+                Los lideres del portal alimentaran este dashboard diariamente.
             </p>
         </field>
     </record>
-    
 
 
-    <!-- Menú Item del Dashboard -->
-    <menuitem id="menu_dashboard_admin"
-              name="Dashboard"
-              parent="digitalizacion.menu_operaciones_root"
-              action="action_digitalizacion_dashboard_admin"
-              sequence="1"/>
+    <!-- ================================================================
+         MENU ITEM DEL DASHBOARD
+         parent: menu_digitalizacion_operaciones (ID correcto en menu_operaciones.xml)
+         sequence=1: aparece primero en el menu de Operaciones
+         groups: restringido al Admin
+         ================================================================ -->
+    <menuitem
+        id="menu_dashboard_admin"
+        name="Dashboard"
+        parent="digitalizacion.menu_digitalizacion_operaciones"
+        action="action_digitalizacion_dashboard_admin"
+        sequence="1"
+        groups="digitalizacion.group_digitalizacion_admin"/>
 
 </odoo>

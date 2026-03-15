@@ -148,7 +148,7 @@
                 <!-- ── Stat button: ir al proyecto ───────────────────── -->
                 <div class="oe_button_box" name="button_box">
                     <button type="action"
-                            name="%(action_digitalizacion_proyecto)d"
+                            name="digitalizacion.action_digitalizacion_proyecto"
                             class="oe_stat_button"
                             icon="fa-folder-open"
                             invisible="not proyecto_id">
@@ -298,7 +298,9 @@
 
                 </sheet>
 
-                <chatter/>
+                <!-- chatter eliminado: modelo no hereda mail.thread.
+                     Para agregar seguimiento, heredar mail.thread en registro.py
+                     y agregar mail en depends del __manifest__ -->
 
             </form>
         </field>
@@ -481,18 +483,26 @@
 
 
     <!-- ================================================================
-         6. ENLACE DE VISTAS A LA ACCION CENTRAL (menu_views.xml)
-         view_mode ampliado con pivot y graph para analisis.
-         Agrupacion por proyecto por defecto.
+         6. ACCION PRINCIPAL DEL MODELO
+         Declaracion completa aqui. menu_views.xml la referencia
+         mediante action="digitalizacion.action_digitalizacion_registro".
          ================================================================ -->
     <record id="action_digitalizacion_registro" model="ir.actions.act_window">
+        <field name="name">Registros de Trabajo</field>
+        <field name="res_model">digitalizacion.registro</field>
+        <field name="view_mode">list,form,pivot,graph</field>
         <field name="view_id"        ref="view_registro_list"/>
         <field name="search_view_id" ref="view_registro_search"/>
-        <field name="view_mode">list,form,pivot,graph</field>
         <field name="context">{
             "search_default_group_proyecto": 1,
             "search_default_filter_este_mes": 1
         }</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Sin registros de trabajo aun
+            </p>
+            <p>Los registros son creados por los Lideres desde el portal al final de cada jornada.</p>
+        </field>
     </record>
 
 </odoo>

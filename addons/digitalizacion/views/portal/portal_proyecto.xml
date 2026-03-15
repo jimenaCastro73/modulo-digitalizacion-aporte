@@ -34,7 +34,7 @@
                     
                     <div class="row">
                         <div class="col-12">
-                            <p t-field="proyecto.descripcion"/>
+                            <p t-field="proyecto.description"/>
                         </div>
                     </div>
                     

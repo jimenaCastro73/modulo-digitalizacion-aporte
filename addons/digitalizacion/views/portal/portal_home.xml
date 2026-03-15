@@ -10,7 +10,7 @@
             <li t-if="page_name == 'digitalizacion_formulario'" class="breadcrumb-item">
                 <a href="/digitalizacion">Producción</a>
             </li>
-            <li t-if="page_name == 'digitalizacion_formulario'" class="breadcrumb-item">
+            <li t-if="page_name == 'digitalizacion_formulario'" class="breadcrumb-item active">
                 Registro Diario
             </li>
         </xpath>

@@ -847,9 +847,85 @@ def api_agregar_miembro(
         }
 
         # =========================================================================
-        # Portal home — contador para el home del portal (/home)
-        # Hereda CustomerPortal para inyectar digitalizacion_count
+        # DETALLE DE PROYECTO
+        # GET /digitalizacion/proyecto/<proyecto_id>
+        # Renderiza wf04_proyecto_detalle — vista de resumen del proyecto
         # =========================================================================
+
+    @http.route(
+        "/digitalizacion/proyecto/<int:proyecto_id>",
+        type="http",
+        auth="user",
+        website=True,
+        methods=["GET"],
+    )
+    def proyecto_detalle(self, proyecto_id, **kwargs):
+        """
+        Muestra el detalle de un proyecto asignado al líder.
+        Verifica que el proyecto pertenezca al líder en sesión.
+        """
+        try:
+            _verificar_lider()
+        except AccessError:
+            return request.redirect("/web/login")
+
+        lider_id = request.env.user.id
+        proyecto = _get_proyecto_del_lider(proyecto_id, lider_id)
+        if not proyecto:
+            return request.redirect("/digitalizacion")
+
+        return request.render("digitalizacion.wf04_proyecto_detalle", {
+        "proyecto":  proyecto,
+        "page_name": "digitalizacion_proyecto",
+    })
+
+    # =========================================================================
+    # GESTIÓN DE MIEMBROS DEL EQUIPO
+    # GET /digitalizacion/proyecto/<proyecto_id>/miembros
+    # Renderiza wf05_miembros_equipo — lista y modal para agregar miembros
+    # =========================================================================
+
+    @http.route(
+        "/digitalizacion/proyecto/<int:proyecto_id>/miembros",
+        type="http",
+        auth="user",
+        website=True,
+        methods=["GET"],
+    )
+    def proyecto_miembros(self, proyecto_id, **kwargs):
+        """
+        Muestra la lista de miembros del equipo de un proyecto.
+        Solo miembros activos sin fecha_salida (disponibles para registrar trabajo).
+        """
+        try:
+            _verificar_lider()
+        except AccessError:
+            return request.redirect("/web/login")
+
+        lider_id = request.env.user.id
+        proyecto = _get_proyecto_del_lider(proyecto_id, lider_id)
+        if not proyecto:
+            return request.redirect("/digitalizacion")
+
+        miembros = (
+            request.env["digitalizacion.miembro_proyecto"]
+            .sudo()
+            .search([
+                ("proyecto_id", "=", proyecto_id),
+                ("active",      "=", True),
+            ], order="partner_id asc")
+        )
+
+        return request.render("digitalizacion.wf05_miembros_equipo", {
+        "proyecto":  proyecto,
+        "miembros":  miembros,
+        "page_name": "digitalizacion_miembros",
+    })
+
+    # =========================================================================
+    # Portal home — contador para el home del portal (/home)
+    # Hereda CustomerPortal para inyectar digitalizacion_count
+    # =========================================================================
 
 
 class DigitalizacionPortalHome(CustomerPortal):

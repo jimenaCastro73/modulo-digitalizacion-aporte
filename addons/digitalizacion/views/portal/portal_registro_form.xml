@@ -289,38 +289,51 @@
                         document.getElementById('msg-exito').classList.add('d-none');
                         document.getElementById('msg-advertencias').classList.add('d-none');
 
-                        // Enviar JSON-RPC POST
-                        odoo.define('digitalizacion.guardar_registro', function (require) {
-                            var rpc = require('web.rpc');
+                        // Enviar via fetch nativo (Odoo 17 — odoo.define/web.rpc deprecated en portal)
+                        const csrfToken = document.cookie
+                            .split('; ')
+                            .find(row => row.startsWith('csrf_token='))
+                            ?.split('=')[1] || '';
 
-                            rpc.query({
-                                route: '/digitalizacion/api/guardar_registros',
+                        fetch('/digitalizacion/api/guardar_registros', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': csrfToken
+                            },
+                            body: JSON.stringify({
+                                jsonrpc: '2.0',
+                                method: 'call',
+                                id: 1,
                                 params: {
                                     proyecto_id: parseInt(proyectoId),
                                     fecha: inputFecha.value,
                                     filas: payloadFilas
                                 }
-                            }).then(function (result) {
-                                btnGuardar.disabled = false;
-                                document.getElementById('msg-guardando').classList.add('d-none');
+                            })
+                        })
+                        .then(r => r.json())
+                        .then(function(data) {
+                            const result = data.result || {};
+                            btnGuardar.disabled = false;
+                            document.getElementById('msg-guardando').classList.add('d-none');
 
-                                if(result.status === 'success') {
-                                    document.getElementById('msg-exito').classList.remove('d-none');
-                                    tbody.innerHTML = ''; // Limpiar
-                                    agregarFila(); // Fila en blanco
-                                    
-                                    if(result.advertencias &amp;&amp; result.advertencias.length &gt; 0) {
-                                        mostrarAdvertencia(result.advertencias);
-                                    }
-                                } else {
-                                    alert("Error del servidor: " + result.message);
+                            if (result.status === 'success') {
+                                document.getElementById('msg-exito').classList.remove('d-none');
+                                tbody.innerHTML = '';
+                                agregarFila();
+                                if (result.advertencias &amp;&amp; result.advertencias.length > 0) {
+                                    mostrarAdvertencia(result.advertencias);
                                 }
-                            }).catch(function (error) {
-                                btnGuardar.disabled = false;
-                                document.getElementById('msg-guardando').classList.add('d-none');
-                                alert("Error crítico al contactar el servidor Odoo.");
-                                console.error(error);
-                            });
+                            } else {
+                                alert('Error del servidor: ' + (result.message || 'Error desconocido'));
+                            }
+                        })
+                        .catch(function(error) {
+                            btnGuardar.disabled = false;
+                            document.getElementById('msg-guardando').classList.add('d-none');
+                            alert('Error critico al contactar el servidor Odoo.');
+                            console.error(error);
                         });
                     });
 

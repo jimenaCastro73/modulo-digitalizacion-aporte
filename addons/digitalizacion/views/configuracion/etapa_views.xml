@@ -116,12 +116,21 @@
 
 
     <!-- ================================================================
-         3. ENLACE DE VISTA A LA ACCION CENTRAL
-         La accion de ventana vive en menu_views.xml.
-         Aqui solo asignamos la vista lista como view_id por defecto.
+         3. ACCION PRINCIPAL DEL MODELO
+         Declaracion completa aqui. menu_configuracion.xml la referencia
+         mediante action="digitalizacion.action_digitalizacion_etapa".
          ================================================================ -->
     <record id="action_digitalizacion_etapa" model="ir.actions.act_window">
+        <field name="name">Etapas</field>
+        <field name="res_model">digitalizacion.etapa</field>
+        <field name="view_mode">list,form</field>
         <field name="view_id" ref="view_etapa_list"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Crea la primera etapa del proceso
+            </p>
+            <p>Define las fases del flujo: Limpieza, Digitalizado, Editado, Indexado, Ordenado.</p>
+        </field>
     </record>
 
 </odoo>
