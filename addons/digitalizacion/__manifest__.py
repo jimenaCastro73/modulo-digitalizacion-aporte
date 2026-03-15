@@ -14,28 +14,25 @@
         # 2. Datos maestros iniciales
         'data/etapas_default.xml',
 
-        # 3. Vistas y acciones (antes que los menús que las referencian)
-        'views/admin/proyecto_views.xml',
-        'views/admin/asignacion_views.xml',
-        'views/operaciones/miembro_views.xml',
-        'views/operaciones/registro_views.xml',
-        'views/configuracion/etapa_views.xml',
-        'views/configuracion/tipo_escaner_views.xml',
-        'views/dashboard/dashboard_admin.xml',
+        # 3. Vistas y acciones — Admin
+        #    Orden: proyectos → operaciones → configuracion → dashboard
+        #    (las acciones deben existir antes que menus.xml las referencie)
+        'views/admin/proyectos/proyecto_views.xml',
+        'views/admin/proyectos/asignacion_views.xml',
+        'views/admin/operaciones/miembro_views.xml',
+        'views/admin/operaciones/registro_views.xml',
+        'views/admin/configuracion/etapa_views.xml',
+        'views/admin/configuracion/tipo_escaner_views.xml',
+        'views/admin/dashboard/dashboard_admin.xml',
 
-        # 4. Menús (después de las acciones que referencian)
-        'views/admin/menu_views.xml',
-        'views/operaciones/menu_operaciones.xml',
-        'views/configuracion/menu_configuracion.xml',
+        # 4. Menús — siempre después de las acciones
+        'views/admin/menus.xml',
 
-        # 5. Portal (vistas QWeb website)
+        # 5. Portal (vistas QWeb website — Líder)
         'views/portal/portal_home.xml',
         'views/portal/portal_proyecto.xml',
         'views/portal/portal_registro_form.xml',
         'views/portal/portal_miembros.xml',
-
-        # 6. Wizards
-        # (eliminados — funcionalidad cubierta por models, views y controllers nativos de Odoo)
     ],
     'installable': True,
     'application': True,

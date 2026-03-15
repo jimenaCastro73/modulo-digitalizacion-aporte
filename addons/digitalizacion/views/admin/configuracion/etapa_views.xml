@@ -6,7 +6,7 @@
          Acceso exclusivo: grupo Administrador (group_digitalizacion_admin)
 
          La accion de ventana y el item de menu se declaran en
-         menu_views.xml (fuente unica de verdad para la navegacion).
+         menus.xml (fuente unica de verdad para la navegacion).
          Este archivo solo define las vistas list y form.
          ================================================================ -->
 
@@ -117,7 +117,7 @@
 
     <!-- ================================================================
          3. ACCION PRINCIPAL DEL MODELO
-         Declaracion completa aqui. menu_configuracion.xml la referencia
+         Declaracion completa aqui. menus.xml la referencia
          mediante action="digitalizacion.action_digitalizacion_etapa".
          ================================================================ -->
     <record id="action_digitalizacion_etapa" model="ir.actions.act_window">

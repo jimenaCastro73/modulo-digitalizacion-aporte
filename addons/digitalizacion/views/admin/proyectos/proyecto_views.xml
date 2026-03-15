@@ -10,7 +10,7 @@
            2. Vista kanban   (kanban)  — vision rapida de estado/progreso
            3. Vista formulario (form)
            4. Vista busqueda (search) — filtros y agrupaciones
-           5. Enlace view_id a la accion central de menu_views.xml
+           5. Enlace view_id a la accion central de menus.xml
          ================================================================ -->
 
 
@@ -406,7 +406,7 @@
 
     <!-- ================================================================
          5. ACCION PRINCIPAL DEL MODELO
-         Declaracion completa aqui. menu_views.xml la referencia
+         Declaracion completa aqui. menus.xml la referencia
          mediante action="digitalizacion.action_digitalizacion_proyecto".
          ================================================================ -->
     <record id="action_digitalizacion_proyecto" model="ir.actions.act_window">

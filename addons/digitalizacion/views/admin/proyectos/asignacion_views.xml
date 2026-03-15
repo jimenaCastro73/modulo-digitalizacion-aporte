@@ -9,7 +9,7 @@
            1. Vista lista     (list)
            2. Vista formulario (form)
            3. Vista busqueda  (search)
-           4. Enlace view_id a la accion central de menu_views.xml
+           4. Enlace view_id a la accion central de menus.xml
 
          Nota de negocio:
            Esta tabla es la que habilita al Lider para ver un proyecto
@@ -201,7 +201,7 @@
 
     <!-- ================================================================
          4. ACCION PRINCIPAL DEL MODELO
-         Declaracion completa aqui. menu_views.xml no necesita redeclararla.
+         Declaracion completa aqui. menus.xml no necesita redeclararla.
          ================================================================ -->
     <record id="action_digitalizacion_asignacion" model="ir.actions.act_window">
         <field name="name">Asignacion de Lideres</field>

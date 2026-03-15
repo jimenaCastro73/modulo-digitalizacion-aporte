@@ -8,7 +8,7 @@
          Vistas incluidas:
            1. Vista lista  (list)
            2. Vista formulario (form)
-           3. Enlace view_id a la accion central de menu_views.xml
+           3. Enlace view_id a la accion central de menus.xml
          ================================================================ -->
 
 
@@ -102,7 +102,7 @@
 
     <!-- ================================================================
          3. ACCION PRINCIPAL DEL MODELO
-         Declaracion completa aqui. menu_configuracion.xml la referencia
+         Declaracion completa aqui. menus.xml la referencia
          mediante action="digitalizacion.action_digitalizacion_escaner".
          ================================================================ -->
     <record id="action_digitalizacion_escaner" model="ir.actions.act_window">

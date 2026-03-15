@@ -1,7 +1,8 @@
-# 📄 Módulo de Gestión de Digitalización
+# Módulo de Gestión de Digitalización
+
 ### `digitalizacion` — Módulo custom para Odoo 17 | OTEC GLOBAL
 
-> Módulo desarrollado como aporte de práctica profesional supervisada.  
+> Desarrollado como práctica profesional supervisada.
 > Gestiona proyectos de digitalización de documentos físicos: equipos, producción diaria, etapas y métricas.
 
 ---
@@ -9,218 +10,231 @@
 ## Tabla de contenido
 
 1. [Descripción general](#1-descripción-general)
-2. [Objetivos del sistema](#2-objetivos-del-sistema)
-3. [Arquitectura del sistema](#3-arquitectura-del-sistema)
-4. [Roles del sistema](#4-roles-del-sistema)
-8. [API del portal — Controllers](#8-api-del-portal--controllers)
-9. [Organización de vistas por rol](#9-organización-de-vistas-por-rol)
-10. [Flujo funcional del sistema](#10-flujo-funcional-del-sistema)
-11. [Estructura del módulo](#11-estructura-del-módulo)
-12. [Seguridad y control de acceso](#12-seguridad-y-control-de-acceso)
-15. [Instalación del módulo](#15-instalación-del-módulo)
-16. [Consideraciones técnicas](#16-consideraciones-técnicas)
-17. [Autor](#17-autor)
+2. [Roles del sistema](#2-roles-del-sistema)
+3. [Arquitectura](#3-arquitectura)
+4. [Modelos de datos](#4-modelos-de-datos)
+5. [Estructura del módulo](#5-estructura-del-módulo)
+6. [Vistas del Admin](#6-vistas-del-admin)
+7. [Portal del Líder](#7-portal-del-líder)
+8. [Seguridad y acceso](#8-seguridad-y-acceso)
+9. [Flujo funcional](#9-flujo-funcional)
+10. [Instalación](#10-instalación)
+11. [Autora](#11-autora)
 
 ---
 
 ## 1. Descripción general
 
-El módulo `digitalizacion` es un módulo custom desarrollado sobre **Odoo 17** para **OTEC GLOBAL**. Su propósito es gestionar de forma integral los proyectos de digitalización de documentos físicos que la empresa ejecuta para sus clientes.
+El módulo `digitalizacion` permite gestionar integralmente proyectos de digitalización de documentos físicos sobre **Odoo 17 Community**.
 
-El sistema permite:
+El modelo operativo es el siguiente: los digitalizadores trabajan en grupos, pero **solo el líder del equipo tiene acceso al sistema**. El líder accede al **portal web de Odoo** y registra la producción diaria del equipo completo al final de cada jornada. El administrador gestiona todo desde el backoffice y monitorea el avance mediante dashboards.
 
-- Crear y administrar **proyectos de digitalización** con fechas, metas y estado de progreso.
-- Asignar **líderes de equipo** responsables de cada proyecto.
-- Gestionar los **miembros del equipo** que participan en cada proyecto.
-- Registrar la **producción diaria** de cada digitalizador por etapa del proceso.
-- Consultar **registros de trabajo** históricos y en tiempo real.
-- Visualizar **métricas y dashboards** de avance por proyecto y por digitalizador.
+**Capacidades del sistema:**
 
-El modelo operativo es el siguiente: los digitalizadores trabajan en grupos pero **solo el líder del equipo tiene acceso al sistema**. El líder accede a través del **portal web de Odoo** y es responsable de registrar la producción diaria del equipo completo, incluyendo la suya propia.
+- Crear y administrar proyectos con fechas, meta de escaneos y estado de progreso.
+- Asignar líderes responsables por proyecto y gestionar el equipo de digitalizadores.
+- Registrar producción diaria por miembro, etapa y caja procesada.
+- Visualizar métricas de avance, tendencia diaria y comparativa por digitalizador.
 
 ---
 
-## 2. Objetivos del sistema
+## 2. Roles del sistema
 
-| # | Objetivo |
-|---|---|
-| 1 | Centralizar el registro de producción de todos los proyectos de digitalización en una única plataforma |
-| 2 | Proveer al administrador visibilidad en tiempo real del avance de cada proyecto |
-| 3 | Permitir al líder registrar la producción diaria del equipo desde el portal web sin necesidad de acceso al backend |
-| 4 | Garantizar la trazabilidad por digitalizador, etapa y fecha |
-| 5 | Generar métricas automáticas de progreso (% de avance, escaneos por día, comparativa por digitalizador) |
-| 6 | Implementar control de acceso por roles (RBAC) que separe las responsabilidades de Admin y Líder |
+El sistema define dos roles con accesos completamente separados.
 
----
-
-## 3. Arquitectura del sistema
-
-El módulo sigue la arquitectura estándar de Odoo con una capa adicional de portal web.
-
-```
-┌─────────────────────────────────────────────────────┐
-│              USUARIO ADMIN (Backend)                │
-│         Vistas XML — Odoo Web Client                │
-└─────────────────────┬───────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────┐
-│              USUARIO LÍDER (Portal)                 │
-│         Templates QWeb — Portal Website             │
-└─────────────────────┬───────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────┐
-│                 CONTROLLERS                         │
-│          HTTP Routes — /digitalizacion/*            │
-│   Validación de sesión · Permisos · Lógica HTTP     │
-└─────────────────────┬───────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────┐
-│                   MODELS (ORM)                      │
-│     digitalizacion.* — Reglas de negocio            │
-│     constrains · onchange · compute                 │
-└─────────────────────┬───────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────┐
-│              BASE DE DATOS                          │
-│            PostgreSQL — Odoo ORM                    │
-└─────────────────────────────────────────────────────┘
-```
-
-### Capas del sistema
-
-| Capa | Tecnología | Responsabilidad |
-|---|---|---|
-| Portal | QWeb Templates + CSS | Interfaz del Líder (solo lectura/escritura de su proyecto) |
-| Controllers | Python — `http.Controller` | Rutas HTTP, validación de sesión y permisos, puente portal ↔ modelos |
-| Models | Python — `models.Model` | Lógica de negocio, validaciones, cálculos automáticos |
-| Vistas Admin | XML — Odoo Views | Backoffice para el administrador |
-| Seguridad | CSV + XML — `ir.rule` | RBAC, grupos de acceso y reglas de registro |
-| Base de datos | PostgreSQL | Persistencia de datos vía ORM de Odoo |
-
----
-
-## 4. Roles del sistema
-
-El sistema define **dos roles principales** con accesos completamente diferenciados.
-
-### Administrador (`Digitalización / Admin`)
+### Administrador — `Gestión de Digitalización / Administrador`
 
 - Accede al **backend de Odoo** (interfaz completa).
-- Puede crear, editar y eliminar proyectos, etapas, tipos de escáner.
-- Asigna líderes y gestiona miembros del equipo.
-- Visualiza todos los registros de trabajo de todos los proyectos.
-- Accede al dashboard con métricas globales.
+- Crea y administra proyectos, etapas y tipos de escáner.
+- Asigna líderes de equipo y gestiona miembros.
+- Visualiza todos los registros de trabajo y el dashboard global.
 
-### Líder de proyecto (`Digitalización / Líder`)
+### Líder de equipo — `Gestión de Digitalización / Líder de equipo`
 
-- Accede **únicamente al website** de Odoo.
+- Accede **únicamente al portal web** de Odoo.
 - Solo ve los proyectos donde tiene una asignación activa.
-- Registra la producción diaria del equipo (propia y de sus digitalizadores).
-- Gestiona los miembros del equipo de sus proyectos.
+- Registra la producción diaria del equipo (formulario multi-fila).
+- Gestiona los miembros de su equipo (agregar, consultar).
 - No tiene acceso al backend ni a proyectos de otros líderes.
 
-### Miembros del equipo
+### Miembros del equipo (digitalizadores)
 
-- **No tienen usuario en Odoo**.
-- Son registrados como contactos (`res.partner`) dentro del sistema.
-- Su producción es ingresada por el Líder.
+- **No tienen usuario en Odoo.** Son contactos (`res.partner`) vinculados al proyecto.
+- Su producción es ingresada por el Líder desde el portal.
 
 ### Tabla de permisos
 
-| Acción | Admin | Líder | Miembro |
+| Acción | Admin | Líder |
+|---|---|---|
+| Crear / editar proyectos | ✅ | ❌ |
+| Ver todos los proyectos | ✅ | ❌ |
+| Ver sus proyectos asignados | ✅ | ✅ |
+| Asignar líderes | ✅ | ❌ |
+| Gestionar miembros del equipo | ✅ | ✅ solo su proyecto |
+| Registrar producción diaria | ✅ | ✅ |
+| Ver todos los registros | ✅ | ❌ |
+| Ver registros de su proyecto | ✅ | ✅ |
+| Configurar etapas y escáneres | ✅ | ❌ |
+| Dashboard global | ✅ | ❌ |
+
+---
+
+## 3. Arquitectura
+
+```
+┌──────────────────────────────────────────────┐
+│         ADMIN — Odoo Backend                 │
+│     Vistas XML · Odoo Web Client             │
+└───────────────────┬──────────────────────────┘
+                    │
+┌──────────────────────────────────────────────┐
+│         LÍDER — Portal Web                   │
+│     Templates QWeb · Website Odoo            │
+└───────────────────┬──────────────────────────┘
+                    │
+┌──────────────────────────────────────────────┐
+│         CONTROLLERS                          │
+│     /digitalizacion/* · Python HTTP          │
+│  Autenticación · Permisos · Lógica HTTP      │
+└───────────────────┬──────────────────────────┘
+                    │
+┌──────────────────────────────────────────────┐
+│         MODELS — ORM Odoo                    │
+│  digitalizacion.* · Reglas de negocio        │
+│  constrains · onchange · compute             │
+└───────────────────┬──────────────────────────┘
+                    │
+┌──────────────────────────────────────────────┐
+│         PostgreSQL                           │
+└──────────────────────────────────────────────┘
+```
+
+| Capa | Tecnología | Responsabilidad |
+|---|---|---|
+| Vistas Admin | XML — Odoo Views | Backoffice del administrador |
+| Portal Líder | QWeb + HTML/CSS/JS | Interfaz web del líder |
+| Controllers | Python `http.Controller` | Rutas HTTP, validación, puente portal ↔ modelos |
+| Models | Python `models.Model` | Lógica de negocio, validaciones, cálculos |
+| Seguridad | CSV + XML `ir.rule` | RBAC, grupos y reglas de registro |
+
+---
+
+## 4. Modelos de datos
+
+| Modelo | Tabla SQL | Descripción |
+|---|---|---|
+| `digitalizacion.etapa` | `digitalizacion_etapa` | Catálogo de etapas del proceso (Limpieza, Digitalizado, Editado, Indexado, Ordenado) |
+| `digitalizacion.tipo_escaner` | `digitalizacion_tipo_escaner` | Catálogo global de equipos escáneres |
+| `digitalizacion.proyecto` | `digitalizacion_proyecto` | Registro central de proyectos |
+| `digitalizacion.asignacion` | `digitalizacion_asignacion` | Relación Líder ↔ Proyecto. `UNIQUE(lider_id, proyecto_id)` |
+| `digitalizacion.miembro_proyecto` | `digitalizacion_miembro_proyecto` | Digitalizadores vinculados a un proyecto. `UNIQUE(proyecto_id, partner_id)` |
+| `digitalizacion.registro` | `digitalizacion_registro` | Tabla principal: producción diaria por miembro y etapa |
+
+### Relaciones principales
+
+| Origen | Campo | Destino | Tipo |
 |---|---|---|---|
-| Crear proyecto | ✅ | ❌ | ❌ |
-| Ver todos los proyectos | ✅ | ❌ | ❌ |
-| Ver proyectos propios | ✅ | ✅ | ❌ |
-| Asignar líder | ✅ | ❌ | ❌ |
-| Gestionar miembros del equipo | ✅ | ✅ (solo su proyecto) | ❌ |
-| Registrar producción diaria | ✅ | ✅ | ❌ |
-| Ver todos los registros | ✅ | ❌ | ❌ |
-| Ver registros de su proyecto | ✅ | ✅ | ❌ |
-| Configurar etapas | ✅ | ❌ | ❌ |
-| Configurar tipos de escáner | ✅ | ❌ | ❌ |
-| Ver dashboard global | ✅ | ❌ | ❌ |
+| `asignacion` | `lider_id` | `res.users` | Many2one |
+| `asignacion` | `proyecto_id` | `digitalizacion.proyecto` | Many2one |
+| `miembro_proyecto` | `partner_id` | `res.partner` | Many2one |
+| `miembro_proyecto` | `proyecto_id` | `digitalizacion.proyecto` | Many2one |
+| `registro` | `lider_id` | `res.users` | Many2one (auditoría) |
+| `registro` | `miembro_id` | `digitalizacion.miembro_proyecto` | Many2one |
+| `registro` | `proyecto_id` | `digitalizacion.proyecto` | Many2one |
+| `registro` | `etapa_id` | `digitalizacion.etapa` | Many2one |
+| `registro` | `tipo_escaner_ids` | `digitalizacion.tipo_escaner` | Many2many |
+
+### Granularidad del registro
+
+> 1 registro = 1 miembro + 1 etapa + cantidades acumuladas del día
+
+El Líder agrega N registros al final de la jornada, uno por cada combinación miembro+etapa trabajada. Un mismo miembro puede tener múltiples registros en el mismo día si trabajó en varias etapas.
+
+Los campos de producción son opcionales y se muestran/ocultan según la etapa:
+
+| Etapa | Campos activos |
+|---|---|
+| Limpieza / Ordenado | `no_caja`, `cantidad_cajas`, `no_expedientes`, `total_folios` |
+| Digitalizado | `total_folios`, `total_escaneos`, `tipo_escaner_ids` |
+| Editado | `expedientes_editados`, `folios_editados` |
+| Indexado | `expedientes_indexados`, `folios_indexados` |
 
 ---
 
-### Relaciones clave
-
-| Relación | Tipo | Descripción |
-|---|---|---|
-| Proyecto → Asignaciones | One2many | Un proyecto puede tener uno o más líderes asignados |
-| Proyecto → Miembros | One2many | Un proyecto tiene varios digitalizadores |
-| Proyecto → Registros | One2many | Todos los registros de producción del proyecto |
-| Asignación → `res.users` | Many2one | El líder debe ser un usuario portal de Odoo |
-| Miembro → `res.partner` | Many2one | El digitalizador es un contacto (sin usuario) |
-| Registro → Miembro | Many2one | A qué digitalizador corresponde la producción |
-| Registro → Etapa | Many2one | En qué etapa del proceso trabajó |
-
----
-
-## 8. API del portal — Controllers
-
-Los controllers implementan las rutas HTTP que consume el portal del líder. Actúan como capa intermedia entre los templates QWeb y los modelos de Odoo.
-
-### Responsabilidades del controller
-
-- Verificar que el usuario tiene sesión activa (`request.env.user`).
-- Validar que el líder tiene asignación activa en el proyecto solicitado.
-- Preparar los datos necesarios para los templates QWeb.
-- Procesar los formularios POST del portal (registro de producción, gestión de miembros).
-- Retornar respuestas HTTP o redirecciones.
-
-### Rutas HTTP principales
-
-| Método | Ruta | Descripción |
-|---|---|---|
-| `GET` | `/digitalizacion` | Dashboard del portal — lista de proyectos del líder |
-| `GET` | `/digitalizacion/proyecto/<int:proyecto_id>` | Detalle del proyecto y sus registros |
-| `GET` | `/digitalizacion/proyecto/<int:proyecto_id>/registros` | Listado de registros de trabajo |
-| `POST` | `/digitalizacion/proyecto/<int:proyecto_id>/registro/nuevo` | Crear nuevo registro de producción |
-| `GET` | `/digitalizacion/proyecto/<int:proyecto_id>/miembros` | Gestión de miembros del equipo |
-| `POST` | `/digitalizacion/proyecto/<int:proyecto_id>/miembro/agregar` | Agregar miembro al equipo |
-
----
-
-## 9. Organización de vistas por rol
-
-Las vistas están organizadas por carpeta según el rol que las consume.
+## 5. Estructura del módulo
 
 ```
-views/
-├── admin/
-│   ├── proyecto_views.xml          # Lista y form de proyectos
-│   ├── asignacion_views.xml        # Asignación de líderes
-│   └── menu_views.xml              # Menú principal Admin
+digitalizacion/
+├── __init__.py
+├── __manifest__.py
 │
-├── operaciones/
-│   ├── miembro_views.xml           # Gestión de miembros del equipo
-│   ├── registro_views.xml          # Registros de trabajo (lista + form)
-│   └── menu_operaciones.xml        # Submenú Operaciones
+├── models/
+│   ├── __init__.py
+│   ├── etapa.py
+│   ├── tipo_escaner.py
+│   ├── proyecto.py
+│   ├── asignacion.py
+│   ├── miembro_proyecto.py
+│   └── registro.py
 │
-├── configuracion/
-│   ├── etapa_views.xml             # CRUD de etapas
-│   ├── tipo_escaner_views.xml      # CRUD de tipos de escáner
-│   └── menu_configuracion.xml      # Submenú Configuración
+├── controllers/
+│   ├── __init__.py
+│   └── portal.py
 │
-├── portal/
-│   ├── portal_home.xml             # Dashboard del líder
-│   ├── portal_proyecto.xml         # Detalle del proyecto
-│   ├── portal_registro_form.xml    # Formulario de registro de producción
-│   └── portal_miembros.xml        # Gestión de miembros desde portal
+├── views/
+│   ├── admin/                          ← Todo el backoffice del Admin
+│   │   ├── proyectos/
+│   │   │   ├── proyecto_views.xml
+│   │   │   └── asignacion_views.xml
+│   │   ├── operaciones/
+│   │   │   ├── miembro_views.xml
+│   │   │   └── registro_views.xml
+│   │   ├── configuracion/
+│   │   │   ├── etapa_views.xml
+│   │   │   └── tipo_escaner_views.xml
+│   │   ├── dashboard/
+│   │   │   └── dashboard_admin.xml
+│   │   └── menus.xml                   ← Árbol de menús consolidado
+│   │
+│   └── portal/                         ← Portal web del Líder (QWeb)
+│       ├── portal_home.xml
+│       ├── portal_proyecto.xml
+│       ├── portal_registro_form.xml
+│       └── portal_miembros.xml
 │
-└── dashboard/
-    ├── dashboard_views.xml         # Vista principal del dashboard
-    └── dashboard_kpi.xml           # KPIs y gráficas
+├── security/
+│   ├── security.xml                    ← Categoría, grupos y reglas ir.rule
+│   └── ir.model.access.csv             ← Permisos CRUD por modelo y grupo
+│
+└── data/
+    └── etapas_default.xml              ← Etapas iniciales del proceso
 ```
 
-### Menú de navegación Admin
+### Orden de carga en `__manifest__.py`
+
+El orden es estricto en Odoo — un `menuitem` no puede referenciar una acción que aún no existe en la BD:
+
+```
+1. security/          → grupos y ACLs primero
+2. data/              → datos maestros
+3. views/admin/*_views.xml  → vistas y acciones
+4. views/admin/menus.xml    → menús (siempre al final)
+5. views/portal/      → templates QWeb
+```
+
+---
+
+## 6. Vistas del Admin
+
+### Menú de navegación
 
 ```
 Digitalización
-├── Operaciones
+├── Dashboard
+├── Proyectos
 │   ├── Proyectos
-│   ├── Asignar Líderes
+│   └── Asignar Líderes
+├── Operaciones
 │   ├── Miembros del Equipo
 │   └── Registros de Trabajo
 └── Configuración
@@ -228,230 +242,178 @@ Digitalización
     └── Tipos de Escáner
 ```
 
----
+### Archivos de vistas
 
-## 10. Flujo funcional del sistema
-
-### Flujo completo: Admin → Líder → Registro → Dashboard
-
-```
-[ADMIN]
-   │
-   ├── 1. Crea el proyecto (nombre, fechas, meta de escaneos)
-   │
-   ├── 2. Asigna un Líder al proyecto
-   │        └── El sistema crea automáticamente al líder como miembro del proyecto
-   │
-   ├── 3. Agrega miembros del equipo (digitalizadores)
-   │
-   └── 4. El proyecto queda activo y visible en el portal del Líder
-   
-[LÍDER — Portal Web]
-   │
-   ├── 5. Inicia sesión en el portal de Odoo
-   │
-   ├── 6. Ve sus proyectos activos asignados
-   │
-   ├── 7. Selecciona un proyecto y accede al formulario de registro
-   │
-   ├── 8. Registra la producción diaria:
-   │        ├── Selecciona miembro del equipo
-   │        ├── Selecciona etapa del proceso
-   │        ├── Ingresa cantidad de escaneos
-   │        └── Guarda el registro
-   │
-   └── 9. Puede ver el progreso acumulado del proyecto
-
-[SISTEMA — Automático]
-   │
-   ├── 10. Calcula el progreso (%) del proyecto en tiempo real
-   │         └── progreso = (suma escaneos registrados / meta_escaneos) × 100
-   │
-   └── 11. Actualiza el dashboard del Admin con las nuevas métricas
-
-[ADMIN — Dashboard]
-   │
-   └── 12. Visualiza KPIs:
-             ├── Total proyectos activos
-             ├── Total registros del mes
-             ├── Progreso por proyecto (gráfica de barras)
-             ├── Producción por digitalizador
-             └── Promedio de escaneos por día
-```
+| Archivo | Vistas incluidas |
+|---|---|
+| `proyectos/proyecto_views.xml` | Lista, Kanban, Formulario con pestañas de Líderes y Miembros, búsqueda |
+| `proyectos/asignacion_views.xml` | Lista, Formulario, búsqueda |
+| `operaciones/miembro_views.xml` | Lista, Formulario con stat buttons, búsqueda |
+| `operaciones/registro_views.xml` | Lista con totales, Formulario con campos dinámicos por etapa, Pivot, Graph, búsqueda |
+| `configuracion/etapa_views.xml` | Lista editable inline, Formulario |
+| `configuracion/tipo_escaner_views.xml` | Lista editable inline, Formulario |
+| `dashboard/dashboard_admin.xml` | Graph por digitalizador (barras), Graph tendencia diaria (línea), Pivot, filtros de período |
 
 ---
 
-## 11. Estructura del módulo
+## 7. Portal del Líder
 
-```
-digitalizacion/
-│
-├── __init__.py
-├── __manifest__.py                 # Metadatos, dependencias, archivos del módulo
-│
-├── models/
-│   ├── __init__.py
-│   ├── etapa.py                    # digitalizacion.etapa
-│   ├── tipo_escaner.py             # digitalizacion.tipo_escaner
-│   ├── proyecto.py                 # digitalizacion.proyecto
-│   ├── asignacion.py               # digitalizacion.asignacion
-│   ├── miembro_proyecto.py         # digitalizacion.miembro_proyecto
-│   └── registro.py                 # digitalizacion.registro
-│
-├── controllers/
-│   ├── __init__.py
-│   └── portal.py                   # Rutas HTTP del portal del líder
-│
-├── views/
-│   ├── admin/
-│   │   ├── proyecto_views.xml
-│   │   ├── asignacion_views.xml
-│   │   └── menu_views.xml
-│   ├── operaciones/
-│   │   ├── miembro_views.xml
-│   │   ├── registro_views.xml
-│   │   └── menu_operaciones.xml
-│   ├── configuracion/
-│   │   ├── etapa_views.xml
-│   │   ├── tipo_escaner_views.xml
-│   │   └── menu_configuracion.xml
-│   ├── portal/
-│   │   ├── portal_home.xml
-│   │   ├── portal_proyecto.xml
-│   │   ├── portal_registro_form.xml
-│   │   └── portal_miembros.xml
-│   └── dashboard/
-│       ├── dashboard_views.xml
-│       └── dashboard_kpi.xml
-│
-├── security/
-│   ├── ir.model.access.csv         # Permisos CRUD por grupo
-│   └── security.xml                # Grupos y reglas de registro (ir.rule)
-│
-├── wizard/
-│   ├── __init__.py
-│   ├── cambio_etapa_wizard.py      # Cambio masivo de etapa de registros
-│   └── asignacion_rapida_wizard.py # Asignación rápida de digitalizador
-│
-└── data/
-    └── etapas_default.xml          # Datos iniciales: etapas del proceso
-```
+### Rutas HTTP
 
----
+| Método | Ruta | Template | Descripción |
+|---|---|---|---|
+| `GET` | `/digitalizacion` | `wf02_dashboard` | Dashboard del líder con KPIs y registros recientes |
+| `GET` | `/digitalizacion/registro/<proyecto_id>` | `wf03_formulario` | Formulario multi-fila de registro de producción |
+| `GET` | `/digitalizacion/proyecto/<proyecto_id>` | `wf04_proyecto_detalle` | Detalle del proyecto |
+| `GET` | `/digitalizacion/proyecto/<proyecto_id>/miembros` | `wf05_miembros_equipo` | Gestión del equipo |
+| `POST` | `/digitalizacion/api/guardar_registros` | — | Guardado masivo de registros (JSON-RPC) |
+| `POST` | `/digitalizacion/api/buscar_partner` | — | Búsqueda de contactos por nombre |
+| `POST` | `/digitalizacion/api/agregar_miembro` | — | Vincula un contacto al proyecto |
 
-## 12. Seguridad y control de acceso
+### Templates QWeb
 
-### Grupos definidos
-
-```xml
-<!-- security/security.xml -->
-<record id="group_digitalizacion_admin" model="res.groups">
-    <field name="name">Admin</field>
-    <field name="category_id" ref="base.module_category_hidden"/>
-</record>
-
-<record id="group_digitalizacion_lider" model="res.groups">
-    <field name="name">Líder (Portal)</field>
-    <field name="category_id" ref="base.module_category_hidden"/>
-</record>
-```
-
-### Permisos CRUD por modelo (`ir.model.access.csv`)
-
-| Modelo | Grupo Admin | Grupo Líder |
+| Archivo | Template | Descripción |
 |---|---|---|
-| `digitalizacion.etapa` | CRUD completo | Solo lectura |
-| `digitalizacion.tipo_escaner` | CRUD completo | Solo lectura |
-| `digitalizacion.proyecto` | CRUD completo | Solo lectura |
-| `digitalizacion.asignacion` | CRUD completo | Solo lectura |
-| `digitalizacion.miembro_proyecto` | CRUD completo | Crear, leer, actualizar |
-| `digitalizacion.registro` | CRUD completo | Crear, leer, actualizar |
+| `portal_home.xml` | `wf02_dashboard` | KPIs del período, producción por etapa, registros recientes |
+| `portal_proyecto.xml` | `wf04_proyecto_detalle` | Datos del proyecto, progreso, accesos rápidos |
+| `portal_registro_form.xml` | `wf03_formulario` | Tabla dinámica con filas por miembro+etapa, campos visibles según etapa seleccionada |
+| `portal_miembros.xml` | `wf05_miembros_equipo` | Lista del equipo, modal para agregar miembros con búsqueda en vivo |
 
-### Cómo crear un usuario Líder (Portal) correctamente
+### Notas de implementación del portal
 
-> ⚠️ Los usuarios Portal en Odoo **no se crean desde Ajustes → Usuarios**.  
-> Si se crean desde ahí quedan como Usuarios Internos y Odoo no permite que sean Portal también.
-
-**Pasos correctos:**
-
-1. Ir a **Contactos** → Crear nuevo contacto (nombre + correo)
-2. En la ficha del contacto: **Acción ⚙️ → Otorgar acceso al portal**
-3. Tildar "En el Portal" → **Aplicar**
-4. Ir a **Ajustes → Usuarios y Empresas → Grupos**
-5. Buscar **Digitalización / Líder (Portal)** → agregar el usuario en la pestaña Usuarios
+- El JS del formulario usa `fetch` nativo (no `odoo.define` / `web.rpc`, deprecados en Odoo 17 para el portal).
+- La visibilidad de columnas por etapa se controla via JavaScript con el mapa `reglasEtapa`.
+- El modal de miembros implementa búsqueda con debounce a `/api/buscar_partner` y crea contactos nuevos si no existen.
 
 ---
 
-## 15. Instalación del módulo
+## 8. Seguridad y acceso
 
-### Prerrequisitos
+### Grupos
 
-- Odoo 17 Community o Enterprise
+Definidos bajo la categoría **Gestión de Digitalización** (visible en Ajustes → Usuarios):
+
+| XML ID | Nombre visible | Acceso |
+|---|---|---|
+| `group_digitalizacion_admin` | Administrador | Backend completo |
+| `group_digitalizacion_lider` | Líder de equipo | Solo portal web |
+
+### Reglas de registro (`ir.rule`)
+
+| Regla | Modelo | Efecto |
+|---|---|---|
+| `rule_lider_solo_sus_proyectos` | `digitalizacion.proyecto` | El líder solo ve proyectos donde tiene asignación activa |
+| `rule_lider_solo_sus_registros` | `digitalizacion.registro` | El líder solo ve registros de sus proyectos |
+
+### Permisos CRUD por modelo
+
+| Modelo | Admin | Líder |
+|---|---|---|
+| `digitalizacion.etapa` | CRUD | R |
+| `digitalizacion.tipo_escaner` | CRUD | R |
+| `digitalizacion.proyecto` | CRUD | R |
+| `digitalizacion.asignacion` | CRUD | R |
+| `digitalizacion.miembro_proyecto` | CRUD | RWC |
+| `digitalizacion.registro` | CRUD | RWC |
+| `res.partner` | — | R |
+
+### Cómo crear un usuario Líder
+
+> ⚠️ Los usuarios Portal **no se crean desde Ajustes → Usuarios** — quedarían como Internos.
+
+1. Ir a **Contactos** → crear contacto con nombre y correo.
+2. En la ficha: **Acción ⚙️ → Otorgar acceso al portal** → tildar "En el Portal" → Aplicar.
+3. Ir a **Ajustes → Usuarios → Grupos** → buscar **Gestión de Digitalización / Líder de equipo** → agregar el usuario.
+
+---
+
+## 9. Flujo funcional
+
+```
+ADMIN
+ ├─ 1. Crea el proyecto (nombre, fechas, meta de escaneos)
+ ├─ 2. Asigna un Líder → el sistema lo agrega automáticamente como miembro
+ └─ 3. Agrega digitalizadores al equipo desde la pestaña Miembros
+
+LÍDER (portal web)
+ ├─ 4. Inicia sesión → ve sus proyectos activos en el dashboard
+ ├─ 5. Entra al formulario de registro del proyecto
+ ├─ 6. Agrega una fila por cada miembro+etapa trabajada
+ │       ├─ Selecciona digitalizador y etapa
+ │       ├─ Los campos se habilitan según la etapa elegida
+ │       └─ Ingresa cantidades (escaneos, folios, expedientes)
+ └─ 7. Envía → los registros se crean en Odoo vía JSON-RPC
+
+SISTEMA (automático)
+ ├─ 8. Calcula progreso del proyecto: (escaneos / meta) × 100
+ └─ 9. Actualiza produccion_principal y unidad_produccion por registro
+
+ADMIN (dashboard)
+ └─ 10. Visualiza:
+         ├─ Progreso por proyecto (barras de avance)
+         ├─ Producción por digitalizador (gráfico de barras)
+         ├─ Tendencia diaria de escaneos (gráfico de línea)
+         └─ Pivot cruzado por proyecto / miembro / etapa
+```
+
+---
+
+## 10. Instalación
+
+### Requisitos
+
+- Odoo 17 Community
 - Python 3.10+
 - PostgreSQL 14+
-- Docker y Docker Compose (entorno recomendado)
+- Docker y Docker Compose
 
-### Con Docker (entorno de desarrollo)
+### Primera instalación (BD limpia)
 
 ```bash
-# 1. Clonar el repositorio dentro de la carpeta de addons
+# 1. Clonar el repositorio en la carpeta de addons
 git clone <repo-url> ./addons/digitalizacion
 
 # 2. Levantar el entorno
 docker compose up -d
 
-# 3. Instalar el módulo desde la interfaz de Odoo
-#    Ajustes → Activar modo desarrollador
-#    Ajustes → Actualizar lista de apps → buscar "Digitalización" → Instalar
+# 3. Abrir http://localhost:<WEB_PORT>/web/database/manager
+#    Crear una BD nueva (demo data: desactivado)
 
-# 4. O instalar por línea de comandos
-docker compose exec web odoo \
-  -c /etc/odoo/odoo.conf \
-  -i digitalizacion \
-  -d nombre_base_de_datos \
-  --stop-after-init
+# 4. Instalar desde Aplicaciones → buscar "Digitalización" → Instalar
+#    (activar modo desarrollador primero si no aparece)
 ```
 
-### Actualizar el módulo tras cambios
+### Actualizar tras cambios en el código
 
 ```bash
-docker compose exec web odoo \
-  -c /etc/odoo/odoo.conf \
-  -u digitalizacion \
-  -d digitalizacion_dev \
-  --stop-after-init
+# Opción A — actualización sin borrar datos (cambios en vistas o lógica)
+docker compose down
+docker compose run --rm web odoo \
+    -c /etc/odoo/odoo.conf \
+    -u digitalizacion_dev \
+    --stop-after-init
+docker compose up -d
+
+# Opción B — BD limpia (cambios en modelos: campos renombrados, tipos cambiados)
+docker compose down
+docker volume rm $(docker volume ls -q | grep odoo)
+docker compose up -d
 ```
+
+> **Cuándo usar la Opción B:** siempre que se renombre un campo, cambie su tipo (ej. Many2one → Many2many) o se elimine un campo que ya tiene datos. Odoo no migra estos cambios automáticamente sin un script de migración.
 
 ### Configuración inicial post-instalación
 
-1. Ir a **Digitalización → Configuración → Etapas** y verificar las etapas cargadas por defecto.
-2. Ir a **Digitalización → Configuración → Tipos de Escáner** y agregar los equipos de la empresa.
+1. **Digitalización → Configuración → Etapas** — verificar las etapas cargadas por defecto.
+2. **Digitalización → Configuración → Tipos de Escáner** — agregar los equipos disponibles.
 3. Crear los contactos de los digitalizadores en **Contactos**.
-4. Crear usuarios Líderes siguiendo el proceso de usuario Portal (ver [Sección 12](#12-seguridad-y-control-de-acceso)).
-5. Crear el primer proyecto desde **Digitalización → Operaciones → Proyectos**.
+4. Crear usuarios Líderes siguiendo el proceso de usuario Portal (ver [Sección 8](#8-seguridad-y-acceso)).
+5. Crear el primer proyecto en **Digitalización → Proyectos → Proyectos**.
+6. Asignar el Líder al proyecto en **Digitalización → Proyectos → Asignar Líderes**.
 
 ---
 
-## 16. Consideraciones técnicas
-
-### Separación estricta Admin / Portal
-El módulo mantiene separación total entre el backend (Admin) y el portal (Líder). Los controllers validan permisos en cada petición HTTP — no se confía únicamente en las reglas de registro de Odoo para el portal.
-
-### Usuarios Portal vs Internos
-Los usuarios Líder **deben crearse como usuarios Portal** desde Contactos → Otorgar acceso al portal. Crearlos directamente desde Ajustes → Usuarios los registra como Internos y Odoo no permite que sean Portal simultáneamente.
-
-### Campos compute con `store=True`
-El campo `progreso` del proyecto usa `store=True` para que sea consultable desde búsquedas y vistas de lista sin recalcular en tiempo real en cada carga.
-
-### Constraints a nivel Python + SQL
-Las validaciones críticas (líder único por proyecto, miembro único por proyecto) se implementan como `@api.constrains` en Python. Para mayor robustez se recomienda agregar también restricciones `_sql_constraints` en los modelos correspondientes.
-
-### Dockerización del entorno
-El módulo fue desarrollado en un entorno Dockerizado para garantizar consistencia de versiones de Odoo, Python y PostgreSQL entre desarrollo y producción. El `docker-compose.yml` debe especificar la versión exacta de la imagen Odoo.
-
----
-
-## 17. Autora
+## 11. Autora
 
 | Campo | Detalle |
 |---|---|

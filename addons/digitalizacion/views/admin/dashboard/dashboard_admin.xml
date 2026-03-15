@@ -221,7 +221,7 @@
 
     <!-- ================================================================
          MENU ITEM DEL DASHBOARD
-         parent: menu_digitalizacion_operaciones (ID correcto en menu_operaciones.xml)
+         parent: menu_digitalizacion_operaciones (ID correcto en menus.xml)
          sequence=1: aparece primero en el menu de Operaciones
          groups: restringido al Admin
          ================================================================ -->

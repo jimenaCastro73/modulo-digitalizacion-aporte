@@ -11,7 +11,7 @@
            3. Vista pivot      (pivot)  — analisis cruzado de produccion
            4. Vista grafico    (graph)  — tendencia de escaneos en el tiempo
            5. Vista busqueda   (search) — filtros y agrupaciones completos
-           6. Enlace view_id a la accion central de menu_views.xml
+           6. Enlace view_id a la accion central de menus.xml
 
          Estrategia de visibilidad de campos por etapa:
            Los campos de detalle se muestran/ocultan con invisible="..."
@@ -484,7 +484,7 @@
 
     <!-- ================================================================
          6. ACCION PRINCIPAL DEL MODELO
-         Declaracion completa aqui. menu_views.xml la referencia
+         Declaracion completa aqui. menus.xml la referencia
          mediante action="digitalizacion.action_digitalizacion_registro".
          ================================================================ -->
     <record id="action_digitalizacion_registro" model="ir.actions.act_window">

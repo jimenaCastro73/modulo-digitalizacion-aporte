@@ -10,7 +10,7 @@
            1. Vista lista     (list)
            2. Vista formulario (form)
            3. Vista busqueda  (search)
-           4. Enlace view_id a la accion central de menu_views.xml
+           4. Enlace view_id a la accion central de menus.xml
 
          Nota de negocio:
            El Admin gestiona miembros desde aqui o desde la pestana
@@ -277,7 +277,7 @@
 
     <!-- ================================================================
          4. ACCION PRINCIPAL DEL MODELO
-         Declaracion completa aqui. menu_views.xml la referencia
+         Declaracion completa aqui. menus.xml la referencia
          mediante action="digitalizacion.action_digitalizacion_miembro".
          ================================================================ -->
     <record id="action_digitalizacion_miembro" model="ir.actions.act_window">

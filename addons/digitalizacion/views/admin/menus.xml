@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ================================================================
+         menus.xml — Arbol de menus del modulo Digitalizacion
+         Acceso: grupo Digitalizacion / Administrador
+         Orden de carga: debe ir DESPUES de todos los *_views.xml
+         que declaran las acciones que estos menus referencian.
+         ================================================================ -->
+
+    <!-- Raiz de la aplicacion -->
+    <menuitem
+        id="menu_digitalizacion_root"
+        name="Digitalización"
+        sequence="10"
+        web_icon="digitalizacion,static/description/icon.png"
+        groups="digitalizacion.group_digitalizacion_admin"/>
+
+    <!-- ── Dashboard ──────────────────────────────────────────────── -->
+    <menuitem
+        id="menu_digitalizacion_dashboard"
+        name="Dashboard"
+        parent="menu_digitalizacion_root"
+        action="digitalizacion.action_digitalizacion_dashboard_admin"
+        sequence="1"
+        groups="digitalizacion.group_digitalizacion_admin"/>
+
+    <!-- ── Proyectos ───────────────────────────────────────────────── -->
+    <menuitem
+        id="menu_digitalizacion_proyectos_root"
+        name="Proyectos"
+        parent="menu_digitalizacion_root"
+        sequence="10"
+        groups="digitalizacion.group_digitalizacion_admin"/>
+
+    <menuitem
+        id="menu_digitalizacion_proyecto"
+        name="Proyectos"
+        parent="menu_digitalizacion_proyectos_root"
+        action="digitalizacion.action_digitalizacion_proyecto"
+        sequence="10"
+        groups="digitalizacion.group_digitalizacion_admin"/>
+
+    <menuitem
+        id="menu_digitalizacion_asignacion"
+        name="Asignar Líderes"
+        parent="menu_digitalizacion_proyectos_root"
+        action="digitalizacion.action_digitalizacion_asignacion"
+        sequence="20"
+        groups="digitalizacion.group_digitalizacion_admin"/>
+
+    <!-- ── Operaciones ─────────────────────────────────────────────── -->
+    <menuitem
+        id="menu_digitalizacion_operaciones"
+        name="Operaciones"
+        parent="menu_digitalizacion_root"
+        sequence="20"
+        groups="digitalizacion.group_digitalizacion_admin"/>
+
+    <menuitem
+        id="menu_digitalizacion_miembro"
+        name="Miembros del Equipo"
+        parent="menu_digitalizacion_operaciones"
+        action="digitalizacion.action_digitalizacion_miembro"
+        sequence="10"
+        groups="digitalizacion.group_digitalizacion_admin"/>
+
+    <menuitem
+        id="menu_digitalizacion_registro"
+        name="Registros de Trabajo"
+        parent="menu_digitalizacion_operaciones"
+        action="digitalizacion.action_digitalizacion_registro"
+        sequence="20"
+        groups="digitalizacion.group_digitalizacion_admin"/>
+
+    <!-- ── Configuración ───────────────────────────────────────────── -->
+    <menuitem
+        id="menu_digitalizacion_configuracion"
+        name="Configuración"
+        parent="menu_digitalizacion_root"
+        sequence="30"
+        groups="digitalizacion.group_digitalizacion_admin"/>
+
+    <menuitem
+        id="menu_digitalizacion_etapa"
+        name="Etapas"
+        parent="menu_digitalizacion_configuracion"
+        action="digitalizacion.action_digitalizacion_etapa"
+        sequence="10"
+        groups="digitalizacion.group_digitalizacion_admin"/>
+
+    <menuitem
+        id="menu_digitalizacion_escaner"
+        name="Tipos de Escáner"
+        parent="menu_digitalizacion_configuracion"
+        action="digitalizacion.action_digitalizacion_escaner"
+        sequence="20"
+        groups="digitalizacion.group_digitalizacion_admin"/>
+
+</odoo>
