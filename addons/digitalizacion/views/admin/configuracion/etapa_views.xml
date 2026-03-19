@@ -15,7 +15,7 @@
          widget="handle" en sequence: drag-and-drop para reordenar.
          decoration-muted: atenua visualmente las etapas archivadas.
          ================================================================ -->
-    <record id="view_etapa_list" model="ir.ui.view">
+    <record id="digitalizacion_etapa_view_tree" model="ir.ui.view">
         <field name="name">digitalizacion.etapa.list</field>
         <field name="model">digitalizacion.etapa</field>
         <field name="arch" type="xml">
@@ -30,7 +30,7 @@
     <!-- ================================================================
          2. VISTA FORMULARIO
          ================================================================ -->
-    <record id="view_etapa_form" model="ir.ui.view">
+    <record id="digitalizacion_etapa_view_form" model="ir.ui.view">
         <field name="name">digitalizacion.etapa.form</field>
         <field name="model">digitalizacion.etapa</field>
         <field name="arch" type="xml">
@@ -81,11 +81,11 @@
          Declaracion completa aqui. menus.xml la referencia
          mediante action="digitalizacion.action_digitalizacion_etapa".
          ================================================================ -->
-    <record id="action_digitalizacion_etapa" model="ir.actions.act_window">
+    <record id="digitalizacion_etapa_action" model="ir.actions.act_window">
         <field name="name">Etapas</field>
         <field name="res_model">digitalizacion.etapa</field>
         <field name="view_mode">list,form</field>
-        <field name="view_id" ref="view_etapa_list" />
+        <field name="view_id" ref="digitalizacion_etapa_view_tree" />
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Crea la primera etapa del proceso</p>
             <p>Define las fases del flujo: Limpieza, Digitalizado, Editado, Indexado, Ordenado.</p>

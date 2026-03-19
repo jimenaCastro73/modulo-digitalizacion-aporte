@@ -25,7 +25,7 @@
          y unidad_produccion como resumen unificado de la etapa.
          Totales opcionales para columnas numericas clave.
          ================================================================ -->
-    <record id="view_registro_list" model="ir.ui.view">
+    <record id="digitalizacion_registro_view_tree" model="ir.ui.view">
         <field name="name">digitalizacion.registro.list</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
@@ -62,7 +62,7 @@
          mostrar solo los campos relevantes a la etapa seleccionada.
          El Admin puede corregir valores pero no cambiar lider_id.
          ================================================================ -->
-    <record id="view_registro_form" model="ir.ui.view">
+    <record id="digitalizacion_registro_view_form" model="ir.ui.view">
         <field name="name">digitalizacion.registro.form</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
@@ -72,7 +72,7 @@
                 </header>
                 <!-- ── Stat button: ir al proyecto ───────────────────── -->
                 <div name="button_box" class="oe_button_box">
-                    <button name="digitalizacion.action_digitalizacion_proyecto" type="action" class="oe_stat_button" icon="fa-folder-open" invisible="not proyecto_id">
+                    <button name="digitalizacion.digitalizacion_proyecto_action" type="action" class="oe_stat_button" icon="fa-folder-open" invisible="not proyecto_id">
                         <div class="o_stat_info">
                             <span class="o_stat_text">
                                 <field name="proyecto_nombre" readonly="1" />
@@ -179,7 +179,7 @@
            Columnas: etapa
            Medidas:  produccion_principal, total_escaneos, expedientes
          ================================================================ -->
-    <record id="view_registro_pivot" model="ir.ui.view">
+    <record id="digitalizacion_registro_view_pivot" model="ir.ui.view">
         <field name="name">digitalizacion.registro.pivot</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
@@ -204,7 +204,7 @@
          Grafico de barras: escaneos por fecha agrupados por proyecto.
          Permite ver la tendencia de produccion en el tiempo.
          ================================================================ -->
-    <record id="view_registro_graph" model="ir.ui.view">
+    <record id="digitalizacion_registro_view_graph" model="ir.ui.view">
         <field name="name">digitalizacion.registro.graph</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
@@ -222,7 +222,7 @@
          5. VISTA BUSQUEDA
          Filtros completos para navegacion y reportes del Admin.
          ================================================================ -->
-    <record id="view_registro_search" model="ir.ui.view">
+    <record id="digitalizacion_registro_view_search" model="ir.ui.view">
         <field name="name">digitalizacion.registro.search</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
@@ -267,12 +267,12 @@
          Declaracion completa aqui. menus.xml la referencia
          mediante action="digitalizacion.action_digitalizacion_registro".
          ================================================================ -->
-    <record id="action_digitalizacion_registro" model="ir.actions.act_window">
+    <record id="digitalizacion_registro_action" model="ir.actions.act_window">
         <field name="name">Registros de Trabajo</field>
         <field name="res_model">digitalizacion.registro</field>
         <field name="view_mode">list,form,pivot,graph</field>
-        <field name="view_id" ref="view_registro_list" />
-        <field name="search_view_id" ref="view_registro_search" />
+        <field name="view_id" ref="digitalizacion_registro_view_tree" />
+        <field name="search_view_id" ref="digitalizacion_registro_view_search" />
         <field name="context">{
             "search_default_group_proyecto": 1,
             "search_default_filter_este_mes": 1

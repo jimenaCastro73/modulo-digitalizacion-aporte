@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Categoria propia del modulo -->
+    <record id="module_category_digitalizacion" model="ir.module.category">
+        <field name="name">Gestión de Digitalización</field>
+        <field name="description">Roles del módulo de digitalización de documentos (OTEC GLOBAL).</field>
+        <field name="sequence">50</field>
+    </record>
+
+    <!-- Grupos definidos -->
+    <record id="digitalizacion_group_admin" model="res.groups">
+        <field name="name">Administrador</field>
+        <field name="category_id" ref="module_category_digitalizacion" />
+        <field name="users" eval="[(4, ref('base.user_admin')), (4, ref('base.user_root'))]" />
+        <field name="comment">Acceso completo al backoffice: proyectos, asignaciones, registros, catálogos y dashboard de producción.</field>
+    </record>
+
+    <record id="digitalizacion_group_lider" model="res.groups">
+        <field name="name">Líder de equipo</field>
+        <field name="category_id" ref="module_category_digitalizacion" />
+        <field name="comment">Acceso solo al portal web. Registra la producción diaria de su equipo y gestiona los miembros de su proyecto.</field>
+    </record>
+</odoo>

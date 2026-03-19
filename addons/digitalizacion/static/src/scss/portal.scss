@@ -1,0 +1,366 @@
+/* =========================================================================
+   ESTILOS DE PORTAL - MÓDULO DIGITALIZACIÓN (OTEC GLOBAL)
+   Alineado con Odoo 17 Coding Guidelines (o_prefix, SCSS variables)
+   ========================================================================= */
+
+/* ── Paleta de colores del proyecto ──────────────── */
+$o-digitalizacion-color-50:  #FCE8E8;
+$o-digitalizacion-color-100: #F8C0BF;
+$o-digitalizacion-color-200: #F39795;
+$o-digitalizacion-color-300: #EF6E6C;
+$o-digitalizacion-color-400: #EA4643;
+$o-digitalizacion-color-500: #DE1C19;
+$o-digitalizacion-color-600: #BC1815;
+$o-digitalizacion-color-700: #931210;
+$o-digitalizacion-color-800: #6A0D0C;
+$o-digitalizacion-color-900: #400807;
+$o-digitalizacion-color-950: #170303;
+$o-digitalizacion-color-white: #ffffff;
+
+/* ── Variables semánticas ── */
+$o-digitalizacion-primary:       $o-digitalizacion-color-500;
+$o-digitalizacion-primary-light: $o-digitalizacion-color-50;
+$o-digitalizacion-success:       #059669;
+$o-digitalizacion-warning:       #d97706;
+$o-digitalizacion-info:          #0284c7;
+$o-digitalizacion-danger:        $o-digitalizacion-color-500;
+$o-digitalizacion-surface:       $o-digitalizacion-color-white;
+$o-digitalizacion-bg:            #f8fafc;
+$o-digitalizacion-border:        $o-digitalizacion-color-100;
+$o-digitalizacion-text:          $o-digitalizacion-color-950;
+$o-digitalizacion-muted:         $o-digitalizacion-color-700;
+$o-digitalizacion-radius:        12px;
+$o-digitalizacion-shadow:        0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+$o-digitalizacion-shadow-md:     0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.04);
+
+/* ── Layout base ─────────────────────────────────── */
+.o_digitalizacion_page {
+    background: $o-digitalizacion-bg;
+    min-height: 100vh;
+}
+
+/* ── Hero del proyecto ───────────────────────────── */
+.o_digitalizacion_project_hero {
+    background: linear-gradient(135deg, $o-digitalizacion-color-600 0%, $o-digitalizacion-color-800 100%);
+    color: #fff;
+    padding: 2.5rem 1.5rem;
+    border-radius: 0 0 $o-digitalizacion-radius $o-digitalizacion-radius;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        position: absolute; top: -40px; right: -40px;
+        width: 180px; height: 180px;
+        border-radius: 50%;
+        background: rgba(255,255,255,.06);
+    }
+
+    &::after {
+        content: '';
+        position: absolute; bottom: -60px; right: 60px;
+        width: 120px; height: 120px;
+        border-radius: 50%;
+        background: rgba(255,255,255,.04);
+    }
+
+    h2 { font-size: 1.6rem; font-weight: 800; margin: 0 0 .25rem; line-height: 1.2; }
+
+    .o_digitalizacion_status {
+        display: inline-flex; align-items: center; gap: .35rem;
+        background: rgba(255,255,255,.2);
+        padding: .2rem .7rem; border-radius: 99px;
+        font-size: .78rem; font-weight: 600;
+    }
+
+    .o_digitalizacion_dates {
+        font-size: .82rem; opacity: .85; margin-top: .5rem;
+    }
+}
+
+/* ── Topbar de proyecto ──────────────────────────── */
+.o_digitalizacion_topbar {
+    background: $o-digitalizacion-surface;
+    border-bottom: 1px solid $o-digitalizacion-border;
+    padding: 1rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+
+    h4 { color: $o-digitalizacion-text; font-weight: 700; margin: 0; font-size: 1.1rem; }
+}
+
+/* ── Selector de proyecto ────────────────────────── */
+.o_digitalizacion_project_select {
+    background: $o-digitalizacion-primary-light;
+    border: 1.5px solid $o-digitalizacion-primary;
+    border-radius: 8px;
+    color: $o-digitalizacion-primary;
+    font-weight: 600;
+    font-size: .85rem;
+    padding: .35rem .75rem;
+    cursor: pointer;
+    outline: none;
+}
+
+/* ── Filtros de período ──────────────────────────── */
+.o_digitalizacion_period_pills {
+    display: flex; gap: .4rem; flex-wrap: wrap;
+
+    a {
+        padding: .3rem .8rem;
+        border-radius: 20px;
+        font-size: .8rem;
+        font-weight: 500;
+        text-decoration: none;
+        background: $o-digitalizacion-border;
+        color: $o-digitalizacion-muted;
+        transition: all .15s;
+
+        &.active, &:hover {
+            background: $o-digitalizacion-primary;
+            color: #fff;
+        }
+    }
+}
+
+/* ── KPI Cards ───────────────────────────────────── */
+.o_digitalizacion_kpi {
+    background: $o-digitalizacion-surface;
+    border-radius: $o-digitalizacion-radius;
+    box-shadow: $o-digitalizacion-shadow;
+    padding: 1.25rem 1.5rem;
+    border-left: 4px solid transparent;
+    transition: transform .15s, box-shadow .15s;
+
+    &:hover { transform: translateY(-2px); box-shadow: $o-digitalizacion-shadow-md; }
+
+    &--escaneos  { border-color: $o-digitalizacion-primary; }
+    &--folios    { border-color: $o-digitalizacion-info; }
+    &--indexados { border-color: $o-digitalizacion-success; }
+    &--registros { border-color: $o-digitalizacion-warning; }
+
+    .o_digitalizacion_kpi_label {
+        font-size: .72rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .05em; color: $o-digitalizacion-muted; margin-bottom: .25rem;
+    }
+
+    .o_digitalizacion_kpi_value { font-size: 2rem; font-weight: 800; color: $o-digitalizacion-text; line-height: 1; }
+    .o_digitalizacion_kpi_sub   { font-size: .78rem; color: $o-digitalizacion-muted; margin-top: .2rem; }
+}
+
+/* ── Cards genéricas ─────────────────────────────── */
+.o_digitalizacion_card {
+    background: $o-digitalizacion-surface;
+    border-radius: $o-digitalizacion-radius;
+    box-shadow: $o-digitalizacion-shadow;
+    overflow: hidden;
+
+    &_header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid $o-digitalizacion-border;
+        font-weight: 700;
+        font-size: .9rem;
+        color: $o-digitalizacion-text;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+
+        i { color: $o-digitalizacion-primary; }
+    }
+
+    &_body { padding: 1.25rem; }
+}
+
+/* ── Barras de etapa / Progreso ──────────────────── */
+.o_digitalizacion_etapa_bar {
+    margin-bottom: .9rem;
+
+    &_label {
+        display: flex; justify-content: space-between;
+        font-size: .82rem; margin-bottom: .3rem;
+
+        span:first-child { color: $o-digitalizacion-text; font-weight: 500; }
+        span:last-child  { color: $o-digitalizacion-primary; font-weight: 700; }
+    }
+}
+
+.o_digitalizacion_progress {
+    height: 6px; border-radius: 99px;
+    background: $o-digitalizacion-border; overflow: hidden;
+
+    &_fill {
+        height: 100%; border-radius: 99px;
+        background: linear-gradient(90deg, $o-digitalizacion-color-500, $o-digitalizacion-color-600);
+        transition: width .4s ease;
+    }
+}
+
+/* ── Tablas ──────────────────────────────────────── */
+.o_digitalizacion_table {
+    width: 100%; border-collapse: collapse; font-size: .85rem;
+
+    th {
+        background: $o-digitalizacion-bg; color: $o-digitalizacion-muted;
+        font-size: .72rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .04em; padding: .6rem 1rem;
+        border-bottom: 1px solid $o-digitalizacion-border; text-align: left;
+    }
+
+    td { padding: .7rem 1rem; border-bottom: 1px solid $o-digitalizacion-border; color: $o-digitalizacion-text; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: $o-digitalizacion-primary-light; }
+}
+
+/* ── Badge ────────────────────────────────────────── */
+.o_digitalizacion_badge {
+    display: inline-block; padding: .2rem .6rem;
+    border-radius: 99px; font-size: .72rem; font-weight: 600;
+    background: $o-digitalizacion-primary-light; color: $o-digitalizacion-primary;
+
+    &--active  { background: #d1fae5; color: $o-digitalizacion-success; }
+    &--inactive{ background: $o-digitalizacion-color-50; color: $o-digitalizacion-danger; }
+    &--lider   { background: #fef3c7; color: #92400e; }
+}
+
+/* ── Botones ─────────────────────────────────────── */
+.o_digitalizacion_btn {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .55rem 1.1rem; border-radius: 8px; font-weight: 600;
+    font-size: .85rem; text-decoration: none; cursor: pointer;
+    border: none; transition: all .15s;
+
+    &--primary {
+        background: $o-digitalizacion-primary; color: #fff;
+        &:hover { background: $o-digitalizacion-color-700; color: #fff; transform: translateY(-1px); }
+    }
+
+    &--outline {
+        background: transparent; color: $o-digitalizacion-primary;
+        border: 1.5px solid $o-digitalizacion-primary;
+        &:hover { background: $o-digitalizacion-primary-light; }
+    }
+
+    &--ghost {
+        background: transparent; color: $o-digitalizacion-danger;
+        border: 1.5px solid $o-digitalizacion-border;
+        &:hover { border-color: $o-digitalizacion-danger; background: $o-digitalizacion-color-50; }
+    }
+
+    &--lg { padding: .7rem 1.75rem; font-size: .95rem; }
+}
+
+/* ── Miembros / Avatares ───────────────────────────── */
+.o_digitalizacion_member_card {
+    background: $o-digitalizacion-surface;
+    border: 1px solid $o-digitalizacion-border;
+    border-radius: $o-digitalizacion-radius;
+    padding: 1rem 1.25rem;
+    display: flex; align-items: center; gap: 1rem;
+    box-shadow: $o-digitalizacion-shadow;
+    transition: box-shadow .15s;
+
+    &:hover { box-shadow: $o-digitalizacion-shadow-md; }
+    &.inactive { opacity: .6; }
+}
+
+.o_digitalizacion_avatar {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: $o-digitalizacion-primary-light;
+    color: $o-digitalizacion-primary;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 1rem; flex-shrink: 0;
+    text-transform: uppercase;
+
+    &--lider {
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        color: #92400e;
+        border: 2px solid #f59e0b;
+    }
+}
+
+/* ── Formulario / Inputs ───────────────────────────── */
+.o_digitalizacion_date_bar {
+    background: $o-digitalizacion-surface;
+    border: 1px solid $o-digitalizacion-border;
+    border-radius: $o-digitalizacion-radius;
+    padding: 1rem 1.25rem;
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+
+    input[type="date"] {
+        border: 1.5px solid $o-digitalizacion-border;
+        border-radius: 8px; padding: .4rem .75rem;
+        font-size: .9rem; background: $o-digitalizacion-bg; outline: none;
+        &:focus { border-color: $o-digitalizacion-primary; }
+    }
+}
+
+.o_digitalizacion_field {
+    label {
+        font-size: .75rem; font-weight: 700; text-transform: uppercase;
+        color: $o-digitalizacion-muted; margin-bottom: .3rem; display: block;
+    }
+
+    input, select {
+        width: 100%; border: 1.5px solid $o-digitalizacion-border;
+        border-radius: 8px; padding: .4rem .65rem; font-size: .875rem;
+        background: $o-digitalizacion-surface; outline: none;
+        &:focus { border-color: $o-digitalizacion-primary; }
+    }
+
+    &.disabled {
+        input, select { background: $o-digitalizacion-bg; opacity: .55; pointer-events: none; }
+    }
+}
+
+.o_digitalizacion_row_card {
+    background: $o-digitalizacion-surface;
+    border: 1px solid $o-digitalizacion-border;
+    border-radius: $o-digitalizacion-radius;
+    padding: 1rem 1.25rem;
+    box-shadow: $o-digitalizacion-shadow;
+    position: relative;
+
+    &.error { border-color: $o-digitalizacion-danger; }
+}
+
+.o_digitalizacion_row_num {
+    position: absolute; top: -10px; left: 1rem;
+    background: $o-digitalizacion-primary; color: #fff;
+    font-size: .7rem; font-weight: 700;
+    padding: .15rem .5rem; border-radius: 99px;
+}
+
+.o_digitalizacion_sticky_footer {
+    position: sticky; bottom: 0; left: 0; right: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid $o-digitalizacion-border;
+    padding: .875rem 1.5rem;
+    z-index: 200;
+    box-shadow: 0 -4px 12px rgba(0,0,0,.05);
+    margin-top: 2rem;
+}
+
+/* ── Alertas ─────────────────────────────────────── */
+.o_digitalizacion_alert {
+    border-radius: 10px; padding: .8rem 1rem; font-size: .875rem;
+    display: flex; align-items: center; gap: .6rem;
+
+    &--info    { background: #dbeafe; color: #1e40af; }
+    &--success { background: #d1fae5; color: #065f46; }
+    &--danger  { background: $o-digitalizacion-color-50; color: $o-digitalizacion-color-800; }
+    &--warning { background: #fef3c7; color: #92400e; }
+}
+
+/* ── Estado vacío ────────────────────────────────── */
+.o_digitalizacion_empty {
+    text-align: center; padding: 3rem 1rem; color: $o-digitalizacion-muted;
+    i { font-size: 2.5rem; margin-bottom: .75rem; display: block; opacity: .4; }
+}
+
+/* ── Responsive ──────────────────────────────────── */
+@media (max-width: 768px) {
+    .o_digitalizacion_sticky_footer { padding: .75rem 1rem; .o_digitalizacion_btn--lg { width: 100%; justify-content: center; } }
+}

@@ -24,7 +24,7 @@
          lider-proyecto. El Admin puede ver de un vistazo que lider
          cubre cada proyecto y desde cuando.
          ================================================================ -->
-    <record id="view_asignacion_list" model="ir.ui.view">
+    <record id="digitalizacion_asignacion_view_tree" model="ir.ui.view">
         <field name="name">digitalizacion.asignacion.list</field>
         <field name="model">digitalizacion.asignacion</field>
         <field name="arch" type="xml">
@@ -43,7 +43,7 @@
          Se incluye la nota de efecto secundario (auto-creacion de
          miembro_proyecto) para que el Admin entienda el comportamiento.
          ================================================================ -->
-    <record id="view_asignacion_form" model="ir.ui.view">
+    <record id="digitalizacion_asignacion_view_form" model="ir.ui.view">
         <field name="name">digitalizacion.asignacion.form</field>
         <field name="model">digitalizacion.asignacion</field>
         <field name="arch" type="xml">
@@ -97,7 +97,7 @@
          3. VISTA BUSQUEDA
          Filtros por estado de asignacion y por proyecto/lider.
          ================================================================ -->
-    <record id="view_asignacion_search" model="ir.ui.view">
+    <record id="digitalizacion_asignacion_view_search" model="ir.ui.view">
         <field name="name">digitalizacion.asignacion.search</field>
         <field name="model">digitalizacion.asignacion</field>
         <field name="arch" type="xml">
@@ -120,12 +120,12 @@
          4. ACCION PRINCIPAL DEL MODELO
          Declaracion completa aqui. menus.xml no necesita redeclararla.
          ================================================================ -->
-    <record id="action_digitalizacion_asignacion" model="ir.actions.act_window">
+    <record id="digitalizacion_asignacion_action" model="ir.actions.act_window">
         <field name="name">Asignacion de Lideres</field>
         <field name="res_model">digitalizacion.asignacion</field>
         <field name="view_mode">list,form</field>
-        <field name="view_id" ref="view_asignacion_list" />
-        <field name="search_view_id" ref="view_asignacion_search" />
+        <field name="view_id" ref="digitalizacion_asignacion_view_tree" />
+        <field name="search_view_id" ref="digitalizacion_asignacion_view_search" />
         <field name="context">{"search_default_filter_activas": 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Asigna un Lider a un proyecto</p>

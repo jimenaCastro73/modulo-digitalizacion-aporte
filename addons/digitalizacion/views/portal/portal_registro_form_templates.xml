@@ -1,206 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <template id="wf03_formulario" name="Formulario de Registro de Trabajo">
+    <template id="digitalizacion_portal_registro_form" name="Formulario de Registro de Trabajo">
         <t t-call="portal.portal_layout">
             <t t-set="breadcrumbs_searchbar" t-value="True" />
-            <style>:root {
-                    --color-50:  #FCE8E8;
-                    --color-100: #F8C0BF;
-                    --color-200: #F39795;
-                    --color-300: #EF6E6C;
-                    --color-400: #EA4643;
-                    --color-500: #DE1C19;
-                    --color-600: #BC1815;
-                    --color-700: #931210;
-                    --color-800: #6A0D0C;
-                    --color-900: #400807;
-                    --color-950: #170303;
-                    --color-white: #ffffff;
-
-                    --dg-primary:       var(--color-500);
-                    --dg-primary-light: var(--color-50);
-                    --dg-success:       #059669;
-                    --dg-danger:        var(--color-500);
-                    --dg-surface:       var(--color-white);
-                    --dg-bg:            #f8fafc;
-                    --dg-border:        var(--color-100);
-                    --dg-text:          var(--color-950);
-                    --dg-muted:         var(--color-700);
-                    --dg-radius:        12px;
-                    --dg-shadow:        0 1px 3px rgba(0,0,0,.08);
-                    --dg-shadow-md:     0 4px 6px rgba(0,0,0,.07);
-                }
-                .dg-page { background: var(--dg-bg); }
-
-                /* ── Encabezado ──────────────────────────────────── */
-                .dg-form-header {
-                    background: var(--dg-surface);
-                    border-bottom: 1px solid var(--dg-border);
-                    padding: 1.25rem 0;
-                }
-                .dg-form-header h2 {
-                    font-size: 1.25rem; font-weight: 800;
-                    color: var(--dg-text); margin: 0;
-                }
-                .dg-form-header .dg-project-name {
-                    font-size: .85rem; color: var(--dg-muted); margin-top: .15rem;
-                }
-
-                /* ── Fecha selector ──────────────────────────────── */
-                .dg-date-bar {
-                    background: var(--dg-surface);
-                    border: 1px solid var(--dg-border);
-                    border-radius: var(--dg-radius);
-                    padding: 1rem 1.25rem;
-                    display: flex;
-                    align-items: center;
-                    gap: 1rem;
-                    flex-wrap: wrap;
-                }
-                .dg-date-bar label {
-                    font-weight: 700; font-size: .82rem;
-                    color: var(--dg-muted); text-transform: uppercase;
-                    letter-spacing: .05em; margin: 0;
-                }
-                .dg-date-bar input[type="date"] {
-                    border: 1.5px solid var(--dg-border);
-                    border-radius: 8px; padding: .4rem .75rem;
-                    font-size: .9rem; color: var(--dg-text);
-                    background: var(--dg-bg); outline: none;
-                    transition: border-color .15s;
-                }
-                .dg-date-bar input[type="date"]:focus { border-color: var(--dg-primary); }
-
-                /* ── Alertas ─────────────────────────────────────── */
-                .dg-alert {
-                    border-radius: 10px; padding: .8rem 1rem;
-                    font-size: .875rem; display: flex;
-                    align-items: center; gap: .6rem;
-                }
-                .dg-alert--info    { background: #dbeafe; color: #1e40af; }
-                .dg-alert--success { background: #d1fae5; color: #065f46; }
-                .dg-alert--danger  { background: var(--color-50); color: var(--color-800); }
-                .dg-alert--warning { background: #fef3c7; color: #92400e; }
-
-                /* ── Filas de registro ───────────────────────────── */
-                .dg-row-card {
-                    background: var(--dg-surface);
-                    border: 1px solid var(--dg-border);
-                    border-radius: var(--dg-radius);
-                    padding: 1rem 1.25rem;
-                    box-shadow: var(--dg-shadow);
-                    transition: box-shadow .15s;
-                    position: relative;
-                }
-                .dg-row-card:hover { box-shadow: var(--dg-shadow-md); }
-                .dg-row-card.error { border-color: var(--dg-danger); }
-                .dg-row-num {
-                    position: absolute; top: -10px; left: 1rem;
-                    background: var(--dg-primary); color: #fff;
-                    font-size: .7rem; font-weight: 700;
-                    padding: .15rem .5rem; border-radius: 99px;
-                }
-
-                /* ── Inputs dentro de filas ──────────────────────── */
-                .dg-field label {
-                    font-size: .75rem; font-weight: 700;
-                    text-transform: uppercase; letter-spacing: .04em;
-                    color: var(--dg-muted); margin-bottom: .3rem; display: block;
-                }
-                .dg-field input,
-                .dg-field select {
-                    width: 100%;
-                    border: 1.5px solid var(--dg-border);
-                    border-radius: 8px;
-                    padding: .4rem .65rem;
-                    font-size: .875rem;
-                    color: var(--dg-text);
-                    background: var(--dg-surface);
-                    outline: none;
-                    transition: border-color .15s, background .15s;
-                }
-                .dg-field input:focus,
-                .dg-field select:focus { border-color: var(--dg-primary); }
-                .dg-field.disabled input,
-                .dg-field.disabled select {
-                    background: var(--dg-bg);
-                    color: var(--dg-muted);
-                    pointer-events: none;
-                    opacity: .55;
-                }
-                .dg-field input.is-invalid,
-                .dg-field select.is-invalid { border-color: var(--dg-danger); }
-
-                /* ── Sección de campos opcionales ───────────────── */
-                .dg-optional-label {
-                    font-size: .7rem; font-weight: 700;
-                    text-transform: uppercase; letter-spacing: .05em;
-                    color: var(--dg-muted); margin: .75rem 0 .4rem;
-                    display: flex; align-items: center; gap: .4rem;
-                }
-                .dg-optional-label::after {
-                    content: ''; flex: 1;
-                    height: 1px; background: var(--dg-border);
-                }
-
-                /* ── Botones ─────────────────────────────────────── */
-                .dg-btn {
-                    display: inline-flex; align-items: center; gap: .4rem;
-                    padding: .55rem 1.1rem; border-radius: 8px;
-                    font-weight: 600; font-size: .875rem;
-                    cursor: pointer; border: none; transition: all .15s;
-                    text-decoration: none;
-                }
-                .dg-btn--primary  { background: var(--dg-primary); color: #fff; }
-                .dg-btn--primary:hover { background: var(--color-700); color: var(--color-white); }
-                .dg-btn--outline  {
-                    background: transparent; color: var(--dg-primary);
-                    border: 1.5px solid var(--dg-primary);
-                }
-                .dg-btn--outline:hover { background: var(--dg-primary-light); }
-                .dg-btn--ghost {
-                    background: transparent; color: var(--dg-danger);
-                    border: 1.5px solid var(--dg-border);
-                }
-                .dg-btn--ghost:hover { border-color: var(--dg-danger); background: var(--color-50); }
-                .dg-btn--lg { padding: .7rem 1.75rem; font-size: .95rem; }
-
-                /* ── Footer sticky ───────────────────────────────── */
-                .dg-sticky-footer {
-                    position: sticky; bottom: 0; left: 0; right: 0;
-                    background: rgba(255, 255, 255, 0.95);
-                    backdrop-filter: blur(8px);
-                    border-top: 1px solid var(--dg-border);
-                    padding: .875rem 1.5rem;
-                    z-index: 200;
-                    box-shadow: 0 -4px 12px rgba(0,0,0,.05);
-                    margin-top: 2rem;
-                }
-
-                /* ── Vacío ───────────────────────────────────────── */
-                .dg-empty {
-                    text-align: center; padding: 3rem; color: var(--dg-muted);
-                }
-                .dg-empty i { font-size: 2rem; opacity: .35; display: block; margin-bottom: .5rem; }
-
-                /* ── Responsive ──────────────────────────────────── */
-                @media (max-width: 576px) {
-                    .dg-sticky-footer { padding: .75rem 1rem; }
-                    .dg-sticky-footer .dg-btn--lg { width: 100%; justify-content: center; }
-                }</style>
-            <div class="dg-page pb-5" style="margin-bottom: 80px;">
+            <div class="o_digitalizacion_page pb-5" style="margin-bottom: 80px;">
                 <!-- Encabezado -->
-                <div class="dg-form-header">
+                <div class="o_digitalizacion_form-header">
                     <div class="container-fluid px-3 px-md-4">
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
                                 <h2>Registro de Producción</h2>
-                                <div class="dg-project-name">
+                                <div class="o_digitalizacion_project-name">
                                     <i class="fa fa-folder-open-o me-1" />
                                     <t t-esc="proyecto.name" />
                                 </div>
                             </div>
-                            <a href="/digitalizacion/v1/dashboard" class="dg-btn dg-btn--outline" style="font-size:.8rem;">
+                            <a href="/digitalizacion/v1/dashboard" class="o_digitalizacion_btn o_digitalizacion_btn--outline" style="font-size:.8rem;">
                                 <i class="fa fa-arrow-left" />
                                 Volver
                             </a>
@@ -217,24 +32,24 @@
                         </t>
                     </t>
                     <!-- Mensajes de estado -->
-                    <div id="msg-guardando" class="dg-alert dg-alert--info d-none mb-3">
+                    <div id="msg-guardando" class="o_digitalizacion_alert o_digitalizacion_alert--info d-none mb-3">
                         <i class="fa fa-spinner fa-spin" />
                         Guardando registros, por favor espere...
                     </div>
-                    <div id="msg-exito" class="dg-alert dg-alert--success d-none mb-3">
+                    <div id="msg-exito" class="o_digitalizacion_alert o_digitalizacion_alert--success d-none mb-3">
                         <i class="fa fa-check-circle" />
                         ¡Registros guardados exitosamente!
                     </div>
                     <div id="msg-advertencias" class="d-none mb-3" />
                     <!-- Sin miembros -->
-                    <div id="msg-sin-miembros" class="dg-alert dg-alert--warning d-none mb-3">
+                    <div id="msg-sin-miembros" class="o_digitalizacion_alert o_digitalizacion_alert--warning d-none mb-3">
                         <i class="fa fa-exclamation-triangle" />
                         No hay digitalizadores activos en este proyecto. Agrega miembros desde la
                         <a t-attf-href="/digitalizacion/v1/proyectos/#{proyecto.id}/miembros" style="color: inherit; font-weight: 700;">gestión del equipo</a>
                         .
                     </div>
                     <!-- Selector de fecha -->
-                    <div class="dg-date-bar mb-4">
+                    <div class="o_digitalizacion_date-bar mb-4">
                         <label for="inputFecha">
                             <i class="fa fa-calendar me-1" />
                             Fecha de producción
@@ -250,18 +65,18 @@
                     <!-- Contenedor de filas -->
                     <div id="contenedor-filas" class="d-flex flex-column gap-3 mb-4" />
                     <!-- Botón agregar fila -->
-                    <button id="btn-agregar-fila" type="button" class="dg-btn dg-btn--outline">
+                    <button id="btn-agregar-fila" type="button" class="o_digitalizacion_btn o_digitalizacion_btn--outline">
                         <i class="fa fa-plus" />
                         Añadir digitalizador
                     </button>
                 </div>
                 <!-- Footer fijo con botón guardar -->
-                <div class="dg-sticky-footer">
+                <div class="o_digitalizacion_sticky-footer">
                     <div class="container-fluid px-3 px-md-4 d-flex align-items-center justify-content-between gap-2">
                         <div class="d-flex align-items-center gap-2">
                             <span id="footer-contador" class="text-muted small">0 filas listas</span>
                         </div>
-                        <button id="btn-guardar-registros" type="button" class="dg-btn dg-btn--primary dg-btn--lg">
+                        <button id="btn-guardar-registros" type="button" class="o_digitalizacion_btn o_digitalizacion_btn--primary o_digitalizacion_btn--lg">
                             <i class="fa fa-paper-plane" />
                             Guardar Registros
                         </button>
@@ -346,12 +161,12 @@
                     rowCounter++;
                     var id = rowCounter;
                     var card = document.createElement('div');
-                    card.className = 'dg-row-card';
+                    card.className = 'o_digitalizacion_row-card';
                     card.id = 'fila-' + id;
 
                     /* Badge de número */
                     var badge = document.createElement('span');
-                    badge.className = 'dg-row-num';
+                    badge.className = 'o_digitalizacion_row-num';
                     badge.textContent = '#' + id;
                     card.appendChild(badge);
 
@@ -363,7 +178,7 @@
                     var col1 = document.createElement('div');
                     col1.className = 'col-12 col-sm-6 col-md-4';
                     var field1 = document.createElement('div');
-                    field1.className = 'dg-field';
+                    field1.className = 'o_digitalizacion_field';
                     var label1 = document.createElement('label');
                     label1.textContent = 'Digitalizador ';
                     var ast1 = document.createElement('span');
@@ -381,7 +196,7 @@
                     var col2 = document.createElement('div');
                     col2.className = 'col-12 col-sm-6 col-md-4';
                     var field2 = document.createElement('div');
-                    field2.className = 'dg-field';
+                    field2.className = 'o_digitalizacion_field';
                     var label2 = document.createElement('label');
                     label2.textContent = 'Etapa ';
                     var ast2 = document.createElement('span');
@@ -400,7 +215,7 @@
                     col3.className = 'col-12 col-sm-12 col-md-4 d-flex align-items-end justify-content-end';
                     var btnElim = document.createElement('button');
                     btnElim.type = 'button';
-                    btnElim.className = 'dg-btn dg-btn--ghost btn-eliminar w-100';
+                    btnElim.className = 'o_digitalizacion_btn o_digitalizacion_btn--ghost btn-eliminar w-100';
                     var icoTrash = document.createElement('i');
                     icoTrash.className = 'fa fa-trash-o';
                     btnElim.appendChild(icoTrash);
@@ -411,7 +226,7 @@
 
                     /* Separador "Datos de producción" */
                     var sepDiv = document.createElement('div');
-                    sepDiv.className = 'dg-optional-label mt-2';
+                    sepDiv.className = 'o_digitalizacion_optional-label mt-2';
                     sepDiv.textContent = 'Datos de producción';
                     card.appendChild(sepDiv);
 
@@ -433,7 +248,7 @@
 
                     camposDef.forEach(function(def) {
                         var colW = document.createElement('div');
-                        colW.className = def.col + ' dg-field';
+                        colW.className = def.col + ' o_digitalizacion_field';
                         colW.setAttribute('data-campo', def.campo);
                         colW.style.display = 'none';
                         var lb = document.createElement('label');
@@ -451,7 +266,7 @@
 
                     /* Escáner (select) */
                     var colEsc = document.createElement('div');
-                    colEsc.className = 'col-6 col-sm-4 col-md-3 dg-field';
+                    colEsc.className = 'col-6 col-sm-4 col-md-3 o_digitalizacion_field';
                     colEsc.setAttribute('data-campo', 'escaner');
                     colEsc.style.display = 'none';
                     var lbEsc = document.createElement('label');
@@ -466,7 +281,7 @@
 
                     /* Observaciones */
                     var colObs = document.createElement('div');
-                    colObs.className = 'col-12 dg-field';
+                    colObs.className = 'col-12 o_digitalizacion_field';
                     var lbObs = document.createElement('label');
                     lbObs.textContent = 'Observaciones';
                     var inpObs = document.createElement('input');
@@ -485,7 +300,7 @@
                     });
                     btnElim.addEventListener('click', function() {
                         card.remove();
-                        if (document.querySelectorAll('.dg-row-card').length === 0) crearFila();
+                        if (document.querySelectorAll('.o_digitalizacion_row-card').length === 0) crearFila();
                         actualizarContador();
                     });
                     selMiembro.addEventListener('change', actualizarContador);
@@ -495,7 +310,7 @@
                 }
 
                 function actualizarContador() {
-                    var filas = document.querySelectorAll('.dg-row-card');
+                    var filas = document.querySelectorAll('.o_digitalizacion_row-card');
                     var completas = Array.from(filas).filter(function(f) {
                         return f.querySelector('.input-miembro').value && f.querySelector('.input-etapa').value;
                     }).length;
@@ -535,7 +350,7 @@
 
                     document.getElementById('btn-guardar-registros').addEventListener('click', function() {
                         var btnGuardar = this;
-                        var filas = document.querySelectorAll('.dg-row-card');
+                        var filas = document.querySelectorAll('.o_digitalizacion_row-card');
                         var payload = [];
                         var valido = true;
 

@@ -1,49 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <template id="wf05_miembros_equipo" name="Miembros del Proyecto">
+    <template id="digitalizacion_portal_miembros_equipo" name="Miembros del Equipo">
         <t t-call="portal.portal_layout">
             <t t-set="breadcrumbs_searchbar" t-value="True" />
-            <style>:root {
-                    --color-50:  #FCE8E8;
-                    --color-100: #F8C0BF;
-                    --color-200: #F39795;
-                    --color-300: #EF6E6C;
-                    --color-400: #EA4643;
-                    --color-500: #DE1C19;
-                    --color-600: #BC1815;
-                    --color-700: #931210;
-                    --color-800: #6A0D0C;
-                    --color-900: #400807;
-                    --color-950: #170303;
-                    --color-white: #ffffff;
-
-                    --dg-primary:       var(--color-500);
-                    --dg-primary-light: var(--color-50);
-                    --dg-success:       #059669;
-                    --dg-danger:        var(--color-500);
-                    --dg-surface:       var(--color-white);
-                    --dg-bg:            #f8fafc;
-                    --dg-border:        var(--color-100);
-                    --dg-text:          var(--color-950);
-                    --dg-muted:         var(--color-700);
-                    --dg-radius:        12px;
-                    --dg-shadow:        0 1px 3px rgba(0,0,0,.08);
-                    --dg-shadow-md:     0 4px 6px rgba(0,0,0,.07);
-                }
-                .dg-page { background: var(--dg-bg); min-height: 80vh; }
-
-                /* ── Header de sección ───────────────────────────── */
-                .dg-section-header {
-                    display: flex; align-items: center;
-                    justify-content: space-between; flex-wrap: wrap;
-                    gap: .75rem; margin-bottom: 1.5rem;
-                }
-                .dg-section-header h3 {
-                    font-size: 1.2rem; font-weight: 800;
-                    color: var(--dg-text); margin: 0;
-                }
-                .dg-section-header .dg-subtitle {
-                    font-size: .82rem; color: var(--dg-muted); margin-top: .1rem;
                 }
 
                 /* ── Botones ─────────────────────────────────────── */
@@ -190,9 +149,9 @@
                     transition: color .15s;
                 }
                 .dg-back:hover { color: var(--dg-primary); }</style>
-            <div class="dg-page pb-5">
+            <div class="o_digitalizacion_page pb-5">
                 <div class="container-fluid px-3 px-md-4 mt-4">
-                    <a t-attf-href="/digitalizacion/v1/proyectos/#{proyecto.id}" class="dg-back">
+                    <a t-attf-href="/digitalizacion/v1/proyectos/#{proyecto.id}" class="o_digitalizacion_back">
                         <i class="fa fa-arrow-left" />
                         Volver al proyecto
                     </a>
@@ -205,19 +164,19 @@
                         </t>
                     </t>
                     <!-- Alertas de feedback -->
-                    <div id="msg-miembro-exito" class="dg-alert dg-alert--success d-none mb-3">
+                    <div id="msg-miembro-exito" class="o_digitalizacion_alert o_digitalizacion_alert--success d-none mb-3">
                         <i class="fa fa-check-circle" />
                         Miembro agregado correctamente.
                     </div>
-                    <div id="msg-miembro-error" class="dg-alert dg-alert--danger d-none mb-3" />
+                    <div id="msg-miembro-error" class="o_digitalizacion_alert o_digitalizacion_alert--danger d-none mb-3" />
                     <!-- Header -->
-                    <div class="dg-section-header">
+                    <div class="o_digitalizacion_section-header">
                         <div>
                             <h3>
-                                <i class="fa fa-users me-2" style="color: var(--dg-primary);" />
+                                <i class="fa fa-users me-2" style="color: var(--o_digitalizacion_primary);" />
                                 Equipo del proyecto
                             </h3>
-                            <div class="dg-subtitle">
+                            <div class="o_digitalizacion_subtitle">
                                 <strong>
                                     <t t-esc="proyecto.name" />
                                 </strong>
@@ -226,14 +185,14 @@
                                 miembro(s) activo(s)
                             </div>
                         </div>
-                        <button class="dg-btn dg-btn--primary" data-bs-toggle="modal" data-bs-target="#modalAgregarMiembro">
+                        <button class="o_digitalizacion_btn o_digitalizacion_btn--primary" data-bs-toggle="modal" data-bs-target="#modalAgregarMiembro">
                             <i class="fa fa-user-plus" />
                             Agregar miembro
                         </button>
                     </div>
                     <!-- Lista de miembros -->
                     <t t-if="not miembros">
-                        <div class="dg-empty">
+                        <div class="o_digitalizacion_empty">
                             <i class="fa fa-user-plus" />
                             <p class="fw-bold">Sin miembros registrados</p>
                             <p>Agrega digitalizadores usando el botón de arriba.</p>
@@ -241,23 +200,23 @@
                     </t>
                     <div t-if="miembros" id="lista-miembros" class="d-flex flex-column gap-2">
                         <t t-foreach="miembros" t-as="m">
-                            <div t-att-class="'dg-member-card' + (' inactive' if m.fecha_salida else '')">
+                            <div t-att-class="'o_digitalizacion_member-card' + (' inactive' if m.fecha_salida else '')">
                                 <!-- Avatar con inicial -->
-                                <div t-att-class="'dg-avatar' + (' dg-avatar--lider' if m.es_lider else '')">
+                                <div t-att-class="'o_digitalizacion_avatar' + (' o_digitalizacion_avatar--lider' if m.es_lider else '')">
                                     <t t-esc="(m.partner_id.name or '?')[0].upper()" />
                                 </div>
                                 <!-- Info -->
                                 <div class="flex-grow-1 min-w-0">
-                                    <div class="dg-member-name">
+                                    <div class="o_digitalizacion_member-name">
                                         <t t-esc="m.partner_id.name" />
                                         <t t-if="m.es_lider">
-                                            <span class="dg-badge dg-badge--lider ms-2">
+                                            <span class="o_digitalizacion_badge o_digitalizacion_badge--lider ms-2">
                                                 <i class="fa fa-star" />
                                                 Líder
                                             </span>
                                         </t>
                                     </div>
-                                    <div class="dg-member-meta">
+                                    <div class="o_digitalizacion_member-meta">
                                         <i class="fa fa-calendar-o me-1" />
                                         Ingresó:
                                         <t t-esc="m.fecha_integracion" />
@@ -270,13 +229,13 @@
                                 <!-- Estado -->
                                 <div class="flex-shrink-0">
                                     <t t-if="m.active and not m.fecha_salida">
-                                        <span class="dg-badge dg-badge--active">
+                                        <span class="o_digitalizacion_badge o_digitalizacion_badge--active">
                                             <i class="fa fa-circle" style="font-size:.5rem;" />
                                             Activo
                                         </span>
                                     </t>
                                     <t t-else="">
-                                        <span class="dg-badge dg-badge--inactive">
+                                        <span class="o_digitalizacion_badge o_digitalizacion_badge--inactive">
                                             <i class="fa fa-circle" style="font-size:.5rem;" />
                                             Baja
                                         </span>
@@ -288,31 +247,31 @@
                 </div>
             </div>
             <!-- ── Modal Agregar Miembro ──────────────────────────── -->
-            <div id="modalAgregarMiembro" class="modal fade dg-modal" tabindex="-1" aria-hidden="true">
+            <div id="modalAgregarMiembro" class="modal fade o_digitalizacion_modal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title">
-                                <i class="fa fa-user-plus me-2" style="color: var(--dg-primary);" />
+                                <i class="fa fa-user-plus me-2" style="color: var(--o_digitalizacion_primary);" />
                                 Agregar miembro al equipo
                             </h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" />
                         </div>
                         <div class="modal-body">
                             <p class="text-muted small mb-3">Busca un contacto existente o escribe un nombre nuevo para crearlo.</p>
-                            <div class="dg-search-wrap mb-2">
+                            <div class="o_digitalizacion_search-wrap mb-2">
                                 <i class="fa fa-search" />
-                                <input id="inputBuscarMiembro" type="text" class="dg-search-input" placeholder="Escribe el nombre del digitalizador..." autocomplete="off" />
+                                <input id="inputBuscarMiembro" type="text" class="o_digitalizacion_search-input" placeholder="Escribe el nombre del digitalizador..." autocomplete="off" />
                             </div>
-                            <div id="resultadosMiembros" class="dg-search-results" />
-                            <div id="divNuevoMiembro" class="dg-result-new d-none mt-2">
+                            <div id="resultadosMiembros" class="o_digitalizacion_search-results" />
+                            <div id="divNuevoMiembro" class="o_digitalizacion_result-new d-none mt-2">
                                 <i class="fa fa-user-plus" />
                                 Se creará un nuevo contacto con este nombre.
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="dg-btn dg-btn--ghost" data-bs-dismiss="modal">Cancelar</button>
-                            <button id="btnConfirmarMiembro" type="button" class="dg-btn dg-btn--primary" disabled="1">
+                            <button type="button" class="o_digitalizacion_btn o_digitalizacion_btn--ghost" data-bs-dismiss="modal">Cancelar</button>
+                            <button id="btnConfirmarMiembro" type="button" class="o_digitalizacion_btn o_digitalizacion_btn--primary" disabled="1">
                                 <i class="fa fa-check" />
                                 Agregar
                             </button>
@@ -374,7 +333,7 @@
                             } else {
                                 partners.forEach(function(p) {
                                     var btn = document.createElement('button');
-                                    btn.className = 'dg-result-item';
+                                    btn.className = 'o_digitalizacion_result-item';
                                     var label = p.name;
                                     if (p.email) label += ' (' + p.email + ')';
                                     btn.textContent = label;

@@ -13,31 +13,35 @@
     'depends': ['base', 'contacts', 'website'],
     'data': [
         # 1. Seguridad primero: grupos, reglas y ACLs
-        'security/security.xml',
+        'security/digitalizacion_groups.xml',
+        'security/digitalizacion_proyecto_security.xml',
+        'security/digitalizacion_registro_security.xml',
         'security/ir.model.access.csv',
 
-        # 2. Datos maestros iniciales
-        'data/etapas_default.xml',
+        # --- Datos ---
+        'data/etapa_data.xml',
 
-        # 3. Vistas y acciones — Admin
-        #    Orden: proyectos → operaciones → configuracion → dashboard
-        #    (las acciones deben existir antes que menus.xml las referencie)
+        # --- Vistas Backend (Admin) ---
         'views/admin/proyectos/proyecto_views.xml',
         'views/admin/proyectos/asignacion_views.xml',
         'views/admin/operaciones/miembro_views.xml',
         'views/admin/operaciones/registro_views.xml',
         'views/admin/configuracion/etapa_views.xml',
         'views/admin/configuracion/tipo_escaner_views.xml',
+        'views/admin/dashboard_views.xml',
+        'views/admin/digitalizacion_menus.xml',
 
-        # 4. Menús — siempre después de las acciones
-        'views/admin/menus.xml',
-
-        # 5. Portal (vistas QWeb website — Líder)
-        'views/portal/portal_home.xml',
-        'views/portal/portal_proyecto.xml',
-        'views/portal/portal_registro_form.xml',
-        'views/portal/portal_miembros.xml',
+        # --- Vistas Portal (Líder) ---
+        'views/portal/portal_home_templates.xml',
+        'views/portal/portal_proyecto_templates.xml',
+        'views/portal/portal_registro_form_templates.xml',
+        'views/portal/portal_miembros_templates.xml',
     ],
+    'assets': {
+        'web.assets_frontend': [
+            'digitalizacion/static/src/scss/portal.scss',
+        ],
+    },
     'installable':
     True,
     'auto_install':
