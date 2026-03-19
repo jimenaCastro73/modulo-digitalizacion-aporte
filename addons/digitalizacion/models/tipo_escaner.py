@@ -12,27 +12,27 @@ from odoo import fields, models
 
 
 class DigitalizacionTipoEscaner(models.Model):
-    _name        = "digitalizacion.tipo_escaner"
+    _name = "digitalizacion.tipo_escaner"
     _description = "Tipo de Escáner"
-    _order       = "name asc"
+    _order = "name asc"
 
     # ── Campos ────────────────────────────────────────────────────────────────
 
     name = fields.Char(
-        string   = "Nombre",
-        required = True,
-        help     = "Nombre o modelo del escáner. Ej: Fujitsu fi-7300NX, Epson GT-S85.",
+        string="Nombre",
+        required=True,
+        help="Nombre o modelo del escáner. Ej: Fujitsu fi-7300NX, Epson GT-S85.",
     )
 
     description = fields.Text(
-        string = "Descripción",
-        help   = "Descripción adicional del equipo (velocidad, formato, ubicación, etc.).",
+        string="Descripción",
+        help="Descripción adicional del equipo (velocidad, formato, ubicación, etc.).",
     )
 
     active = fields.Boolean(
-        string  = "Activo",
-        default = True,
-        help    = "Soft delete de Odoo. False = escáner archivado/fuera de uso. "
+        string="Activo",
+        default=True,
+        help="Soft delete de Odoo. False = escáner archivado/fuera de uso. "
         "No aparece en el formulario de registro.",
     )
 

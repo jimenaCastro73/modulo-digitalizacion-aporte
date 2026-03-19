@@ -212,7 +212,7 @@
                         <t t-foreach="notifications" t-as="noti">
                             <div t-attf-class="alert alert-#{noti['type']} alert-dismissible fade show mb-3" role="alert">
                                 <t t-esc="noti['message']" />
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" />
                             </div>
                         </t>
                     </t>
@@ -269,9 +269,10 @@
                 </div>
             </div>
             <script type="text/javascript">
+                <![CDATA[
                 (function() {
                 'use strict';
-                var csrfToken = '<t t-esc="request.csrf_token()"/>';
+                var csrfToken = ']]><t t-esc="request.csrf_token()" /><![CDATA[';
 
                 var rowCounter = 0;
                 var etapas = [], miembros = [], escaneres = [];
@@ -496,7 +497,7 @@
                 function actualizarContador() {
                     var filas = document.querySelectorAll('.dg-row-card');
                     var completas = Array.from(filas).filter(function(f) {
-                        return f.querySelector('.input-miembro').value &amp;&amp; f.querySelector('.input-etapa').value;
+                        return f.querySelector('.input-miembro').value && f.querySelector('.input-etapa').value;
                     }).length;
                     var el = document.getElementById('footer-contador');
                     if (el) el.textContent = completas + ' de ' + filas.length + ' filas completas';
@@ -556,7 +557,7 @@
                                 no_expedientes:         parseInt(card.querySelector('.input-expedientes').value)   || 0,
                                 total_folios:           parseInt(card.querySelector('.input-folios').value)        || 0,
                                 total_escaneos:         parseInt(card.querySelector('.input-escaneos').value)      || 0,
-                                tipo_escaner_ids:       (escVal &amp;&amp; escVal.value) ? [parseInt(escVal.value)] : [],
+                                tipo_escaner_ids:       (escVal && escVal.value) ? [parseInt(escVal.value)] : [],
                                 expedientes_editados:   parseInt(card.querySelector('.input-exp-editados').value)    || 0,
                                 folios_editados:        parseInt(card.querySelector('.input-folios-editados').value) || 0,
                                 expedientes_indexados:  parseInt(card.querySelector('.input-exp-indexados').value)   || 0,
@@ -612,7 +613,8 @@
                         });
                     });
                 });
-            })();
+                })();
+                ]]>
             </script>
         </t>
     </template>

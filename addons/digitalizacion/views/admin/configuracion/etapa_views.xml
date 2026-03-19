@@ -9,8 +9,6 @@
          menus.xml (fuente unica de verdad para la navegacion).
          Este archivo solo define las vistas list y form.
          ================================================================ -->
-
-
     <!-- ================================================================
          1. VISTA LISTA
          editable="bottom": edicion directa en fila (ideal para catalogos).
@@ -21,22 +19,14 @@
         <field name="name">digitalizacion.etapa.list</field>
         <field name="model">digitalizacion.etapa</field>
         <field name="arch" type="xml">
-            <tree
-                string="Etapas"
-                default_order="sequence asc"
-                editable="bottom"
-                decoration-muted="not active">
-
-                <field name="sequence" widget="handle"/>
-                <field name="name"           string="Nombre de la etapa"/>
-                <field name="registro_count" string="Registros" optional="show"/>
-                <field name="active"         widget="boolean_toggle" string="Activo"/>
-
+            <tree string="Etapas" default_order="sequence asc" editable="bottom" decoration-muted="not active">
+                <field name="sequence" widget="handle" />
+                <field name="name" string="Nombre de la etapa" />
+                <field name="registro_count" string="Registros" optional="show" />
+                <field name="active" string="Activo" widget="boolean_toggle" />
             </tree>
         </field>
     </record>
-
-
     <!-- ================================================================
          2. VISTA FORMULARIO
          ================================================================ -->
@@ -45,76 +35,47 @@
         <field name="model">digitalizacion.etapa</field>
         <field name="arch" type="xml">
             <form string="Etapa de Digitalizacion">
-
-                <header/>
-
+                <header />
                 <!-- Stat button: visible solo si ya tiene registros -->
-                <div class="oe_button_box" name="button_box">
-                    <button
-                        name="action_ver_registros"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-list-ul"
-                        invisible="registro_count == 0">
-                        <field
-                            name="registro_count"
-                            widget="statinfo"
-                            string="Registros"/>
+                <div name="button_box" class="oe_button_box">
+                    <button name="action_ver_registros" type="object" class="oe_stat_button" icon="fa-list-ul" invisible="registro_count == 0">
+                        <field name="registro_count" string="Registros" widget="statinfo" />
                     </button>
                 </div>
-
-                <field name="active" widget="boolean_toggle" invisible="1"/>
-
+                <field name="active" widget="boolean_toggle" invisible="1" />
                 <sheet>
                     <div class="oe_title">
-                        <label for="name" string="Nombre de la etapa"/>
+                        <label string="Nombre de la etapa" for="name" />
                         <h1>
-                            <field
-                                name="name"
-                                placeholder="Ej: Limpieza, Digitalizado, Editado..."
-                                required="1"/>
+                            <field name="name" placeholder="Ej: Limpieza, Digitalizado, Editado..." required="1" />
                         </h1>
                     </div>
-
                     <group>
                         <group string="Configuracion">
-                            <field name="sequence"
-                                   string="Secuencia"
-                                   help="Orden de aparicion en listas y selectores. Menor numero = primera posicion."/>
-                            <field name="active"
-                                   string="Activo"
-                                   widget="boolean_toggle"/>
+                            <field name="sequence" string="Secuencia" help="Orden de aparicion en listas y selectores. Menor numero = primera posicion." />
+                            <field name="active" string="Activo" widget="boolean_toggle" />
                         </group>
                         <group string="Estadisticas" invisible="registro_count == 0">
-                            <field name="registro_count"
-                                   string="Total de registros"
-                                   readonly="1"/>
+                            <field name="registro_count" string="Total de registros" readonly="1" />
                         </group>
                     </group>
-
                     <!-- Alerta: etapa nueva sin registros -->
-                    <div class="alert alert-info" role="alert"
-                         invisible="registro_count != 0">
-                        <i class="fa fa-info-circle"/> Esta etapa aun no tiene registros de trabajo asociados.
+                    <div class="alert alert-info" role="alert" invisible="registro_count != 0">
+                        <i class="fa fa-info-circle" />
+                        Esta etapa aun no tiene registros de trabajo asociados.
                         Aparecera en el formulario del Lider una vez que este activa.
                     </div>
-
                     <!-- Alerta: etapa archivada -->
-                    <div class="alert alert-warning" role="alert"
-                         invisible="active">
-                        <i class="fa fa-archive"/> Esta etapa esta archivada y no aparecera
+                    <div class="alert alert-warning" role="alert" invisible="active">
+                        <i class="fa fa-archive" />
+                        Esta etapa esta archivada y no aparecera
                         en el formulario de registro del portal.
                     </div>
-
                 </sheet>
-
                 <!-- chatter eliminado: modelo no hereda mail.thread -->
-
             </form>
         </field>
     </record>
-
-
     <!-- ================================================================
          3. ACCION PRINCIPAL DEL MODELO
          Declaracion completa aqui. menus.xml la referencia
@@ -124,13 +85,10 @@
         <field name="name">Etapas</field>
         <field name="res_model">digitalizacion.etapa</field>
         <field name="view_mode">list,form</field>
-        <field name="view_id" ref="view_etapa_list"/>
+        <field name="view_id" ref="view_etapa_list" />
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                Crea la primera etapa del proceso
-            </p>
+            <p class="o_view_nocontent_smiling_face">Crea la primera etapa del proceso</p>
             <p>Define las fases del flujo: Limpieza, Digitalizado, Editado, Indexado, Ordenado.</p>
         </field>
     </record>
-
 </odoo>

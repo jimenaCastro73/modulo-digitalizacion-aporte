@@ -18,8 +18,6 @@
            Lider (nota 3.8). El Admin gestiona esto desde aqui o desde
            la pestana "Lideres asignados" del formulario de proyecto.
          ================================================================ -->
-
-
     <!-- ================================================================
          1. VISTA LISTA
          Vista principal de gestion: muestra todas las asignaciones
@@ -30,36 +28,15 @@
         <field name="name">digitalizacion.asignacion.list</field>
         <field name="model">digitalizacion.asignacion</field>
         <field name="arch" type="xml">
-            <tree
-                string="Asignacion de Lideres"
-                default_order="fecha_asignacion desc"
-                decoration-muted="not active"
-                decoration-success="active">
-
-                <field name="proyecto_id"
-                       string="Proyecto"
-                       required="1"/>
-
-                <field name="lider_id"
-                       string="Lider (usuario portal)"
-                       required="1"/>
-
-                <field name="fecha_asignacion"
-                       string="Asignado desde"/>
-
-                <field name="active"
-                       string="Activo"
-                       widget="boolean_toggle"/>
-
-
+            <tree string="Asignacion de Lideres" default_order="fecha_asignacion desc" decoration-muted="not active" decoration-success="active">
+                <field name="proyecto_id" string="Proyecto" required="1" />
+                <field name="lider_id" string="Lider (usuario portal)" required="1" />
+                <field name="fecha_asignacion" string="Asignado desde" />
+                <field name="active" string="Activo" widget="boolean_toggle" />
                 <!-- Columna invisible: eliminada (duplicada) -->
-
-
             </tree>
         </field>
     </record>
-
-
     <!-- ================================================================
          2. VISTA FORMULARIO
          Formulario minimo: la asignacion es una relacion simple.
@@ -71,89 +48,51 @@
         <field name="model">digitalizacion.asignacion</field>
         <field name="arch" type="xml">
             <form string="Asignacion de Lider a Proyecto">
-
                 <header>
-                    <button name="action_desactivar"
-                            string="Desactivar asignacion"
-                            type="object"
-                            class="btn-secondary"
-                            invisible="not active"
-                            confirm="El lider perdera acceso a este proyecto en el portal. Su registro como miembro del equipo permanece intacto. Continuar?"/>
-
-                    <button name="action_activar"
-                            string="Reactivar asignacion"
-                            type="object"
-                            class="btn-primary"
-                            invisible="active"/>
-
+                    <button name="action_desactivar" string="Desactivar asignacion" type="object" class="btn-secondary" invisible="not active" confirm="El lider perdera acceso a este proyecto en el portal. Su registro como miembro del equipo permanece intacto. Continuar?" />
+                    <button name="action_activar" string="Reactivar asignacion" type="object" class="btn-primary" invisible="active" />
                     <!-- Statusbar simplificado: activo/inactivo -->
-                    <field name="active"
-                           widget="boolean_toggle"
-                           invisible="1"/>
+                    <field name="active" widget="boolean_toggle" invisible="1" />
                 </header>
-
                 <!-- Alerta: asignacion inactiva -->
-                <div class="alert alert-warning" role="alert"
-                     invisible="active">
-                    <i class="fa fa-lock me-1"/>
-                    Asignacion <strong>inactiva</strong>. El lider no tiene acceso
+                <div class="alert alert-warning" role="alert" invisible="active">
+                    <i class="fa fa-lock me-1" />
+                    Asignacion
+                    <strong>inactiva</strong>
+                    . El lider no tiene acceso
                     a este proyecto en el portal. Usa "Reactivar asignacion" para restaurar el acceso.
                 </div>
-
                 <sheet>
-
                     <div class="oe_title">
-                        <label for="display_name" string="Asignacion"/>
+                        <label string="Asignacion" for="display_name" />
                         <h1>
-                            <field name="display_name" readonly="1"/>
+                            <field name="display_name" readonly="1" />
                         </h1>
                     </div>
-
                     <group>
                         <group string="Datos de la asignacion">
-                            <field name="proyecto_id"
-                                   string="Proyecto"
-                                   required="1"
-                                   domain="[('active', '=', True), ('state', '=', 'activo')]"
-                                   options="{'no_create': True, 'no_create_edit': True}"
-                                   help="Solo se muestran proyectos activos."/>
-
-                            <field name="lider_id"
-                                   string="Lider (usuario portal)"
-                                   required="1"
-                                   domain="[('share', '=', True), ('active', '=', True)]"
-                                   options="{'no_create': True}"
-                                   help="Usuario Odoo con grupo Digitalizacion / Lider. Accede unicamente al portal."/>
-
-                            <field name="fecha_asignacion"
-                                   string="Fecha de asignacion"/>
+                            <field name="proyecto_id" string="Proyecto" required="1" domain="[('active', '=', True), ('state', '=', 'activo')]" options="{'no_create': True, 'no_create_edit': True}" help="Solo se muestran proyectos activos." />
+                            <field name="lider_id" string="Lider (usuario portal)" required="1" domain="[('share', '=', True), ('active', '=', True)]" options="{'no_create': True}" help="Usuario Odoo con grupo Digitalizacion / Lider. Accede unicamente al portal." />
+                            <field name="fecha_asignacion" string="Fecha de asignacion" />
                         </group>
-
                         <group string="Estado">
-                            <field name="active"
-                                   string="Asignacion activa"
-                                   widget="boolean_toggle"/>
+                            <field name="active" string="Asignacion activa" widget="boolean_toggle" />
                         </group>
                     </group>
-
                     <!-- Nota informativa sobre efecto secundario -->
                     <div class="alert alert-info" role="alert">
-                        <i class="fa fa-info-circle me-1"/>
-                        <strong>Nota:</strong> Al guardar esta asignacion, el sistema crea
+                        <i class="fa fa-info-circle me-1" />
+                        <strong>Nota:</strong>
+                        Al guardar esta asignacion, el sistema crea
                         automaticamente al Lider como miembro del equipo del proyecto
                         (digitalizacion.miembro_proyecto), de modo que aparece en el
                         selector de digitalizadores del formulario de registro.
                     </div>
-
                 </sheet>
-
                 <!-- chatter eliminado: modelo no hereda mail.thread -->
-
             </form>
         </field>
     </record>
-
-
     <!-- ================================================================
          3. VISTA BUSQUEDA
          Filtros por estado de asignacion y por proyecto/lider.
@@ -163,42 +102,20 @@
         <field name="model">digitalizacion.asignacion</field>
         <field name="arch" type="xml">
             <search string="Buscar asignaciones">
-
-                <field name="proyecto_id"
-                       string="Proyecto"
-                       filter_domain="[('proyecto_id.name', 'ilike', self)]"/>
-
-                <field name="lider_id"
-                       string="Lider"
-                       filter_domain="[('lider_id.name', 'ilike', self)]"/>
-
+                <field name="proyecto_id" string="Proyecto" filter_domain="[('proyecto_id.name', 'ilike', self)]" />
+                <field name="lider_id" string="Lider" filter_domain="[('lider_id.name', 'ilike', self)]" />
                 <!-- Filtros rapidos -->
-                <filter name="filter_activas"
-                        string="Activas"
-                        domain="[('active', '=', True)]"/>
-
-                <filter name="filter_inactivas"
-                        string="Inactivas"
-                        domain="[('active', '=', False)]"/>
-
+                <filter name="filter_activas" string="Activas" domain="[('active', '=', True)]" />
+                <filter name="filter_inactivas" string="Inactivas" domain="[('active', '=', False)]" />
                 <!-- Agrupaciones -->
-                <group expand="0" string="Agrupar por">
-                    <filter name="group_proyecto"
-                            string="Proyecto"
-                            context="{'group_by': 'proyecto_id'}"/>
-                    <filter name="group_lider"
-                            string="Lider"
-                            context="{'group_by': 'lider_id'}"/>
-                    <filter name="group_fecha"
-                            string="Mes de asignacion"
-                            context="{'group_by': 'fecha_asignacion:month'}"/>
+                <group string="Agrupar por" expand="0">
+                    <filter name="group_proyecto" string="Proyecto" context="{'group_by': 'proyecto_id'}" />
+                    <filter name="group_lider" string="Lider" context="{'group_by': 'lider_id'}" />
+                    <filter name="group_fecha" string="Mes de asignacion" context="{'group_by': 'fecha_asignacion:month'}" />
                 </group>
-
             </search>
         </field>
     </record>
-
-
     <!-- ================================================================
          4. ACCION PRINCIPAL DEL MODELO
          Declaracion completa aqui. menus.xml no necesita redeclararla.
@@ -207,15 +124,12 @@
         <field name="name">Asignacion de Lideres</field>
         <field name="res_model">digitalizacion.asignacion</field>
         <field name="view_mode">list,form</field>
-        <field name="view_id" ref="view_asignacion_list"/>
-        <field name="search_view_id" ref="view_asignacion_search"/>
+        <field name="view_id" ref="view_asignacion_list" />
+        <field name="search_view_id" ref="view_asignacion_search" />
         <field name="context">{"search_default_filter_activas": 1}</field>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                Asigna un Lider a un proyecto
-            </p>
+            <p class="o_view_nocontent_smiling_face">Asigna un Lider a un proyecto</p>
             <p>El Lider es el usuario portal que registra la produccion diaria del equipo.</p>
         </field>
     </record>
-
 </odoo>

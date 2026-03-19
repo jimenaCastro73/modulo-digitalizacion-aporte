@@ -87,18 +87,19 @@ class Asignacion(models.Model):
 
     # ── Restricciones Python ──────────────────────────────────────────────────
 
-    @api.constrains('proyecto_id', 'lider_id')
+    @api.constrains("proyecto_id", "lider_id")
     def _check_lider_unico_por_proyecto(self):
         for rec in self:
-            duplicado = self.search([
-                ('proyecto_id', '=', rec.proyecto_id.id),
-                ('lider_id', '=', rec.lider_id.id),
-                ('id', '!=', rec.id)
-            ])
+            duplicado = self.search(
+                [
+                    ("proyecto_id", "=", rec.proyecto_id.id),
+                    ("lider_id", "=", rec.lider_id.id),
+                    ("id", "!=", rec.id),
+                    ("active", "=", True),
+                ]
+            )
             if duplicado:
-                raise ValidationError(
-                    "Este líder ya está asignado a este proyecto."
-                )
+                raise ValidationError("Este líder ya está asignado a este proyecto.")
 
     @api.constrains("lider_id", "proyecto_id")
     def _check_lider_tiene_grupo(self):
@@ -140,13 +141,45 @@ class Asignacion(models.Model):
 
         Nota 3.8: Si ya existe un miembro_proyecto para ese (proyecto, partner),
         no se duplica (respeta la restricción UNIQUE).
-        """
-        records = super().create(vals_list)
 
-        for asig in records:
+        Reactivación: Si ya existe una asignación archivada, la reactiva
+        en lugar de crear una nueva (evita error de constraint SQL).
+        """
+        records_to_create = []
+        created = self.env["digitalizacion.asignacion"]
+
+        for vals in vals_list:
+            # Buscar asignación archivada previa para este líder+proyecto
+            existente = self.with_context(active_test=False).search(
+                [
+                    ("lider_id", "=", vals.get("lider_id")),
+                    ("proyecto_id", "=", vals.get("proyecto_id")),
+                    ("active", "=", False),
+                ],
+                limit=1,
+            )
+
+            if existente:
+                # Reutilizar en lugar de crear → evita violar UNIQUE
+                existente.write(
+                    {
+                        "active": True,
+                        "fecha_asignacion": vals.get(
+                            "fecha_asignacion", fields.Date.today()
+                        ),
+                    }
+                )
+                created |= existente
+            else:
+                records_to_create.append(vals)
+
+        if records_to_create:
+            created |= super().create(records_to_create)
+
+        for asig in created:
             self._crear_miembro_para_lider(asig)
 
-        return records
+        return created
 
     def write(self, vals):
         """

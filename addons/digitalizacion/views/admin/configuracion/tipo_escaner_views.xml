@@ -10,8 +10,6 @@
            2. Vista formulario (form)
            3. Enlace view_id a la accion central de menus.xml
          ================================================================ -->
-
-
     <!-- ================================================================
          1. VISTA LISTA
          Catalogo simple: editable directamente en fila.
@@ -21,28 +19,13 @@
         <field name="name">digitalizacion.tipo_escaner.list</field>
         <field name="model">digitalizacion.tipo_escaner</field>
         <field name="arch" type="xml">
-            <tree
-                string="Tipos de Escaner"
-                editable="bottom"
-                decoration-muted="not active">
-
-                <field name="name"
-                       string="Nombre / Modelo"
-                       required="1"/>
-
-                <field name="description"
-                       string="Descripcion"
-                       optional="show"/>
-
-                <field name="active"
-                       string="Activo"
-                       widget="boolean_toggle"/>
-
+            <tree string="Tipos de Escaner" editable="bottom" decoration-muted="not active">
+                <field name="name" string="Nombre / Modelo" required="1" />
+                <field name="description" string="Descripcion" optional="show" />
+                <field name="active" string="Activo" widget="boolean_toggle" />
             </tree>
         </field>
     </record>
-
-
     <!-- ================================================================
          2. VISTA FORMULARIO
          ================================================================ -->
@@ -51,55 +34,34 @@
         <field name="model">digitalizacion.tipo_escaner</field>
         <field name="arch" type="xml">
             <form string="Tipo de Escaner">
-
-                <header/>
-
-                <field name="active" widget="boolean_toggle" invisible="1"/>
-
+                <header />
+                <field name="active" widget="boolean_toggle" invisible="1" />
                 <sheet>
-
                     <div class="oe_title">
-                        <label for="name" string="Nombre del escaner"/>
+                        <label string="Nombre del escaner" for="name" />
                         <h1>
-                            <field
-                                name="name"
-                                placeholder="Ej: Fujitsu fi-7300NX, Epson GT-S85..."
-                                required="1"/>
+                            <field name="name" placeholder="Ej: Fujitsu fi-7300NX, Epson GT-S85..." required="1" />
                         </h1>
                     </div>
-
                     <group>
                         <group string="Informacion del equipo">
-                            <field name="active"
-                                   string="Activo"
-                                   widget="boolean_toggle"
-                                   help="Desactivar archiva el escaner. No aparecera en el formulario de registro del portal."/>
+                            <field name="active" string="Activo" widget="boolean_toggle" help="Desactivar archiva el escaner. No aparecera en el formulario de registro del portal." />
                         </group>
                     </group>
-
                     <group string="Descripcion adicional">
-                        <field name="description"
-                               string="Descripcion"
-                               placeholder="Velocidad, formato de hojas soportado, ubicacion fisica, observaciones..."
-                               nolabel="1"/>
+                        <field name="description" string="Descripcion" placeholder="Velocidad, formato de hojas soportado, ubicacion fisica, observaciones..." nolabel="1" />
                     </group>
-
                     <!-- Alerta: escaner archivado -->
-                    <div class="alert alert-warning" role="alert"
-                         invisible="active">
-                        <i class="fa fa-archive"/> Este escaner esta archivado y no aparecera
+                    <div class="alert alert-warning" role="alert" invisible="active">
+                        <i class="fa fa-archive" />
+                        Este escaner esta archivado y no aparecera
                         en el selector de la etapa Digitalizado.
                     </div>
-
                 </sheet>
-
                 <!-- chatter eliminado: modelo no hereda mail.thread -->
-
             </form>
         </field>
     </record>
-
-
     <!-- ================================================================
          3. ACCION PRINCIPAL DEL MODELO
          Declaracion completa aqui. menus.xml la referencia
@@ -109,13 +71,10 @@
         <field name="name">Tipos de Escaner</field>
         <field name="res_model">digitalizacion.tipo_escaner</field>
         <field name="view_mode">list,form</field>
-        <field name="view_id" ref="view_tipo_escaner_list"/>
+        <field name="view_id" ref="view_tipo_escaner_list" />
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                Registra los escaneres disponibles
-            </p>
+            <p class="o_view_nocontent_smiling_face">Registra los escaneres disponibles</p>
             <p>Los tipos de escaner se seleccionan en la etapa Digitalizado.</p>
         </field>
     </record>
-
 </odoo>

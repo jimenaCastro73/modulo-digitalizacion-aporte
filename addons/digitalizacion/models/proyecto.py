@@ -2,15 +2,7 @@
 """
 proyecto.py — Modelo: digitalizacion.proyecto
 Tabla T-03 · Registro central de proyectos de digitalización
-
-Cada proyecto representa un contrato o encargo de digitalización de documentos
-físicos. Gestionado exclusivamente por el Administrador desde el backend.
-
-Referenciado por:
-    - digitalizacion.asignacion      (proyecto_id)  → T-04
-    - digitalizacion.miembro_proyecto (proyecto_id)  → T-05
-    - digitalizacion.registro         (proyecto_id)  → T-06
-    """
+"""
 
 from odoo import api, fields, models
 from odoo.exceptions import ValidationError
@@ -50,8 +42,7 @@ class Proyecto(models.Model):
         string="Duración estimada",
         compute="_compute_duracion_estimada",
         store=True,
-        help="Días entre fecha_inicio y fecha_fin_estimada. "
-        "Calculado automáticamente al guardar.",
+        help="Días entre fecha_inicio y fecha_fin_estimada.",
     )
 
     state = fields.Selection(
@@ -68,8 +59,7 @@ class Proyecto(models.Model):
     active = fields.Boolean(
         string="Activo",
         default=True,
-        help="Soft delete de Odoo. False = proyecto archivado. "
-        "No aparece en vistas normales ni en el portal del líder.",
+        help="Soft delete de Odoo. False = proyecto archivado.",
     )
 
     color = fields.Integer(
@@ -83,7 +73,7 @@ class Proyecto(models.Model):
         comodel_name="digitalizacion.asignacion",
         inverse_name="proyecto_id",
         string="Asignaciones de Líder",
-        help="Líderes asignados a este proyecto.",
+        help="Líderes asignados a este proyecto (gestionado internamente).",
     )
 
     miembro_ids = fields.One2many(
@@ -112,36 +102,34 @@ class Proyecto(models.Model):
     total_miembros = fields.Integer(
         string="Total miembros",
         compute="_compute_totales",
-        store=False,
+        store=True,
     )
 
     total_registros = fields.Integer(
         string="Total registros",
         compute="_compute_totales",
-        store=False,
+        store=True,
     )
 
     total_escaneos = fields.Integer(
         string="Total escaneos",
         compute="_compute_totales",
-        store=False,
+        store=True,
         help="Suma acumulada de total_escaneos en todos los registros del proyecto.",
     )
 
     progreso = fields.Float(
         string="Progreso (%)",
         compute="_compute_progreso",
-        store=False,
+        store=True,
         digits=(5, 1),
-        help="Porcentaje calculado: (escaneos acumulados / meta) × 100. "
-        "Requiere definir meta_escaneos.",
+        help="Porcentaje calculado: (escaneos acumulados / meta) × 100.",
     )
 
     meta_escaneos = fields.Integer(
         string="Meta de escaneos",
         default=0,
-        help="Cantidad objetivo de escaneos para este proyecto. "
-        "Se usa para calcular el porcentaje de progreso.",
+        help="Cantidad objetivo de escaneos para este proyecto.",
     )
 
     # ── Restricciones SQL ─────────────────────────────────────────────────────
@@ -162,10 +150,10 @@ class Proyecto(models.Model):
             if rec.fecha_fin_estimada and rec.fecha_inicio:
                 if rec.fecha_fin_estimada < rec.fecha_inicio:
                     raise ValidationError(
-                "La fecha de fin estimada no puede ser anterior a la fecha de inicio."
-            )
+                        "La fecha de fin estimada no puede ser anterior a la fecha de inicio."
+                    )
 
-    @api.onchange('fecha_inicio', 'fecha_fin_estimada')
+    @api.onchange("fecha_inicio", "fecha_fin_estimada")
     def _onchange_fechas(self):
         """Preview de duración en el formulario antes de guardar."""
         if self.fecha_inicio and self.fecha_fin_estimada:
@@ -174,11 +162,6 @@ class Proyecto(models.Model):
 
     @api.depends("fecha_inicio", "fecha_fin_estimada")
     def _compute_duracion_estimada(self):
-        """
-        Calcula y persiste la duración en días entre inicio y fin estimado.
-        Usar compute+store garantiza que el valor quede guardado incluso si
-        el registro se crea o modifica desde código o API (sin pasar por el form).
-        """
         for rec in self:
             if rec.fecha_inicio and rec.fecha_fin_estimada:
                 rec.duracion_estimada = (rec.fecha_fin_estimada - rec.fecha_inicio).days
@@ -212,17 +195,58 @@ class Proyecto(models.Model):
             else:
                 proyecto.progreso = 0.0
 
-                # ── Métodos de negocio ────────────────────────────────────────────────────
+    # ── Métodos de negocio ────────────────────────────────────────────────────
 
     def action_archivar(self):
-        """Archiva el proyecto (soft delete). Desactiva asignaciones activas."""
+        """
+        Archiva el proyecto (soft delete).
+        Desactiva asignaciones activas y marca es_lider=False en miembros.
+        La sincronización con asignacion ocurre via _sincronizar_liderazgo.
+        """
         for proyecto in self:
+            # Desmarcar líderes (esto desactiva sus asignaciones via write override)
+            lideres = proyecto.miembro_ids.filtered(lambda m: m.es_lider and m.active)
+            if lideres:
+                lideres.write({"es_lider": False})
+
+            # Por seguridad, desactivar cualquier asignación que quede activa
             proyecto.asignacion_ids.filtered("active").write({"active": False})
+
             proyecto.active = False
 
     def action_activar(self):
-        """Reactiva un proyecto archivado."""
-        self.write({"active": True, "state": "activo"})
+        """
+        Reactiva un proyecto archivado o inactivo.
+        Restaura el estado activo y reactiva las asignaciones y miembros
+        que estaban activos antes de archivar.
+        """
+        for proyecto in self:
+            proyecto.write({"active": True, "state": "activo"})
+
+            # Reactivar miembros archivados junto con el proyecto
+            # (solo los que no tienen fecha_salida, es decir no salieron voluntariamente)
+            miembros_inactivos = (
+                self.env["digitalizacion.miembro_proyecto"]
+                .with_context(active_test=False)
+                .search(
+                    [
+                        ("proyecto_id", "=", proyecto.id),
+                        ("active", "=", False),
+                        ("fecha_salida", "=", False),
+                    ]
+                )
+            )
+            if miembros_inactivos:
+                miembros_inactivos.write({"active": True})
+
+            # Reactivar asignaciones que fueron desactivadas al archivar
+            # (las que tienen un miembro es_lider=True activo)
+            lideres_activos = proyecto.miembro_ids.filtered(
+                lambda m: m.es_lider and m.active
+            )
+            for lider_miembro in lideres_activos:
+                # Delegar a _sincronizar_liderazgo para reactivar la asignación
+                lider_miembro._sincronizar_liderazgo(True)
 
     def action_inactivar(self):
         """Cambia el estado a inactivo sin archivar (sigue visible para el admin)."""
@@ -232,22 +256,22 @@ class Proyecto(models.Model):
         """Abre la lista de registros filtrada por este proyecto."""
         self.ensure_one()
         return {
-    "type": "ir.actions.act_window",
-    "name": f"Registros — {self.name}",
-    "res_model": "digitalizacion.registro",
-    "view_mode": "list,form",
-    "domain": [("proyecto_id", "=", self.id)],
-    "context": {"default_proyecto_id": self.id},
-}
+            "type": "ir.actions.act_window",
+            "name": f"Registros — {self.name}",
+            "res_model": "digitalizacion.registro",
+            "view_mode": "list,form",
+            "domain": [("proyecto_id", "=", self.id)],
+            "context": {"default_proyecto_id": self.id},
+        }
 
     def action_ver_miembros(self):
         """Abre la lista de miembros del equipo de este proyecto."""
         self.ensure_one()
         return {
-    "type": "ir.actions.act_window",
-    "name": f"Equipo — {self.name}",
-    "res_model": "digitalizacion.miembro_proyecto",
-    "view_mode": "list,form",
-    "domain": [("proyecto_id", "=", self.id)],
-    "context": {"default_proyecto_id": self.id},
-}
+            "type": "ir.actions.act_window",
+            "name": f"Equipo — {self.name}",
+            "res_model": "digitalizacion.miembro_proyecto",
+            "view_mode": "list,form",
+            "domain": [("proyecto_id", "=", self.id)],
+            "context": {"default_proyecto_id": self.id},
+        }

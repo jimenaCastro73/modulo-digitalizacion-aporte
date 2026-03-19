@@ -280,7 +280,7 @@
                         <t t-foreach="notifications" t-as="noti">
                             <div t-attf-class="alert alert-#{noti['type']} alert-dismissible fade show" role="alert">
                                 <t t-esc="noti['message']" />
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" />
                             </div>
                         </t>
                     </t>

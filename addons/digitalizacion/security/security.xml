@@ -9,45 +9,35 @@
             <field name="description">Roles del modulo de digitalizacion de documentos (OTEC GLOBAL).</field>
             <field name="sequence">50</field>
         </record>
-
         <!-- Grupos definidos -->
         <record id="group_digitalizacion_admin" model="res.groups">
             <field name="name">Administrador</field>
-            <field name="category_id" ref="module_category_digitalizacion"/>
-            <field name="comment">
-                Acceso completo al backoffice: proyectos, asignaciones,
-                registros, catalogos y dashboard de produccion.
-            </field>
+            <field name="category_id" ref="module_category_digitalizacion" />
+            <field name="users" eval="[(4, ref('base.user_admin')), (4, ref('base.user_root'))]" />
+            <field name="comment">Acceso completo al backoffice: proyectos, asignaciones,
+                registros, catalogos y dashboard de produccion.</field>
         </record>
 
         <record id="group_digitalizacion_lider" model="res.groups">
             <field name="name">Lider de equipo</field>
-            <field name="category_id" ref="module_category_digitalizacion"/>
-            <field name="comment">
-                Acceso solo al portal web. Registra la produccion diaria
-                de su equipo y gestiona los miembros de su proyecto.
-            </field>
+            <field name="category_id" ref="module_category_digitalizacion" />
+            <field name="comment">Acceso solo al portal web. Registra la produccion diaria
+                de su equipo y gestiona los miembros de su proyecto.</field>
         </record>
-
         <!-- El lider solo ve proyectos donde tiene asignacion activa -->
         <record id="rule_lider_solo_sus_proyectos" model="ir.rule">
             <field name="name">Lider ve sus proyectos activos</field>
-            <field name="model_id" ref="model_digitalizacion_proyecto"/>
-            <field name="groups" eval="[(4, ref('group_digitalizacion_lider'))]"/>
-            <field name="domain_force">
-                [('asignacion_ids.lider_id', '=', user.id),
-                 ('asignacion_ids.active', '=', True)]
-            </field>
+            <field name="model_id" ref="model_digitalizacion_proyecto" />
+            <field name="groups" eval="[(4, ref('group_digitalizacion_lider'))]" />
+            <field name="domain_force">[('asignacion_ids.lider_id', '=', user.id),
+                 ('asignacion_ids.active', '=', True)]</field>
         </record>
-
         <!-- El lider solo ve registros de sus proyectos -->
         <record id="rule_lider_solo_sus_registros" model="ir.rule">
             <field name="name">Lider ve sus registros</field>
-            <field name="model_id" ref="model_digitalizacion_registro"/>
-            <field name="groups" eval="[(4, ref('group_digitalizacion_lider'))]"/>
-            <field name="domain_force">
-                [('proyecto_id.asignacion_ids.lider_id', '=', user.id)]
-            </field>
+            <field name="model_id" ref="model_digitalizacion_registro" />
+            <field name="groups" eval="[(4, ref('group_digitalizacion_lider'))]" />
+            <field name="domain_force">[('proyecto_id.asignacion_ids.lider_id', '=', user.id)]</field>
         </record>
     </data>
 </odoo>

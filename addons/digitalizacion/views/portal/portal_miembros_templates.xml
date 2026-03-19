@@ -200,7 +200,7 @@
                         <t t-foreach="notifications" t-as="noti">
                             <div t-attf-class="alert alert-#{noti['type']} alert-dismissible fade show" role="alert">
                                 <t t-esc="noti['message']" />
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" />
                             </div>
                         </t>
                     </t>
@@ -321,11 +321,12 @@
                 </div>
             </div>
             <script type="text/javascript">
+                <![CDATA[
                 (function() {
                 'use strict';
 
-                var proyectoId = <t t-esc="proyecto.id"/>;
-                var csrfToken  = '<t t-esc="request.csrf_token()"/>';
+                var proyectoId = <t t-esc="proyecto.id" />;
+                var csrfToken  = ']]><t t-esc="request.csrf_token()" /><![CDATA[';
 
                 var inputBuscar   = document.getElementById('inputBuscarMiembro');
                 var divResultados = document.getElementById('resultadosMiembros');
@@ -346,7 +347,7 @@
                     divResultados.innerHTML = '';
                     divNuevo.classList.add('d-none');
 
-                    if (term.length &lt; 2) return;
+                    if (term.length < 2) return;
 
                     debounceTimer = setTimeout(function() {
                         fetch('/digitalizacion/api/v1/partners/search', {
@@ -454,7 +455,8 @@
                         btnConfirmar.disabled = true;
                         partnerId = null; nombreNuevo = null;
                     });
-            })();
+                })();
+                ]]>
             </script>
         </t>
     </template>

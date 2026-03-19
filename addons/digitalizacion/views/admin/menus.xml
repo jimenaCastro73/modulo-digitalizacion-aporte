@@ -6,94 +6,107 @@
          Orden de carga: debe ir DESPUES de todos los *_views.xml
          que declaran las acciones que estos menus referencian.
          ================================================================ -->
-
     <!-- Raiz de la aplicacion -->
-    <menuitem
-        id="menu_digitalizacion_root"
-        name="Digitalización"
-        sequence="10"
-        web_icon="digitalizacion,static/description/icon.png"
-        groups="digitalizacion.group_digitalizacion_admin"/>
-
-    <!-- ── Dashboard ──────────────────────────────────────────────── -->
-    <menuitem
-        id="menu_digitalizacion_dashboard"
-        name="Dashboard"
-        parent="menu_digitalizacion_root"
-        action="digitalizacion.action_digitalizacion_dashboard_admin"
-        sequence="1"
-        groups="digitalizacion.group_digitalizacion_admin"/>
-
+    <menuitem id="menu_digitalizacion_root" name="Digitalización" sequence="10" groups="digitalizacion.group_digitalizacion_admin" />
     <!-- ── Proyectos ───────────────────────────────────────────────── -->
-    <menuitem
-        id="menu_digitalizacion_proyectos_root"
-        name="Proyectos"
-        parent="menu_digitalizacion_root"
-        sequence="10"
-        groups="digitalizacion.group_digitalizacion_admin"/>
+    <menuitem id="menu_digitalizacion_proyectos_root" name="Proyectos" parent="menu_digitalizacion_root" sequence="10" groups="digitalizacion.group_digitalizacion_admin" />
 
-    <menuitem
-        id="menu_digitalizacion_proyecto"
-        name="Proyectos"
-        parent="menu_digitalizacion_proyectos_root"
-        action="digitalizacion.action_digitalizacion_proyecto"
-        sequence="10"
-        groups="digitalizacion.group_digitalizacion_admin"/>
+    <menuitem id="menu_digitalizacion_proyecto" name="Proyectos" parent="menu_digitalizacion_proyectos_root" action="digitalizacion.action_digitalizacion_proyecto" sequence="10" groups="digitalizacion.group_digitalizacion_admin" />
 
-    <menuitem
-        id="menu_digitalizacion_asignacion"
-        name="Asignar Líderes"
-        parent="menu_digitalizacion_proyectos_root"
-        action="digitalizacion.action_digitalizacion_asignacion"
-        sequence="20"
-        groups="digitalizacion.group_digitalizacion_admin"/>
-
+    <menuitem id="menu_digitalizacion_asignacion" name="Asignar Líderes" parent="menu_digitalizacion_proyectos_root" action="digitalizacion.action_digitalizacion_asignacion" sequence="20" groups="digitalizacion.group_digitalizacion_admin" />
     <!-- ── Operaciones ─────────────────────────────────────────────── -->
-    <menuitem
-        id="menu_digitalizacion_operaciones"
-        name="Operaciones"
-        parent="menu_digitalizacion_root"
-        sequence="20"
-        groups="digitalizacion.group_digitalizacion_admin"/>
+    <menuitem id="menu_digitalizacion_operaciones" name="Operaciones" parent="menu_digitalizacion_root" sequence="20" groups="digitalizacion.group_digitalizacion_admin" />
 
-    <menuitem
-        id="menu_digitalizacion_miembro"
-        name="Miembros del Equipo"
-        parent="menu_digitalizacion_operaciones"
-        action="digitalizacion.action_digitalizacion_miembro"
-        sequence="10"
-        groups="digitalizacion.group_digitalizacion_admin"/>
+    <menuitem id="menu_digitalizacion_miembro" name="Miembros del Equipo" parent="menu_digitalizacion_operaciones" action="digitalizacion.action_digitalizacion_miembro" sequence="10" groups="digitalizacion.group_digitalizacion_admin" />
 
-    <menuitem
-        id="menu_digitalizacion_registro"
-        name="Registros de Trabajo"
-        parent="menu_digitalizacion_operaciones"
-        action="digitalizacion.action_digitalizacion_registro"
-        sequence="20"
-        groups="digitalizacion.group_digitalizacion_admin"/>
-
+    <menuitem id="menu_digitalizacion_registro" name="Registros de Trabajo" parent="menu_digitalizacion_operaciones" action="digitalizacion.action_digitalizacion_registro" sequence="20" groups="digitalizacion.group_digitalizacion_admin" />
     <!-- ── Configuración ───────────────────────────────────────────── -->
-    <menuitem
-        id="menu_digitalizacion_configuracion"
-        name="Configuración"
-        parent="menu_digitalizacion_root"
-        sequence="30"
-        groups="digitalizacion.group_digitalizacion_admin"/>
+    <menuitem id="menu_digitalizacion_configuracion" name="Configuración" parent="menu_digitalizacion_root" sequence="30" groups="digitalizacion.group_digitalizacion_admin" />
 
-    <menuitem
-        id="menu_digitalizacion_etapa"
-        name="Etapas"
-        parent="menu_digitalizacion_configuracion"
-        action="digitalizacion.action_digitalizacion_etapa"
-        sequence="10"
-        groups="digitalizacion.group_digitalizacion_admin"/>
+    <menuitem id="menu_digitalizacion_etapa" name="Etapas" parent="menu_digitalizacion_configuracion" action="digitalizacion.action_digitalizacion_etapa" sequence="10" groups="digitalizacion.group_digitalizacion_admin" />
 
-    <menuitem
-        id="menu_digitalizacion_escaner"
-        name="Tipos de Escáner"
-        parent="menu_digitalizacion_configuracion"
-        action="digitalizacion.action_digitalizacion_escaner"
-        sequence="20"
-        groups="digitalizacion.group_digitalizacion_admin"/>
-
+    <menuitem id="menu_digitalizacion_escaner" name="Tipos de Escáner" parent="menu_digitalizacion_configuracion" action="digitalizacion.action_digitalizacion_escaner" sequence="20" groups="digitalizacion.group_digitalizacion_admin" />
+    <!-- ================================================================
+         DASHBOARD ADMIN - Consolidado al final para asegurar dependencias
+         ================================================================ -->
+    <!-- SECCION C — Produccion por digitalizador (grafico de barras) -->
+    <record id="view_registro_graph_por_digitalizador" model="ir.ui.view">
+        <field name="name">digitalizacion.registro.graph.digitalizador</field>
+        <field name="model">digitalizacion.registro</field>
+        <field name="arch" type="xml">
+            <graph string="Produccion por Digitalizador" type="bar" stacked="0">
+                <field name="miembro_id" type="row" />
+                <field name="total_escaneos" string="Escaneos" type="measure" />
+                <field name="total_folios" string="Folios fisicos" type="measure" />
+                <field name="expedientes_indexados" string="Exp. indexados" type="measure" />
+                <field name="folios_indexados" string="Folios indexados" type="measure" />
+            </graph>
+        </field>
+    </record>
+    <!-- SECCION D — Tendencia diaria de escaneos (grafico de linea) -->
+    <record id="view_registro_graph_tendencia" model="ir.ui.view">
+        <field name="name">digitalizacion.registro.graph.tendencia</field>
+        <field name="model">digitalizacion.registro</field>
+        <field name="arch" type="xml">
+            <graph string="Tendencia Diaria de Escaneos" type="line">
+                <field name="fecha" type="row" interval="day" />
+                <field name="proyecto_id" type="col" />
+                <field name="total_escaneos" string="Escaneos" type="measure" />
+            </graph>
+        </field>
+    </record>
+    <!-- SECCION C — Pivot: analisis cruzado -->
+    <record id="view_registro_pivot_dashboard" model="ir.ui.view">
+        <field name="name">digitalizacion.registro.pivot.dashboard</field>
+        <field name="model">digitalizacion.registro</field>
+        <field name="arch" type="xml">
+            <pivot string="Produccion por Digitalizador" disable_linking="false">
+                <field name="proyecto_id" type="row" />
+                <field name="miembro_id" type="row" />
+                <field name="etapa_id" type="col" />
+                <field name="total_escaneos" string="Escaneos" type="measure" />
+                <field name="total_folios" string="Folios fisicos" type="measure" />
+                <field name="expedientes_indexados" string="Exp. indexados" type="measure" />
+                <field name="folios_indexados" string="Folios indexados" type="measure" />
+            </pivot>
+        </field>
+    </record>
+    <!-- SECCION E — Filtros del dashboard -->
+    <record id="view_registro_search_dashboard" model="ir.ui.view">
+        <field name="name">digitalizacion.registro.search.dashboard</field>
+        <field name="model">digitalizacion.registro</field>
+        <field name="arch" type="xml">
+            <search string="Filtros Dashboard">
+                <field name="proyecto_id" string="Proyecto" filter_domain="[('proyecto_id.name', 'ilike', self)]" />
+                <field name="miembro_id" string="Digitalizador" filter_domain="[('miembro_id.partner_id.name', 'ilike', self)]" />
+                <filter name="este_mes" string="Este mes" domain="[('fecha', '&gt;=', context_today().strftime('%Y-%m-01')), ('fecha', '&lt;=', context_today().strftime('%Y-%m-%d'))]" />
+                <filter name="mes_anterior" string="Mes anterior" domain="[('fecha', '&gt;=', (context_today() + relativedelta(months=-1, day=1)).strftime('%Y-%m-%d')), ('fecha', '&lt;=', (context_today() + relativedelta(day=1, days=-1)).strftime('%Y-%m-%d'))]" />
+                <filter name="este_anio" string="Este año" domain="[('fecha', '&gt;=', context_today().strftime('%Y-01-01')), ('fecha', '&lt;=', context_today().strftime('%Y-%m-%d'))]" />
+                <separator />
+                <group string="Agrupar por" expand="1">
+                    <filter name="por_proyecto" string="Proyecto" context="{'group_by': 'proyecto_id'}" />
+                    <filter name="por_digitalizador" string="Digitalizador" context="{'group_by': 'miembro_id'}" />
+                    <filter name="por_etapa" string="Etapa" context="{'group_by': 'etapa_id'}" />
+                    <filter name="por_fecha_dia" string="Dia" context="{'group_by': 'fecha:day'}" />
+                    <filter name="por_fecha_mes" string="Mes" context="{'group_by': 'fecha:month'}" />
+                </group>
+            </search>
+        </field>
+    </record>
+    <!-- ACCION DEL DASHBOARD -->
+    <record id="action_digitalizacion_dashboard_admin" model="ir.actions.act_window">
+        <field name="name">Dashboard de Produccion</field>
+        <field name="res_model">digitalizacion.registro</field>
+        <field name="view_mode">graph,pivot,list</field>
+        <field name="search_view_id" ref="view_registro_search_dashboard" />
+        <field name="view_ids" eval="[(5, 0, 0),
+                       (0, 0, {'view_mode': 'graph', 'view_id': ref('view_registro_graph_por_digitalizador')}),
+                       (0, 0, {'view_mode': 'pivot', 'view_id': ref('view_registro_pivot_dashboard')})]" />
+        <field name="context">{
+            'search_default_este_mes': 1,
+            'search_default_por_proyecto': 1
+        }</field>
+    </record>
+    <!-- MENU ITEM DEL DASHBOARD -->
+    <menuitem id="menu_dashboard_admin" name="Dashboard" parent="menu_digitalizacion_operaciones" action="action_digitalizacion_dashboard_admin" sequence="1" groups="digitalizacion.group_digitalizacion_admin" />
 </odoo>

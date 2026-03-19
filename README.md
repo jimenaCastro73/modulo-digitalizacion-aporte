@@ -427,3 +427,5 @@ docker compose up -d
 ---
 
 *Última actualización: Día 32 — Sábado 14 de Marzo, 2026*
+
+docker exec odoo.17.otecglobal odoo -u digitalizacion -d postgres --stop-after-init
