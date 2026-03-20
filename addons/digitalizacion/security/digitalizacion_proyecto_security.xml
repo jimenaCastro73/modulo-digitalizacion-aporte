@@ -5,7 +5,7 @@
         <record id="rule_lider_solo_sus_proyectos" model="ir.rule">
             <field name="name">Lider ve sus proyectos activos</field>
             <field name="model_id" ref="model_digitalizacion_proyecto" />
-            <field name="groups" eval="[(4, ref('digitalizacion_group_lider'))]" />
+            <field name="groups" eval="[(4, ref(&quot;group_digitalizacion_lider&quot;))]" />
             <field name="domain_force">[('asignacion_ids.lider_id', '=', user.id),
                  ('asignacion_ids.active', '=', True)]</field>
         </record>

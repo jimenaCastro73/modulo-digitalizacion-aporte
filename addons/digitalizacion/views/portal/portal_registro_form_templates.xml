@@ -5,17 +5,17 @@
             <t t-set="breadcrumbs_searchbar" t-value="True" />
             <div class="o_digitalizacion_page pb-5" style="margin-bottom: 80px;">
                 <!-- Encabezado -->
-                <div class="o_digitalizacion_form-header">
+                <div class="o_digitalizacion_form_header">
                     <div class="container-fluid px-3 px-md-4">
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
                                 <h2>Registro de Producción</h2>
-                                <div class="o_digitalizacion_project-name">
+                                <div class="o_digitalizacion_project_name">
                                     <i class="fa fa-folder-open-o me-1" />
                                     <t t-esc="proyecto.name" />
                                 </div>
                             </div>
-                            <a href="/digitalizacion/v1/dashboard" class="o_digitalizacion_btn o_digitalizacion_btn--outline" style="font-size:.8rem;">
+                            <a href="/digitalizacion/v1/dashboard" class="o_digitalizacion_btn o_digitalizacion_btn_outline" style="font-size:.8rem;">
                                 <i class="fa fa-arrow-left" />
                                 Volver
                             </a>
@@ -32,24 +32,24 @@
                         </t>
                     </t>
                     <!-- Mensajes de estado -->
-                    <div id="msg-guardando" class="o_digitalizacion_alert o_digitalizacion_alert--info d-none mb-3">
+                    <div id="msg-guardando" class="o_digitalizacion_alert o_digitalizacion_alert_info d-none mb-3">
                         <i class="fa fa-spinner fa-spin" />
                         Guardando registros, por favor espere...
                     </div>
-                    <div id="msg-exito" class="o_digitalizacion_alert o_digitalizacion_alert--success d-none mb-3">
+                    <div id="msg-exito" class="o_digitalizacion_alert o_digitalizacion_alert_success d-none mb-3">
                         <i class="fa fa-check-circle" />
                         ¡Registros guardados exitosamente!
                     </div>
                     <div id="msg-advertencias" class="d-none mb-3" />
                     <!-- Sin miembros -->
-                    <div id="msg-sin-miembros" class="o_digitalizacion_alert o_digitalizacion_alert--warning d-none mb-3">
+                    <div id="msg-sin-miembros" class="o_digitalizacion_alert o_digitalizacion_alert_warning d-none mb-3">
                         <i class="fa fa-exclamation-triangle" />
                         No hay digitalizadores activos en este proyecto. Agrega miembros desde la
                         <a t-attf-href="/digitalizacion/v1/proyectos/#{proyecto.id}/miembros" style="color: inherit; font-weight: 700;">gestión del equipo</a>
                         .
                     </div>
                     <!-- Selector de fecha -->
-                    <div class="o_digitalizacion_date-bar mb-4">
+                    <div class="o_digitalizacion_date_bar mb-4">
                         <label for="inputFecha">
                             <i class="fa fa-calendar me-1" />
                             Fecha de producción
@@ -65,18 +65,18 @@
                     <!-- Contenedor de filas -->
                     <div id="contenedor-filas" class="d-flex flex-column gap-3 mb-4" />
                     <!-- Botón agregar fila -->
-                    <button id="btn-agregar-fila" type="button" class="o_digitalizacion_btn o_digitalizacion_btn--outline">
+                    <button id="btn-agregar-fila" type="button" class="o_digitalizacion_btn o_digitalizacion_btn_outline">
                         <i class="fa fa-plus" />
                         Añadir digitalizador
                     </button>
                 </div>
                 <!-- Footer fijo con botón guardar -->
-                <div class="o_digitalizacion_sticky-footer">
+                <div class="o_digitalizacion_sticky_footer">
                     <div class="container-fluid px-3 px-md-4 d-flex align-items-center justify-content-between gap-2">
                         <div class="d-flex align-items-center gap-2">
                             <span id="footer-contador" class="text-muted small">0 filas listas</span>
                         </div>
-                        <button id="btn-guardar-registros" type="button" class="o_digitalizacion_btn o_digitalizacion_btn--primary o_digitalizacion_btn--lg">
+                        <button id="btn-guardar-registros" type="button" class="o_digitalizacion_btn o_digitalizacion_btn_primary o_digitalizacion_btn_lg">
                             <i class="fa fa-paper-plane" />
                             Guardar Registros
                         </button>
@@ -86,178 +86,229 @@
             <script type="text/javascript">
                 <![CDATA[
                 (function() {
-                'use strict';
-                var csrfToken = ']]><t t-esc="request.csrf_token()" /><![CDATA[';
+                "use strict";
+                const csrfToken = "]]><t t-esc="request.csrf_token()" /><![CDATA[";
 
-                var rowCounter = 0;
-                var etapas = [], miembros = [], escaneres = [];
+                let rowCounter = 0;
+                let etapas = [];
+                let miembros = [];
+                let escaneres = [];
 
-                var REGLAS = {
-                    'limpieza':     ['caja', 'cant_cajas', 'expedientes', 'folios'],
-                    'ordenado':     ['caja', 'cant_cajas', 'expedientes', 'folios'],
-                    'digitalizado': ['folios', 'escaneos', 'escaner'],
-                    'editado':      ['exp_editados', 'folios_editados'],
-                    'indexado':     ['exp_indexados', 'folios_indexados'],
+                const REGLAS = {
+                    "limpieza":     ["caja", "cant_cajas", "expedientes", "folios"],
+                    "ordenado":     ["caja", "cant_cajas", "expedientes", "folios"],
+                    "digitalizado": ["folios", "escaneos", "escaner"],
+                    "editado":      ["exp_editados", "folios_editados"],
+                    "indexado":     ["exp_indexados", "folios_indexados"],
                 };
-                var TODOS_CAMPOS = ['caja','cant_cajas','expedientes','folios',
-                                      'escaneos','escaner','exp_editados','folios_editados',
-                                      'exp_indexados','folios_indexados'];
+                const TODOS_CAMPOS = ["caja", "cant_cajas", "expedientes", "folios",
+                                      "escaneos", "escaner", "exp_editados", "folios_editados",
+                                      "exp_indexados", "folios_indexados"];
 
-                function getRegla(nombreEtapa) {
-                    var n = (nombreEtapa || '').toLowerCase();
-                    for (var key in REGLAS) {
-                        if (n.includes(key)) return REGLAS[key];
+                /**
+                 * Obtiene la regla de visibilidad según el nombre de la etapa.
+                 * 
+                 * @private
+                 * @param {string} nombreEtapa
+                 * @returns {Array} Listado de campos visibles.
+                 */
+                function _getRegla(nombreEtapa) {
+                    const n = (nombreEtapa || "").toLowerCase();
+                    for (const key in REGLAS) {
+                        if (n.includes(key)) {
+                            return REGLAS[key];
+                        }
                     }
                     return [];
                 }
 
-                function actualizarCampos(card) {
-                    var select = card.querySelector('.input-etapa');
-                    var opt = select.options[select.selectedIndex];
-                    var nombreEtapa = opt ? opt.getAttribute('data-name') || '' : '';
-                    var visibles = getRegla(nombreEtapa);
+                /**
+                 * Actualiza la visibilidad de los campos en una fila según la etapa seleccionada.
+                 * 
+                 * @private
+                 * @param {HTMLElement} card Fila del formulario.
+                 */
+                function _actualizarCampos(card) {
+                    const select = card.querySelector(".input-etapa");
+                    const opt = select.options[select.selectedIndex];
+                    const nombreEtapa = opt ? opt.getAttribute("data-name") || "" : "";
+                    const visibles = _getRegla(nombreEtapa);
 
                     TODOS_CAMPOS.forEach(function(campo) {
-                        var wrapper = card.querySelector('[data-campo="' + campo + '"]');
-                        if (!wrapper) return;
+                        const wrapper = card.querySelector("[data-campo=\"" + campo + "\"]");
+                        if (!wrapper) {
+                            return;
+                        }
                         if (visibles.includes(campo)) {
-                            wrapper.classList.remove('disabled');
-                            wrapper.style.display = '';
+                            wrapper.classList.remove("disabled");
+                            wrapper.style.display = "";
                         } else {
-                            wrapper.classList.add('disabled');
-                            wrapper.style.display = 'none';
-                            var inp = wrapper.querySelector('input, select');
-                            if (inp) { inp.value = ''; inp.disabled = true; }
+                            wrapper.classList.add("disabled");
+                            wrapper.style.display = "none";
+                            const inp = wrapper.querySelector("input, select");
+                            if (inp) { 
+                                inp.value = ""; 
+                                inp.disabled = true; 
+                            }
                         }
                     });
                     visibles.forEach(function(campo) {
-                        var wrapper = card.querySelector('[data-campo="' + campo + '"]');
-                        if (!wrapper) return;
-                        var inp = wrapper.querySelector('input, select');
-                        if (inp) inp.disabled = false;
+                        const wrapper = card.querySelector("[data-campo=\"" + campo + "\"]");
+                        if (!wrapper) {
+                            return;
+                        }
+                        const inp = wrapper.querySelector("input, select");
+                        if (inp) {
+                            inp.disabled = false;
+                        }
                     });
-                    actualizarContador();
+                    _actualizarContador();
                 }
 
-                function crearSelect(className, opciones, placeholder, required) {
-                    var sel = document.createElement('select');
+                /**
+                 * Crea un elemento select con opciones dinámicas.
+                 * 
+                 * @private
+                 * @param {string} className Clase CSS.
+                 * @param {Array} opciones Listado de objetos {id, name, dataName}.
+                 * @param {string} placeholder Texto inicial.
+                 * @param {boolean} required Si es obligatorio.
+                 * @returns {HTMLSelectElement} Elemento select.
+                 */
+                function _crearSelect(className, opciones, placeholder, required) {
+                    const sel = document.createElement("select");
                     sel.className = className;
-                    if (required) sel.required = true;
-                    var defOpt = document.createElement('option');
-                    defOpt.value = '';
+                    if (required) {
+                        sel.required = true;
+                    }
+                    const defOpt = document.createElement("option");
+                    defOpt.value = "";
                     defOpt.textContent = placeholder;
                     sel.appendChild(defOpt);
                     opciones.forEach(function(item) {
-                        var o = document.createElement('option');
+                        const o = document.createElement("option");
                         o.value = item.id;
                         o.textContent = item.name;
-                        if (item.dataName) o.setAttribute('data-name', item.dataName);
+                        if (item.dataName) {
+                            o.setAttribute("data-name", item.dataName);
+                        }
                         sel.appendChild(o);
                     });
                     return sel;
                 }
 
-                function crearFila() {
+                /**
+                 * Crea una nueva fila de registro en el formulario.
+                 * 
+                 * @private
+                 */
+                function _crearFila() {
                     rowCounter++;
-                    var id = rowCounter;
-                    var card = document.createElement('div');
-                    card.className = 'o_digitalizacion_row-card';
-                    card.id = 'fila-' + id;
+                    const id = rowCounter;
+                    const card = document.createElement("div");
+                    card.className = "o_digitalizacion_row_card";
+                    card.id = "fila-" + id;
 
                     /* Badge de número */
-                    var badge = document.createElement('span');
-                    badge.className = 'o_digitalizacion_row-num';
-                    badge.textContent = '#' + id;
+                    const badge = document.createElement("span");
+                    badge.className = "o_digitalizacion_row_num";
+                    badge.textContent = "#" + id;
                     card.appendChild(badge);
 
                     /* Fila principal: digitalizador, etapa, eliminar */
-                    var row1 = document.createElement('div');
-                    row1.className = 'row g-2 mt-1';
+                    const row1 = document.createElement("div");
+                    row1.className = "row g-2 mt-1";
 
                     /* Digitalizador */
-                    var col1 = document.createElement('div');
-                    col1.className = 'col-12 col-sm-6 col-md-4';
-                    var field1 = document.createElement('div');
-                    field1.className = 'o_digitalizacion_field';
-                    var label1 = document.createElement('label');
-                    label1.textContent = 'Digitalizador ';
-                    var ast1 = document.createElement('span');
-                    ast1.className = 'text-danger'; ast1.textContent = '*';
+                    const col1 = document.createElement("div");
+                    col1.className = "col-12 col-sm-6 col-md-4";
+                    const field1 = document.createElement("div");
+                    field1.className = "o_digitalizacion_field";
+                    const label1 = document.createElement("label");
+                    label1.textContent = "Digitalizador ";
+                    const ast1 = document.createElement("span");
+                    ast1.className = "text-danger"; 
+                    ast1.textContent = "*";
                     label1.appendChild(ast1);
-                    var selMiembro = crearSelect('input-miembro',
+                    const selMiembro = _crearSelect("input-miembro",
                         miembros.map(function(m) { return {id: m.id, name: m.name}; }),
-                        'Seleccione digitalizador...', true);
+                        "Seleccione digitalizador...", true);
                     field1.appendChild(label1);
                     field1.appendChild(selMiembro);
                     col1.appendChild(field1);
                     row1.appendChild(col1);
 
                     /* Etapa */
-                    var col2 = document.createElement('div');
-                    col2.className = 'col-12 col-sm-6 col-md-4';
-                    var field2 = document.createElement('div');
-                    field2.className = 'o_digitalizacion_field';
-                    var label2 = document.createElement('label');
-                    label2.textContent = 'Etapa ';
-                    var ast2 = document.createElement('span');
-                    ast2.className = 'text-danger'; ast2.textContent = '*';
+                    const col2 = document.createElement("div");
+                    col2.className = "col-12 col-sm-6 col-md-4";
+                    const field2 = document.createElement("div");
+                    field2.className = "o_digitalizacion_field";
+                    const label2 = document.createElement("label");
+                    label2.textContent = "Etapa ";
+                    const ast2 = document.createElement("span");
+                    ast2.className = "text-danger"; 
+                    ast2.textContent = "*";
                     label2.appendChild(ast2);
-                    var selEtapa = crearSelect('input-etapa',
+                    const selEtapa = _crearSelect("input-etapa",
                         etapas.map(function(e) { return {id: e.id, name: e.name, dataName: e.name.toLowerCase()}; }),
-                        'Seleccione etapa...', true);
+                        "Seleccione etapa...", true);
                     field2.appendChild(label2);
                     field2.appendChild(selEtapa);
                     col2.appendChild(field2);
                     row1.appendChild(col2);
 
                     /* Botón eliminar */
-                    var col3 = document.createElement('div');
-                    col3.className = 'col-12 col-sm-12 col-md-4 d-flex align-items-end justify-content-end';
-                    var btnElim = document.createElement('button');
-                    btnElim.type = 'button';
-                    btnElim.className = 'o_digitalizacion_btn o_digitalizacion_btn--ghost btn-eliminar w-100';
-                    var icoTrash = document.createElement('i');
-                    icoTrash.className = 'fa fa-trash-o';
+                    const col3 = document.createElement("div");
+                    col3.className = "col-12 col-sm-12 col-md-4 d-flex align-items-end justify-content-end";
+                    const btnElim = document.createElement("button");
+                    btnElim.type = "button";
+                    btnElim.className = "o_digitalizacion_btn o_digitalizacion_btn_ghost btn-eliminar w-100";
+                    const icoTrash = document.createElement("i");
+                    icoTrash.className = "fa fa-trash-o";
                     btnElim.appendChild(icoTrash);
-                    btnElim.appendChild(document.createTextNode(' Eliminar fila'));
+                    btnElim.appendChild(document.createTextNode(" Eliminar fila"));
                     col3.appendChild(btnElim);
                     row1.appendChild(col3);
                     card.appendChild(row1);
 
                     /* Separador "Datos de producción" */
-                    var sepDiv = document.createElement('div');
-                    sepDiv.className = 'o_digitalizacion_optional-label mt-2';
-                    sepDiv.textContent = 'Datos de producción';
+                    const sepDiv = document.createElement("div");
+                    sepDiv.className = "o_digitalizacion_kpi_label mt-2";
+                    sepDiv.textContent = "Datos de producción";
                     card.appendChild(sepDiv);
 
                     /* Fila de campos de producción */
-                    var row2 = document.createElement('div');
-                    row2.className = 'row g-2';
+                    const row2 = document.createElement("div");
+                    row2.className = "row g-2";
 
-                    var camposDef = [
-                        {campo: 'caja', label: 'Caja / ID', type: 'text', cls: 'input-caja', col: 'col-6 col-sm-4 col-md-3', placeholder: 'Ej. A-1'},
-                        {campo: 'cant_cajas', label: 'Cant. cajas', type: 'number', cls: 'input-cant-cajas', col: 'col-6 col-sm-4 col-md-2'},
-                        {campo: 'expedientes', label: 'Expedientes', type: 'number', cls: 'input-expedientes', col: 'col-6 col-sm-4 col-md-2'},
-                        {campo: 'folios', label: 'Folios', type: 'number', cls: 'input-folios', col: 'col-6 col-sm-4 col-md-2'},
-                        {campo: 'escaneos', label: 'Escaneos', type: 'number', cls: 'input-escaneos', col: 'col-6 col-sm-4 col-md-2'},
-                        {campo: 'exp_editados', label: 'Exp. editados', type: 'number', cls: 'input-exp-editados', col: 'col-6 col-sm-4 col-md-2'},
-                        {campo: 'folios_editados', label: 'Folios editados', type: 'number', cls: 'input-folios-editados', col: 'col-6 col-sm-4 col-md-2'},
-                        {campo: 'exp_indexados', label: 'Exp. indexados', type: 'number', cls: 'input-exp-indexados', col: 'col-6 col-sm-4 col-md-2'},
-                        {campo: 'folios_indexados', label: 'Folios indexados', type: 'number', cls: 'input-folios-indexados', col: 'col-6 col-sm-4 col-md-2'},
+                    const camposDef = [
+                        {campo: "caja", label: "Caja / ID", type: "text", cls: "input-caja", col: "col-6 col-sm-4 col-md-3", placeholder: "Ej. A-1"},
+                        {campo: "cant_cajas", label: "Cant. cajas", type: "number", cls: "input-cant-cajas", col: "col-6 col-sm-4 col-md-2"},
+                        {campo: "expedientes", label: "Expedientes", type: "number", cls: "input-expedientes", col: "col-6 col-sm-4 col-md-2"},
+                        {campo: "folios", label: "Folios", type: "number", cls: "input-folios", col: "col-6 col-sm-4 col-md-2"},
+                        {campo: "escaneos", label: "Escaneos", type: "number", cls: "input-escaneos", col: "col-6 col-sm-4 col-md-2"},
+                        {campo: "exp_editados", label: "Exp. editados", type: "number", cls: "input-exp-editados", col: "col-6 col-sm-4 col-md-2"},
+                        {campo: "folios_editados", label: "Folios editados", type: "number", cls: "input-folios-editados", col: "col-6 col-sm-4 col-md-2"},
+                        {campo: "exp_indexados", label: "Exp. indexados", type: "number", cls: "input-exp-indexados", col: "col-6 col-sm-4 col-md-2"},
+                        {campo: "folios_indexados", label: "Folios indexados", type: "number", cls: "input-folios-indexados", col: "col-6 col-sm-4 col-md-2"},
                     ];
 
                     camposDef.forEach(function(def) {
-                        var colW = document.createElement('div');
-                        colW.className = def.col + ' o_digitalizacion_field';
-                        colW.setAttribute('data-campo', def.campo);
-                        colW.style.display = 'none';
-                        var lb = document.createElement('label');
+                        const colW = document.createElement("div");
+                        colW.className = def.col + " o_digitalizacion_field";
+                        colW.setAttribute("data-campo", def.campo);
+                        colW.style.display = "none";
+                        const lb = document.createElement("label");
                         lb.textContent = def.label;
-                        var inp = document.createElement('input');
+                        const inp = document.createElement("input");
                         inp.type = def.type;
                         inp.className = def.cls;
-                        if (def.type === 'number') inp.min = '0';
-                        if (def.placeholder) inp.placeholder = def.placeholder;
+                        if (def.type === "number") {
+                            inp.min = "0";
+                        }
+                        if (def.placeholder) {
+                            inp.placeholder = def.placeholder;
+                        }
                         inp.disabled = true;
                         colW.appendChild(lb);
                         colW.appendChild(inp);
@@ -265,29 +316,29 @@
                     });
 
                     /* Escáner (select) */
-                    var colEsc = document.createElement('div');
-                    colEsc.className = 'col-6 col-sm-4 col-md-3 o_digitalizacion_field';
-                    colEsc.setAttribute('data-campo', 'escaner');
-                    colEsc.style.display = 'none';
-                    var lbEsc = document.createElement('label');
-                    lbEsc.textContent = 'Escáner';
-                    var selEsc = crearSelect('input-escaner',
+                    const colEsc = document.createElement("div");
+                    colEsc.className = "col-6 col-sm-4 col-md-3 o_digitalizacion_field";
+                    colEsc.setAttribute("data-campo", "escaner");
+                    colEsc.style.display = "none";
+                    const lbEsc = document.createElement("label");
+                    lbEsc.textContent = "Escáner";
+                    const selEsc = _crearSelect("input-escaner",
                         escaneres.map(function(eq) { return {id: eq.id, name: eq.name}; }),
-                        'No aplica', false);
+                        "No aplica", false);
                     selEsc.disabled = true;
                     colEsc.appendChild(lbEsc);
                     colEsc.appendChild(selEsc);
                     row2.appendChild(colEsc);
 
                     /* Observaciones */
-                    var colObs = document.createElement('div');
-                    colObs.className = 'col-12 o_digitalizacion_field';
-                    var lbObs = document.createElement('label');
-                    lbObs.textContent = 'Observaciones';
-                    var inpObs = document.createElement('input');
-                    inpObs.type = 'text';
-                    inpObs.className = 'input-observacion';
-                    inpObs.placeholder = 'Opcional...';
+                    const colObs = document.createElement("div");
+                    colObs.className = "col-12 o_digitalizacion_field";
+                    const lbObs = document.createElement("label");
+                    lbObs.textContent = "Observaciones";
+                    const inpObs = document.createElement("input");
+                    inpObs.type = "text";
+                    inpObs.className = "input-observacion";
+                    inpObs.placeholder = "Opcional...";
                     colObs.appendChild(lbObs);
                     colObs.appendChild(inpObs);
                     row2.appendChild(colObs);
@@ -295,136 +346,162 @@
                     card.appendChild(row2);
 
                     /* Listeners */
-                    selEtapa.addEventListener('change', function() {
-                        actualizarCampos(card);
+                    selEtapa.addEventListener("change", function() {
+                        _actualizarCampos(card);
                     });
-                    btnElim.addEventListener('click', function() {
+                    btnElim.addEventListener("click", function() {
                         card.remove();
-                        if (document.querySelectorAll('.o_digitalizacion_row-card').length === 0) crearFila();
-                        actualizarContador();
+                        if (document.querySelectorAll(".o_digitalizacion_row_card").length === 0) {
+                            _crearFila();
+                        }
+                        _actualizarContador();
                     });
-                    selMiembro.addEventListener('change', actualizarContador);
+                    selMiembro.addEventListener("change", _actualizarContador);
 
-                    document.getElementById('contenedor-filas').appendChild(card);
-                    actualizarCampos(card);
+                    document.getElementById("contenedor-filas").appendChild(card);
+                    _actualizarCampos(card);
                 }
 
-                function actualizarContador() {
-                    var filas = document.querySelectorAll('.o_digitalizacion_row-card');
-                    var completas = Array.from(filas).filter(function(f) {
-                        return f.querySelector('.input-miembro').value && f.querySelector('.input-etapa').value;
+                /**
+                 * Actualiza el contador de filas completas en el footer.
+                 * 
+                 * @private
+                 */
+                function _actualizarContador() {
+                    const filas = document.querySelectorAll(".o_digitalizacion_row_card");
+                    const completas = Array.from(filas).filter(function(f) {
+                        return f.querySelector(".input-miembro").value && f.querySelector(".input-etapa").value;
                     }).length;
-                    var el = document.getElementById('footer-contador');
-                    if (el) el.textContent = completas + ' de ' + filas.length + ' filas completas';
-                }
-
-                function mostrarMensaje(tipo, texto) {
-                    var ids = { info: 'msg-guardando', success: 'msg-exito', warning: 'msg-advertencias' };
-                    Object.values(ids).forEach(function(id) {
-                        var el = document.getElementById(id);
-                        if (el) el.classList.add('d-none');
-                    });
-                    var el = document.getElementById(ids[tipo] || 'msg-exito');
+                    const el = document.getElementById("footer-contador");
                     if (el) {
-                        if (texto) el.textContent = texto;
-                        el.classList.remove('d-none');
+                        el.textContent = completas + " de " + filas.length + " filas completas";
                     }
                 }
 
-                document.addEventListener('DOMContentLoaded', function() {
-                    var proyectoId = document.getElementById('proyecto_id').value;
-                    etapas    = JSON.parse(document.getElementById('etapas_data').value    || '[]');
-                    miembros  = JSON.parse(document.getElementById('miembros_data').value  || '[]');
-                    escaneres = JSON.parse(document.getElementById('escaneres_data').value || '[]');
+                /**
+                 * Muestra un mensaje de estado en el formulario.
+                 * 
+                 * @private
+                 * @param {string} tipo 'info', 'success' o 'warning'.
+                 * @param {string} [texto] Mensaje opcional.
+                 */
+                function _mostrarMensaje(tipo, texto) {
+                    const ids = { 
+                        "info": "msg-guardando", 
+                        "success": "msg-exito", 
+                        "warning": "msg-advertencias" 
+                    };
+                    Object.values(ids).forEach(function(id) {
+                        const el = document.getElementById(id);
+                        if (el) {
+                            el.classList.add("d-none");
+                        }
+                    });
+                    const el = document.getElementById(ids[tipo] || "msg-exito");
+                    if (el) {
+                        if (texto) {
+                            el.textContent = texto;
+                        }
+                        el.classList.remove("d-none");
+                    }
+                }
+
+                document.addEventListener("DOMContentLoaded", function() {
+                    const proyectoId = document.getElementById("proyecto_id").value;
+                    etapas    = JSON.parse(document.getElementById("etapas_data").value    || "[]");
+                    miembros  = JSON.parse(document.getElementById("miembros_data").value  || "[]");
+                    escaneres = JSON.parse(document.getElementById("escaneres_data").value || "[]");
 
                     if (miembros.length === 0) {
-                        document.getElementById('msg-sin-miembros').classList.remove('d-none');
-                        document.getElementById('btn-agregar-fila').disabled = true;
-                        document.getElementById('btn-guardar-registros').disabled = true;
+                        document.getElementById("msg-sin-miembros").classList.remove("d-none");
+                        document.getElementById("btn-agregar-fila").disabled = true;
+                        document.getElementById("btn-guardar-registros").disabled = true;
                         return;
                     }
 
-                    crearFila();
+                    _crearFila();
 
-                    document.getElementById('btn-agregar-fila').addEventListener('click', crearFila);
+                    document.getElementById("btn-agregar-fila").addEventListener("click", _crearFila);
 
-                    document.getElementById('btn-guardar-registros').addEventListener('click', function() {
-                        var btnGuardar = this;
-                        var filas = document.querySelectorAll('.o_digitalizacion_row-card');
-                        var payload = [];
-                        var valido = true;
+                    document.getElementById("btn-guardar-registros").addEventListener("click", function() {
+                        const btnGuardar = this;
+                        const filas = document.querySelectorAll(".o_digitalizacion_row_card");
+                        const payload = [];
+                        let valido = true;
 
                         filas.forEach(function(card) {
-                            card.classList.remove('error');
-                            var miembroId = card.querySelector('.input-miembro').value;
-                            var etapaId   = card.querySelector('.input-etapa').value;
+                            card.classList.remove("error");
+                            const miembroId = card.querySelector(".input-miembro").value;
+                            const etapaId   = card.querySelector(".input-etapa").value;
                             if (!miembroId || !etapaId) {
                                 valido = false;
-                                card.classList.add('error');
+                                card.classList.add("error");
                                 return;
                             }
-                            var escVal = card.querySelector('.input-escaner');
+                            const escVal = card.querySelector(".input-escaner");
                             payload.push({
-                                miembro_id:             parseInt(miembroId),
-                                etapa_id:               parseInt(etapaId),
-                                no_caja:                card.querySelector('.input-caja').value || '',
-                                cantidad_cajas:         parseInt(card.querySelector('.input-cant-cajas').value)    || 0,
-                                no_expedientes:         parseInt(card.querySelector('.input-expedientes').value)   || 0,
-                                total_folios:           parseInt(card.querySelector('.input-folios').value)        || 0,
-                                total_escaneos:         parseInt(card.querySelector('.input-escaneos').value)      || 0,
-                                tipo_escaner_ids:       (escVal && escVal.value) ? [parseInt(escVal.value)] : [],
-                                expedientes_editados:   parseInt(card.querySelector('.input-exp-editados').value)    || 0,
-                                folios_editados:        parseInt(card.querySelector('.input-folios-editados').value) || 0,
-                                expedientes_indexados:  parseInt(card.querySelector('.input-exp-indexados').value)   || 0,
-                                folios_indexados:       parseInt(card.querySelector('.input-folios-indexados').value)|| 0,
-                                observacion:            card.querySelector('.input-observacion').value || '',
+                                "miembro_id":             parseInt(miembroId),
+                                "etapa_id":               parseInt(etapaId),
+                                "no_caja":                card.querySelector(".input-caja").value || "",
+                                "cantidad_cajas":         parseInt(card.querySelector(".input-cant-cajas").value)    || 0,
+                                "no_expedientes":         parseInt(card.querySelector(".input-expedientes").value)   || 0,
+                                "total_folios":           parseInt(card.querySelector(".input-folios").value)        || 0,
+                                "total_escaneos":         parseInt(card.querySelector(".input-escaneos").value)      || 0,
+                                "tipo_escaner_ids":       (escVal && escVal.value) ? [parseInt(escVal.value)] : [],
+                                "expedientes_editados":   parseInt(card.querySelector(".input-exp-editados").value)    || 0,
+                                "folios_editados":        parseInt(card.querySelector(".input-folios-editados").value) || 0,
+                                "expedientes_indexados":  parseInt(card.querySelector(".input-exp-indexados").value)   || 0,
+                                "folios_indexados":       parseInt(card.querySelector(".input-folios-indexados").value)|| 0,
+                                "observacion":            card.querySelector(".input-observacion").value || "",
                             });
                         });
 
                         if (!valido || payload.length === 0) {
-                            mostrarMensaje('warning', 'Completa Digitalizador y Etapa en todas las filas marcadas en rojo.');
+                            _mostrarMensaje("warning", "Completa Digitalizador y Etapa en todas las filas marcadas en rojo.");
                             return;
                         }
 
                         btnGuardar.disabled = true;
-                        mostrarMensaje('info');
+                        _mostrarMensaje("info");
 
-                        fetch('/digitalizacion/api/v1/proyectos/' + proyectoId + '/registros', {
-                            method: 'POST',
+                        fetch("/digitalizacion/api/v1/proyectos/" + proyectoId + "/registros", {
+                            method: "POST",
                             headers: { 
-                                'Content-Type': 'application/json',
-                                'X-CSRF-Token': csrfToken
+                                "Content-Type": "application/json",
+                                "X-CSRF-Token": csrfToken
                             },
                             body: JSON.stringify({
-                                jsonrpc: '2.0', method: 'call', id: 1,
-                                params: {
-                                    proyecto_id: parseInt(proyectoId),
-                                    fecha: document.getElementById('inputFecha').value,
-                                    filas: payload
+                                "jsonrpc": "2.0", 
+                                "method": "call", 
+                                "id": 1,
+                                "params": {
+                                    "proyecto_id": parseInt(proyectoId),
+                                    "fecha": document.getElementById("inputFecha").value,
+                                    "filas": payload
                                 }
                             })
                         })
                         .then(function(r) { return r.json(); })
                         .then(function(response) {
-                            var data = response.result || {};
+                            const data = response.result || {};
                             btnGuardar.disabled = false;
-                            document.getElementById('msg-guardando').classList.add('d-none');
+                            document.getElementById("msg-guardando").classList.add("d-none");
                             if (data.success) {
-                                var adv = data.meta ? (data.meta.advertencias ? data.meta.advertencias.join(' | ') : null) : null;
-                                mostrarMensaje('success', adv);
-                                document.getElementById('contenedor-filas').innerHTML = '';
+                                const adv = data.meta ? (data.meta.advertencias ? data.meta.advertencias.join(" | ") : null) : null;
+                                _mostrarMensaje("success", adv);
+                                document.getElementById("contenedor-filas").innerHTML = "";
                                 rowCounter = 0;
-                                crearFila();
-                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                                _crearFila();
+                                window.scrollTo({ top: 0, behavior: "smooth" });
                             } else {
-                                var errMsg = data.error ? (data.error.message ? data.error.message : 'Error desconocido.') : 'Error desconocido.';
-                                mostrarMensaje('warning', errMsg);
+                                const errMsg = data.error ? (data.error.message ? data.error.message : "Error desconocido.") : "Error desconocido.";
+                                _mostrarMensaje("warning", errMsg);
                             }
                         })
                         .catch(function() {
                             btnGuardar.disabled = false;
-                            document.getElementById('msg-guardando').classList.add('d-none');
-                            mostrarMensaje('warning', 'Error de conexión al servidor. Intenta de nuevo.');
+                            document.getElementById("msg-guardando").classList.add("d-none");
+                            _mostrarMensaje("warning", "Error de conexión al servidor. Intenta de nuevo.");
                         });
                     });
                 });

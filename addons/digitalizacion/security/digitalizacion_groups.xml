@@ -8,14 +8,14 @@
     </record>
 
     <!-- Grupos definidos -->
-    <record id="digitalizacion_group_admin" model="res.groups">
+    <record id="group_digitalizacion_admin" model="res.groups">
         <field name="name">Administrador</field>
         <field name="category_id" ref="module_category_digitalizacion" />
         <field name="users" eval="[(4, ref('base.user_admin')), (4, ref('base.user_root'))]" />
         <field name="comment">Acceso completo al backoffice: proyectos, asignaciones, registros, catálogos y dashboard de producción.</field>
     </record>
 
-    <record id="digitalizacion_group_lider" model="res.groups">
+    <record id="group_digitalizacion_lider" model="res.groups">
         <field name="name">Líder de equipo</field>
         <field name="category_id" ref="module_category_digitalizacion" />
         <field name="comment">Acceso solo al portal web. Registra la producción diaria de su equipo y gestiona los miembros de su proyecto.</field>

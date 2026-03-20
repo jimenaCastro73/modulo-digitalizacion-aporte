@@ -165,7 +165,7 @@ class DigitalizacionPortal(http.Controller):
         asignaciones = _get_asignaciones_activas(lider_id)
         
         if not asignaciones:
-            return request.render("digitalizacion.wf02_dashboard", {
+            return request.render("digitalizacion.digitalizacion_portal_dashboard", {
                 "asignaciones": [],
                 "notifications": request.session.pop('notifications', []),
                 "page_name": "digitalizacion_dashboard",
@@ -194,7 +194,7 @@ class DigitalizacionPortal(http.Controller):
         resumen_etapas = service.get_summary_by_stage(domain_final)
         has_next = len(ultimos_registros) == limit
 
-        return request.render("digitalizacion.wf02_dashboard", {
+        return request.render("digitalizacion.digitalizacion_portal_dashboard", {
             "kpis": kpis,
             "ultimos_registros": ultimos_registros,
             "asignaciones": asignaciones,
@@ -227,7 +227,7 @@ class DigitalizacionPortal(http.Controller):
         ], order="partner_name asc")
         escaneres = request.env["digitalizacion.tipo_escaner"].sudo().search([("active", "=", True)], order="name asc")
         
-        return request.render("digitalizacion.wf03_formulario", {
+        return request.render("digitalizacion.digitalizacion_portal_registro_form", {
             "proyecto": proyecto,
             "etapas_json": json.dumps([{"id": e.id, "name": e.name} for e in etapas]),
             "miembros_json": json.dumps([{"id": m.id, "name": m.partner_name} for m in miembros]),
@@ -247,7 +247,7 @@ class DigitalizacionPortal(http.Controller):
             _add_notification(request, 'danger', str(e))
             return request.redirect("/digitalizacion/v1/dashboard")
             
-        return request.render("digitalizacion.wf04_proyecto_detalle", {
+        return request.render("digitalizacion.digitalizacion_portal_proyecto_detalle", {
             "proyecto": proyecto,
             "notifications": request.session.pop('notifications', []),
             "page_name": "digitalizacion_proyecto",
@@ -269,7 +269,7 @@ class DigitalizacionPortal(http.Controller):
             ("active", "=", True),
         ], order="partner_name asc")
         
-        return request.render("digitalizacion.wf05_miembros_equipo", {
+        return request.render("digitalizacion.digitalizacion_portal_miembros_equipo", {
             "proyecto": proyecto,
             "miembros": miembros,
             "notifications": request.session.pop('notifications', []),

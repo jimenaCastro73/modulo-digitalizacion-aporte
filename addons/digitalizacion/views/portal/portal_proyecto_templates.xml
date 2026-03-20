@@ -6,7 +6,7 @@
             <div class="o_digitalizacion_page pb-5">
                 <div class="container-fluid px-0 px-md-0">
                     <!-- Hero -->
-                    <div class="o_digitalizacion_project-hero">
+                    <div class="o_digitalizacion_project_hero">
                         <a href="/digitalizacion/v1/dashboard" class="o_digitalizacion_back" style="color: rgba(255,255,255,.7);">
                             <i class="fa fa-arrow-left" />
                             Volver al dashboard
@@ -33,8 +33,8 @@
                         </div>
                         <!-- Barra de progreso si hay meta -->
                         <t t-if="proyecto.meta_escaneos and proyecto.meta_escaneos > 0">
-                            <div class="o_digitalizacion_hero-progress">
-                                <div class="o_digitalizacion_hero-progress__label">
+                            <div class="o_digitalizacion_hero_progress">
+                                <div class="o_digitalizacion_hero_progress_label">
                                     <span>Progreso del proyecto</span>
                                     <span>
                                         <t t-esc="'%.1f' % proyecto.progreso" />
@@ -46,8 +46,8 @@
                                         esc.)
                                     </span>
                                 </div>
-                                <div class="o_digitalizacion_hero-progress__bar">
-                                    <div t-attf-style="width: #{proyecto.progreso}%" class="o_digitalizacion_hero-progress__fill" />
+                                <div class="o_digitalizacion_hero_progress_bar">
+                                    <div t-attf-style="width: #{proyecto.progreso}%" class="o_digitalizacion_hero_progress_fill" />
                                 </div>
                             </div>
                         </t>
@@ -64,60 +64,66 @@
                         <!-- Acciones principales -->
                         <div class="row g-3 mb-4 mt-1">
                             <div class="col-12 col-md-6">
-                                <a t-attf-href="/digitalizacion/v1/proyectos/#{proyecto.id}/form" class="o_digitalizacion_action-card">
-                                    <div class="o_digitalizacion_action-card__icon o_digitalizacion_action-card__icon--primary">
+                                <a t-attf-href="/digitalizacion/v1/proyectos/#{proyecto.id}/form" class="o_digitalizacion_action_card">
+                                    <div class="o_digitalizacion_action_card_icon o_digitalizacion_action_card_icon_primary">
                                         <i class="fa fa-pencil-square-o" />
                                     </div>
                                     <div>
-                                        <div class="o_digitalizacion_action-card__title">Registrar producción</div>
-                                        <div class="o_digitalizacion_action-card__desc">Carga el trabajo de hoy del equipo</div>
+                                        <div class="o_digitalizacion_action_card_title">Registrar producción</div>
+                                        <div class="o_digitalizacion_action_card_desc">Carga el trabajo de hoy del equipo</div>
                                     </div>
-                                    <i class="fa fa-chevron-right o_digitalizacion_action-card__arrow" />
+                                    <i class="fa fa-chevron-right o_digitalizacion_action_card_arrow" />
                                 </a>
                             </div>
                             <div class="col-12 col-md-6">
-                                <a t-attf-href="/digitalizacion/v1/proyectos/#{proyecto.id}/miembros" class="o_digitalizacion_action-card">
-                                    <div class="o_digitalizacion_action-card__icon o_digitalizacion_action-card__icon--green">
+                                <a t-attf-href="/digitalizacion/v1/proyectos/#{proyecto.id}/miembros" class="o_digitalizacion_action_card">
+                                    <div class="o_digitalizacion_action_card_icon o_digitalizacion_action_card_icon_green">
                                         <i class="fa fa-users" />
                                     </div>
                                     <div>
-                                        <div class="o_digitalizacion_action-card__title">Gestionar equipo</div>
-                                        <div class="o_digitalizacion_action-card__desc">Ver y agregar digitalizadores</div>
+                                        <div class="o_digitalizacion_action_card_title">Gestionar equipo</div>
+                                        <div class="o_digitalizacion_action_card_desc">Ver y agregar digitalizadores</div>
                                     </div>
-                                    <i class="fa fa-chevron-right o_digitalizacion_action-card__arrow" />
+                                    <i class="fa fa-chevron-right o_digitalizacion_action_card_arrow" />
                                 </a>
                             </div>
                         </div>
                         <!-- Info + descripción -->
                         <div class="row g-3">
                             <div class="col-12 col-md-5">
-                                <div class="o_digitalizacion_info-card">
-                                    <div class="o_digitalizacion_info-card__title">
+                                <div class="o_digitalizacion_info_card">
+                                    <div class="o_digitalizacion_info_card_title">
                                         <i class="fa fa-info-circle" />
                                         Información
                                     </div>
-                                    <div class="o_digitalizacion_info-row">
-                                        <span class="o_digitalizacion_info-row__label">Miembros</span>
-                                        <span class="o_digitalizacion_info-row__value">
+                                    <div class="o_digitalizacion_info_row">
+                                        <span class="o_digitalizacion_info_row_label">Miembros</span>
+                                        <span class="o_digitalizacion_info_row_value">
                                             <t t-esc="proyecto.total_miembros" />
                                         </span>
                                     </div>
-                                    <div class="o_digitalizacion_info-row">
-                                        <span class="o_digitalizacion_info-row__label">Registros totales</span>
-                                        <span class="o_digitalizacion_info-row__value">
+                                    <div class="o_digitalizacion_info_row">
+                                        <span class="o_digitalizacion_info_row_label">Miembros</span>
+                                        <span class="o_digitalizacion_info_row_value">
+                                            <t t-esc="proyecto.total_miembros" />
+                                        </span>
+                                    </div>
+                                    <div class="o_digitalizacion_info_row">
+                                        <span class="o_digitalizacion_info_row_label">Registros totales</span>
+                                        <span class="o_digitalizacion_info_row_value">
                                             <t t-esc="proyecto.total_registros" />
                                         </span>
                                     </div>
-                                    <div class="o_digitalizacion_info-row">
-                                        <span class="o_digitalizacion_info-row__label">Escaneos acumulados</span>
-                                        <span class="o_digitalizacion_info-row__value">
+                                    <div class="o_digitalizacion_info_row">
+                                        <span class="o_digitalizacion_info_row_label">Escaneos acumulados</span>
+                                        <span class="o_digitalizacion_info_row_value">
                                             <t t-esc="proyecto.total_escaneos" />
                                         </span>
                                     </div>
                                     <t t-if="proyecto.duracion_estimada">
-                                        <div class="o_digitalizacion_info-row">
-                                            <span class="o_digitalizacion_info-row__label">Duración estimada</span>
-                                            <span class="o_digitalizacion_info-row__value">
+                                        <div class="o_digitalizacion_info_row">
+                                            <span class="o_digitalizacion_info_row_label">Duración estimada</span>
+                                            <span class="o_digitalizacion_info_row_value">
                                                 <t t-esc="proyecto.duracion_estimada" />
                                                 días
                                             </span>
@@ -127,8 +133,8 @@
                             </div>
                             <div class="col-12 col-md-7">
                                 <t t-if="proyecto.description">
-                                    <div class="o_digitalizacion_desc-card h-100">
-                                        <div class="o_digitalizacion_info-card__title" style="margin-bottom:.75rem;">
+                                    <div class="o_digitalizacion_desc_card h-100">
+                                        <div class="o_digitalizacion_info_card_title" style="margin-bottom:.75rem;">
                                             <i class="fa fa-align-left" />
                                             Descripción
                                         </div>
@@ -136,7 +142,7 @@
                                     </div>
                                 </t>
                                 <t t-if="not proyecto.description">
-                                    <div class="o_digitalizacion_desc-card h-100 d-flex align-items-center justify-content-center" style="color: var(--o_digitalizacion_muted); font-style: italic;">Sin descripción registrada</div>
+                                    <div class="o_digitalizacion_desc_card h-100 d-flex align-items-center justify-content-center" style="color: var(--o_digitalizacion_muted); font-style: italic;">Sin descripción registrada</div>
                                 </t>
                             </div>
                         </div>

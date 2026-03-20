@@ -1,6 +1,7 @@
 /* =========================================================================
    ESTILOS DE PORTAL - MÓDULO DIGITALIZACIÓN (OTEC GLOBAL)
    Alineado con Odoo 17 Coding Guidelines (o_prefix, SCSS variables)
+   Premium Design: Gradients, Glassmorphism, Micro-animations
    ========================================================================= */
 
 /* ── Paleta de colores del proyecto ──────────────── */
@@ -17,350 +18,929 @@ $o-digitalizacion-color-900: #400807;
 $o-digitalizacion-color-950: #170303;
 $o-digitalizacion-color-white: #ffffff;
 
-/* ── Variables semánticas ── */
+$o-digitalizacion-font:          'Outfit', sans-serif;
 $o-digitalizacion-primary:       $o-digitalizacion-color-500;
+$o-digitalizacion-primary-dark:  $o-digitalizacion-color-700;
 $o-digitalizacion-primary-light: $o-digitalizacion-color-50;
-$o-digitalizacion-success:       #059669;
-$o-digitalizacion-warning:       #d97706;
-$o-digitalizacion-info:          #0284c7;
+$o-digitalizacion-success:       #10b981;
+$o-digitalizacion-warning:       #f59e0b;
+$o-digitalizacion-info:          #0ea5e9;
 $o-digitalizacion-danger:        $o-digitalizacion-color-500;
 $o-digitalizacion-surface:       $o-digitalizacion-color-white;
-$o-digitalizacion-bg:            #f8fafc;
-$o-digitalizacion-border:        $o-digitalizacion-color-100;
-$o-digitalizacion-text:          $o-digitalizacion-color-950;
-$o-digitalizacion-muted:         $o-digitalizacion-color-700;
-$o-digitalizacion-radius:        12px;
-$o-digitalizacion-shadow:        0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
-$o-digitalizacion-shadow-md:     0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.04);
+$o-digitalizacion-bg:            #fcfdfe;
+$o-digitalizacion-border:        rgba(222, 28, 25, 0.12);
+$o-digitalizacion-text:          #1e293b;
+$o-digitalizacion-muted:         #64748b;
+$o-digitalizacion-radius:        16px;
+$o-digitalizacion-radius-sm:     10px;
+
+/* ── Sombras Multicapa ── */
+$o-digitalizacion-shadow-sm: 0 2px 4px rgba(0,0,0,.02), 0 1px 0 rgba(0,0,0,.01);
+$o-digitalizacion-shadow:    0 10px 15px -3px rgba(0,0,0,.04), 0 4px 6px -2px rgba(0,0,0,.02);
+$o-digitalizacion-shadow-lg: 0 20px 25px -5px rgba(0,0,0,.06), 0 10px 10px -5px rgba(0,0,0,.03);
+
+/* ── Efecto Glassmorphism ── */
+@mixin glass($bg: rgba(255, 255, 255, 0.8)) {
+    background: $bg;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
 
 /* ── Layout base ─────────────────────────────────── */
 .o_digitalizacion_page {
-    background: $o-digitalizacion-bg;
     min-height: 100vh;
+    background: $o-digitalizacion-bg;
+    color: $o-digitalizacion-text;
+    -webkit-font-smoothing: antialiased;
 }
 
-/* ── Hero del proyecto ───────────────────────────── */
-.o_digitalizacion_project_hero {
-    background: linear-gradient(135deg, $o-digitalizacion-color-600 0%, $o-digitalizacion-color-800 100%);
-    color: #fff;
-    padding: 2.5rem 1.5rem;
-    border-radius: 0 0 $o-digitalizacion-radius $o-digitalizacion-radius;
-    margin-bottom: 1.5rem;
-    position: relative;
-    overflow: hidden;
-
-    &::before {
-        content: '';
-        position: absolute; top: -40px; right: -40px;
-        width: 180px; height: 180px;
-        border-radius: 50%;
-        background: rgba(255,255,255,.06);
-    }
-
-    &::after {
-        content: '';
-        position: absolute; bottom: -60px; right: 60px;
-        width: 120px; height: 120px;
-        border-radius: 50%;
-        background: rgba(255,255,255,.04);
-    }
-
-    h2 { font-size: 1.6rem; font-weight: 800; margin: 0 0 .25rem; line-height: 1.2; }
-
-    .o_digitalizacion_status {
-        display: inline-flex; align-items: center; gap: .35rem;
-        background: rgba(255,255,255,.2);
-        padding: .2rem .7rem; border-radius: 99px;
-        font-size: .78rem; font-weight: 600;
-    }
-
-    .o_digitalizacion_dates {
-        font-size: .82rem; opacity: .85; margin-top: .5rem;
-    }
-}
-
-/* ── Topbar de proyecto ──────────────────────────── */
-.o_digitalizacion_topbar {
-    background: $o-digitalizacion-surface;
+/* ── Encabezado de Formulario ────────────────────── */
+.o_digitalizacion_form_header {
+    background: #fff;
+    padding: 2rem 0;
     border-bottom: 1px solid $o-digitalizacion-border;
-    padding: 1rem 0;
-    position: sticky;
-    top: 0;
-    z-index: 100;
+    margin-bottom: 2rem;
 
-    h4 { color: $o-digitalizacion-text; font-weight: 700; margin: 0; font-size: 1.1rem; }
+    h2 {
+        margin: 0;
+        font-weight: 800;
+        color: $o-digitalizacion-text;
+    }
+
+    .o_digitalizacion_project_name {
+        margin-top: .5rem;
+        color: $o-digitalizacion-primary;
+        font-weight: 700;
+        font-size: .95rem;
+    }
 }
 
-/* ── Selector de proyecto ────────────────────────── */
-.o_digitalizacion_project_select {
-    background: $o-digitalizacion-primary-light;
-    border: 1.5px solid $o-digitalizacion-primary;
-    border-radius: 8px;
-    color: $o-digitalizacion-primary;
-    font-weight: 600;
-    font-size: .85rem;
-    padding: .35rem .75rem;
-    cursor: pointer;
-    outline: none;
-}
+/* ── Barra de Fecha ──────────────────────────────── */
+.o_digitalizacion_date_bar {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.25rem 2rem;
+    background: #fff;
+    border: 1px solid $o-digitalizacion-border;
+    border-radius: 14px;
+    box-shadow: $o-digitalizacion-shadow-sm;
 
-/* ── Filtros de período ──────────────────────────── */
-.o_digitalizacion_period_pills {
-    display: flex; gap: .4rem; flex-wrap: wrap;
+    label {
+        margin: 0;
+        font-weight: 700;
+        color: $o-digitalizacion-text;
+    }
 
-    a {
-        padding: .3rem .8rem;
-        border-radius: 20px;
-        font-size: .8rem;
-        font-weight: 500;
-        text-decoration: none;
-        background: $o-digitalizacion-border;
-        color: $o-digitalizacion-muted;
-        transition: all .15s;
+    input[type="date"] {
+        border: 2px solid #F1F5F9;
+        border-radius: 10px;
+        padding: .5rem 1rem;
+        font-weight: 600;
+        outline: none;
+        transition: border-color .2s;
 
-        &.active, &:hover {
-            background: $o-digitalizacion-primary;
-            color: #fff;
+        &:focus {
+            border-color: $o-digitalizacion-primary;
         }
     }
 }
 
-/* ── KPI Cards ───────────────────────────────────── */
-.o_digitalizacion_kpi {
-    background: $o-digitalizacion-surface;
-    border-radius: $o-digitalizacion-radius;
-    box-shadow: $o-digitalizacion-shadow;
-    padding: 1.25rem 1.5rem;
-    border-left: 4px solid transparent;
-    transition: transform .15s, box-shadow .15s;
+/* ── Hero del proyecto (Vibrante) ───────────────────────────── */
+.o_digitalizacion_project_hero {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    padding: 3.5rem 2rem;
+    background: linear-gradient(135deg, #DE1C19 0%, #931210 50%, #6A0D0C 100%);
+    color: #fff;
+    border-radius: 0 0 $o-digitalizacion-radius $o-digitalizacion-radius;
+    box-shadow: $o-digitalizacion-shadow-lg;
 
-    &:hover { transform: translateY(-2px); box-shadow: $o-digitalizacion-shadow-md; }
-
-    &--escaneos  { border-color: $o-digitalizacion-primary; }
-    &--folios    { border-color: $o-digitalizacion-info; }
-    &--indexados { border-color: $o-digitalizacion-success; }
-    &--registros { border-color: $o-digitalizacion-warning; }
-
-    .o_digitalizacion_kpi_label {
-        font-size: .72rem; font-weight: 700; text-transform: uppercase;
-        letter-spacing: .05em; color: $o-digitalizacion-muted; margin-bottom: .25rem;
+    &::before {
+        content: '';
+        position: absolute;
+        top: -10%;
+        right: -5%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
+        border-radius: 50%;
     }
 
-    .o_digitalizacion_kpi_value { font-size: 2rem; font-weight: 800; color: $o-digitalizacion-text; line-height: 1; }
-    .o_digitalizacion_kpi_sub   { font-size: .78rem; color: $o-digitalizacion-muted; margin-top: .2rem; }
-}
+    &::after {
+        content: '';
+        position: absolute;
+        bottom: -20%;
+        left: 5%;
+        width: 200px;
+        height: 200px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 70%);
+        border-radius: 50%;
+    }
 
-/* ── Cards genéricas ─────────────────────────────── */
-.o_digitalizacion_card {
-    background: $o-digitalizacion-surface;
-    border-radius: $o-digitalizacion-radius;
-    box-shadow: $o-digitalizacion-shadow;
-    overflow: hidden;
+    h2 {
+        margin: 0 0 .5rem;
+        font-size: 2.2rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+    }
 
-    &_header {
-        padding: 1rem 1.25rem;
-        border-bottom: 1px solid $o-digitalizacion-border;
-        font-weight: 700;
-        font-size: .9rem;
-        color: $o-digitalizacion-text;
-        display: flex;
+    .o_digitalizacion_status {
+        @include glass(rgba(255, 255, 255, 0.1));
+        display: inline-flex;
         align-items: center;
         gap: .5rem;
-
-        i { color: $o-digitalizacion-primary; }
+        padding: .35rem 1rem;
+        background: rgba(255, 255, 255, 0.15);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 99px;
+        font-size: .85rem;
+        font-weight: 600;
     }
 
-    &_body { padding: 1.25rem; }
+    .o_digitalizacion_dates {
+        margin-top: .75rem;
+        font-size: .9rem;
+        font-weight: 500;
+        opacity: .9;
+    }
 }
 
-/* ── Barras de etapa / Progreso ──────────────────── */
-.o_digitalizacion_etapa_bar {
-    margin-bottom: .9rem;
+/* ── Topbar de proyecto (Sticky Glass) ──────────────────────────── */
+.o_digitalizacion_topbar {
+    @include glass();
+    position: sticky;
+    top: 0;
+    z-index: 101;
+    padding: 1.25rem 0;
+    border-bottom: 1px solid $o-digitalizacion-border;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+
+    h4 {
+        margin: 0;
+        color: $o-digitalizacion-text;
+        font-size: 1.25rem;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+    }
+}
+
+.o_digitalizacion_back {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: 1rem;
+    color: $o-digitalizacion-muted;
+    font-size: .9rem;
+    font-weight: 600;
+    text-decoration: none !important;
+    transition: color .2s;
+
+    &:hover {
+        color: $o-digitalizacion-primary;
+    }
+}
+
+.o_digitalizacion_section_header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid $o-digitalizacion-border;
+
+    h3 {
+        margin: 0;
+        color: $o-digitalizacion-text;
+        font-weight: 800;
+    }
+
+    .o_digitalizacion_subtitle {
+        margin-top: .25rem;
+        color: $o-digitalizacion-muted;
+        font-size: .95rem;
+    }
+}
+
+/* ── Proyect Select & Period Pills ────────────────────────── */
+.o_digitalizacion_project_select {
+    padding: .5rem 1rem;
+    background: $o-digitalizacion-primary-light;
+    color: $o-digitalizacion-primary;
+    border: 1.5px solid transparent;
+    border-radius: 10px;
+    font-size: .9rem;
+    font-weight: 700;
+    transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    &:hover, &:focus {
+        border-color: $o-digitalizacion-primary;
+        box-shadow: 0 0 0 4px rgba($o-digitalizacion-primary, 0.1);
+    }
+}
+
+.o_digitalizacion_period_pills {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    background: #F1F5F9;
+    border-radius: 12px;
+
+    a {
+        padding: .45rem 1.25rem;
+        color: $o-digitalizacion-muted;
+        transition: all .2s;
+        border-radius: 10px;
+        font-size: .85rem;
+        font-weight: 600;
+        text-decoration: none;
+
+        &.active {
+            background: #fff;
+            color: $o-digitalizacion-primary;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        &:not(.active):hover {
+            color: $o-digitalizacion-primary;
+        }
+    }
+}
+
+/* ── KPI Cards (Elevated) ───────────────────────────────────── */
+.o_digitalizacion_kpi {
+    position: relative;
+    overflow: hidden;
+    padding: 1.5rem;
+    background: $o-digitalizacion-surface;
+    border: 1px solid transparent;
+    border-radius: $o-digitalizacion-radius;
+    box-shadow: $o-digitalizacion-shadow;
+    transition: all .3s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+    }
+
+    &:hover {
+        transform: translateY(-5px) scale(1.02);
+        border-color: $o-digitalizacion-border;
+        box-shadow: $o-digitalizacion-shadow-lg;
+    }
+
+    &_escaneos {
+        &::before { background: $o-digitalizacion-primary; }
+    }
+    &_folios {
+        &::before { background: $o-digitalizacion-info; }
+    }
+    &_indexados {
+        &::before { background: $o-digitalizacion-success; }
+    }
+    &_registros {
+        &::before { background: $o-digitalizacion-warning; }
+    }
+
+    .o_digitalizacion_kpi_label {
+        margin-bottom: .5rem;
+        color: $o-digitalizacion-muted;
+        font-size: .75rem;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
+
+    .o_digitalizacion_kpi_value {
+        margin: .25rem 0;
+        color: #0F172A;
+        font-size: 2.25rem;
+        font-weight: 800;
+        line-height: 1.1;
+    }
+
+    .o_digitalizacion_kpi_sub {
+        color: $o-digitalizacion-muted;
+        font-size: .85rem;
+        font-weight: 500;
+    }
+}
+
+/* ── Card Design (Premium) ─────────────────────────────── */
+.o_digitalizacion_card {
+    overflow: hidden;
+    background: $o-digitalizacion-surface;
+    border: 1px solid rgba(0, 0, 0, 0.02);
+    border-radius: $o-digitalizacion-radius;
+    box-shadow: $o-digitalizacion-shadow;
+    transition: box-shadow .3s;
+
+    &:hover {
+        box-shadow: $o-digitalizacion-shadow-lg;
+    }
+
+    &_header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.25rem 1.5rem;
+        background: linear-gradient(to right, #ffffff, #fafafa);
+        border-bottom: 1px solid $o-digitalizacion-border;
+        color: #0F172A;
+        font-size: 1rem;
+        font-weight: 800;
+
+        i {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            background: $o-digitalizacion-primary-light;
+            color: $o-digitalizacion-primary;
+            border-radius: 8px;
+            font-size: .9rem;
+        }
+    }
+
+    &_body {
+        padding: 1.5rem;
+    }
+}
+
+/* ── Specialized Cards ── */
+.o_digitalizacion_action_card {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.5rem;
+    background: #fff;
+    border: 1px solid transparent;
+    border-radius: $o-digitalizacion-radius;
+    box-shadow: $o-digitalizacion-shadow;
+    transition: all .25s ease;
+    text-decoration: none !important;
+
+    &:hover {
+        transform: scale(1.03);
+        border-color: $o-digitalizacion-border;
+        box-shadow: $o-digitalizacion-shadow-lg;
+    }
+
+    &_icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 54px;
+        height: 54px;
+        background: #F1F5F9;
+        border-radius: 14px;
+        font-size: 1.5rem;
+
+        &_primary {
+            background: $o-digitalizacion-primary-light;
+            color: $o-digitalizacion-primary;
+        }
+        &_green {
+            background: #ECFDF5;
+            color: #10B981;
+        }
+    }
+
+    &_title {
+        color: #1E293B;
+        font-size: 1.1rem;
+        font-weight: 800;
+    }
+    &_desc {
+        color: $o-digitalizacion-muted;
+        font-size: .85rem;
+    }
+    &_arrow {
+        margin-left: auto;
+        color: #CBD5E1;
+        transition: transform .2s;
+    }
+    &:hover &_arrow {
+        transform: translateX(4px);
+        color: $o-digitalizacion-primary;
+    }
+}
+
+.o_digitalizacion_info_card {
+    padding: 2rem;
+    background: #fff;
+    border-radius: $o-digitalizacion-radius;
+    box-shadow: $o-digitalizacion-shadow;
+
+    &_title {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        margin-bottom: 1.5rem;
+        color: #0F172A;
+        font-size: 1.1rem;
+        font-weight: 800;
+
+        i {
+            color: $o-digitalizacion-primary;
+            font-size: 1.2rem;
+        }
+    }
+}
+
+.o_digitalizacion_info_row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .85rem 0;
+    border-bottom: 1px solid #F1F5F9;
+    &:last-child {
+        border-bottom: none;
+    }
 
     &_label {
-        display: flex; justify-content: space-between;
-        font-size: .82rem; margin-bottom: .3rem;
+        color: $o-digitalizacion-muted;
+        font-size: .9rem;
+        font-weight: 600;
+    }
+    &_value {
+        color: #1E293B;
+        font-size: .95rem;
+        font-weight: 800;
+    }
+}
 
-        span:first-child { color: $o-digitalizacion-text; font-weight: 500; }
-        span:last-child  { color: $o-digitalizacion-primary; font-weight: 700; }
+.o_digitalizacion_desc_card {
+    padding: 2rem;
+    background: #F8FAFC;
+    color: #475569;
+    border: 1px dashed #CBD5E1;
+    border-radius: $o-digitalizacion-radius;
+    font-weight: 500;
+    line-height: 1.6;
+}
+
+/* ── Progress & Bars ──────────────────── */
+.o_digitalizacion_hero_progress {
+    margin-top: 2rem;
+    padding: 1.25rem;
+    background: rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+
+    &_label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: .6rem;
+        font-size: .9rem;
+        font-weight: 700;
+
+        span:first-child { color: rgba(255, 255, 255, 0.8); }
+        span:last-child { color: #fff; }
+    }
+
+    &_bar {
+        overflow: hidden;
+        height: 10px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 99px;
+    }
+
+    &_fill {
+        height: 100%;
+        background: #fff;
+        border-radius: 99px;
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+    }
+}
+
+.o_digitalizacion_etapa_bar {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    margin-bottom: 1.25rem;
+    font-size: .9rem;
+    font-weight: 600;
+
+    span {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    span:last-child {
+        color: $o-digitalizacion-primary;
+        font-weight: 800;
     }
 }
 
 .o_digitalizacion_progress {
-    height: 6px; border-radius: 99px;
-    background: $o-digitalizacion-border; overflow: hidden;
+    overflow: hidden;
+    height: 10px;
+    background: #F1F5F9;
+    border-radius: 99px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
 
     &_fill {
-        height: 100%; border-radius: 99px;
-        background: linear-gradient(90deg, $o-digitalizacion-color-500, $o-digitalizacion-color-600);
-        transition: width .4s ease;
+        position: relative;
+        height: 100%;
+        background: linear-gradient(90deg, #DE1C19 0%, #EA4643 100%);
+        border-radius: 99px;
+        box-shadow: 0 2px 4px rgba(222, 28, 25, 0.2);
+
+        &::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%);
+        }
     }
 }
 
-/* ── Tablas ──────────────────────────────────────── */
+/* ── Unified Tables (Premium) ──────────────────────────────────────── */
 .o_digitalizacion_table {
-    width: 100%; border-collapse: collapse; font-size: .85rem;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
 
     th {
-        background: $o-digitalizacion-bg; color: $o-digitalizacion-muted;
-        font-size: .72rem; font-weight: 700; text-transform: uppercase;
-        letter-spacing: .04em; padding: .6rem 1rem;
-        border-bottom: 1px solid $o-digitalizacion-border; text-align: left;
+        padding: 1rem 1.25rem;
+        background: #F8FAFC;
+        color: #475569;
+        border-bottom: 2px solid $o-digitalizacion-border;
+        font-size: .75rem;
+        font-weight: 800;
+        letter-spacing: .06em;
+        text-transform: uppercase;
     }
 
-    td { padding: .7rem 1rem; border-bottom: 1px solid $o-digitalizacion-border; color: $o-digitalizacion-text; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: $o-digitalizacion-primary-light; }
+    td {
+        vertical-align: middle;
+        padding: 1.15rem 1.25rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+        transition: background-color .2s;
+    }
+
+    tr:hover td {
+        background: #FDF2F2;
+    }
 }
 
-/* ── Badge ────────────────────────────────────────── */
-.o_digitalizacion_badge {
-    display: inline-block; padding: .2rem .6rem;
-    border-radius: 99px; font-size: .72rem; font-weight: 600;
-    background: $o-digitalizacion-primary-light; color: $o-digitalizacion-primary;
-
-    &--active  { background: #d1fae5; color: $o-digitalizacion-success; }
-    &--inactive{ background: $o-digitalizacion-color-50; color: $o-digitalizacion-danger; }
-    &--lider   { background: #fef3c7; color: #92400e; }
-}
-
-/* ── Botones ─────────────────────────────────────── */
+/* ── High-End Buttons ─────────────────────────────────────── */
 .o_digitalizacion_btn {
-    display: inline-flex; align-items: center; gap: .4rem;
-    padding: .55rem 1.1rem; border-radius: 8px; font-weight: 600;
-    font-size: .85rem; text-decoration: none; cursor: pointer;
-    border: none; transition: all .15s;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .6rem;
+    overflow: hidden;
+    padding: .65rem 1.5rem;
+    cursor: pointer;
+    border: none;
+    border-radius: 12px;
+    font-size: .95rem;
+    font-weight: 700;
+    text-decoration: none !important;
+    transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
 
-    &--primary {
-        background: $o-digitalizacion-primary; color: #fff;
-        &:hover { background: $o-digitalizacion-color-700; color: #fff; transform: translateY(-1px); }
+    &_primary {
+        background: linear-gradient(135deg, #DE1C19 0%, #BC1815 100%);
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(222, 28, 25, 0.25);
+
+        &:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+            box-shadow: 0 8px 20px rgba(222, 28, 25, 0.35);
+        }
     }
 
-    &--outline {
-        background: transparent; color: $o-digitalizacion-primary;
+    &_outline {
+        background: #ffffff;
+        color: $o-digitalizacion-primary;
         border: 1.5px solid $o-digitalizacion-primary;
-        &:hover { background: $o-digitalizacion-primary-light; }
+
+        &:hover {
+            transform: translateY(-1px);
+            background: $o-digitalizacion-primary-light;
+        }
     }
 
-    &--ghost {
-        background: transparent; color: $o-digitalizacion-danger;
-        border: 1.5px solid $o-digitalizacion-border;
-        &:hover { border-color: $o-digitalizacion-danger; background: $o-digitalizacion-color-50; }
+    &_ghost {
+        background: transparent;
+        color: #64748B;
+
+        &:hover {
+            background: #F1F5F9;
+            color: $o-digitalizacion-primary;
+        }
     }
 
-    &--lg { padding: .7rem 1.75rem; font-size: .95rem; }
+    &_lg {
+        padding: .9rem 2.25rem;
+        font-size: 1.05rem;
+    }
 }
 
-/* ── Miembros / Avatares ───────────────────────────── */
-.o_digitalizacion_member_card {
-    background: $o-digitalizacion-surface;
-    border: 1px solid $o-digitalizacion-border;
-    border-radius: $o-digitalizacion-radius;
-    padding: 1rem 1.25rem;
-    display: flex; align-items: center; gap: 1rem;
-    box-shadow: $o-digitalizacion-shadow;
-    transition: box-shadow .15s;
+/* ── Status Badges ────────────────────────────────────────── */
+.o_digitalizacion_badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .4rem .85rem;
+    background: #F1F5F9;
+    color: #475569;
+    border-radius: 8px;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
 
-    &:hover { box-shadow: $o-digitalizacion-shadow-md; }
-    &.inactive { opacity: .6; }
+    &_active {
+        background: #ECFDF5;
+        color: #059669;
+    }
+    &_inactive {
+        background: #FEF2F2;
+        color: #DC2626;
+    }
+    &_lider {
+        background: #FFFBEB;
+        color: #D97706;
+        border: 1px solid #FDE68A;
+    }
+}
+
+/* ── Member Avatars ───────────────────────────── */
+.o_digitalizacion_member_card {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.25rem 1.5rem;
+    background: #fff;
+    border: 1px solid transparent;
+    border-radius: $o-digitalizacion-radius;
+    box-shadow: $o-digitalizacion-shadow;
+    transition: all .25s;
+
+    &:hover {
+        border-color: $o-digitalizacion-border;
+        box-shadow: $o-digitalizacion-shadow-lg;
+    }
+    &.inactive {
+        opacity: .6;
+        filter: grayscale(0.5);
+    }
 }
 
 .o_digitalizacion_avatar {
-    width: 42px; height: 42px; border-radius: 50%;
-    background: $o-digitalizacion-primary-light;
-    color: $o-digitalizacion-primary;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 800; font-size: 1rem; flex-shrink: 0;
-    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    background: #F1F5F9;
+    color: #64748B;
+    border: 1px solid #fff;
+    border-radius: 14px;
+    box-shadow: $o-digitalizacion-shadow-sm;
+    font-size: 1.2rem;
+    font-weight: 800;
 
-    &--lider {
-        background: linear-gradient(135deg, #fef3c7, #fde68a);
-        color: #92400e;
-        border: 2px solid #f59e0b;
+    &_lider {
+        background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+        color: #92400E;
+        border: 2px solid #FBBF24;
     }
 }
 
-/* ── Formulario / Inputs ───────────────────────────── */
-.o_digitalizacion_date_bar {
-    background: $o-digitalizacion-surface;
-    border: 1px solid $o-digitalizacion-border;
-    border-radius: $o-digitalizacion-radius;
-    padding: 1rem 1.25rem;
-    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
-
-    input[type="date"] {
-        border: 1.5px solid $o-digitalizacion-border;
-        border-radius: 8px; padding: .4rem .75rem;
-        font-size: .9rem; background: $o-digitalizacion-bg; outline: none;
-        &:focus { border-color: $o-digitalizacion-primary; }
-    }
+.o_digitalizacion_member_name {
+    margin-bottom: .2rem;
+    color: #1E293B;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+.o_digitalizacion_member_meta {
+    color: #94A3B8;
+    font-size: .85rem;
+    font-weight: 500;
 }
 
+/* ── Form Inputs (Premium) ───────────────────────────── */
 .o_digitalizacion_field {
+    margin-bottom: 1.5rem;
+
     label {
-        font-size: .75rem; font-weight: 700; text-transform: uppercase;
-        color: $o-digitalizacion-muted; margin-bottom: .3rem; display: block;
+        display: block;
+        margin-bottom: .6rem;
+        color: #334155;
+        font-size: .85rem;
+        font-weight: 800;
+        letter-spacing: .02em;
+        text-transform: uppercase;
     }
 
-    input, select {
-        width: 100%; border: 1.5px solid $o-digitalizacion-border;
-        border-radius: 8px; padding: .4rem .65rem; font-size: .875rem;
-        background: $o-digitalizacion-surface; outline: none;
-        &:focus { border-color: $o-digitalizacion-primary; }
-    }
+    input,
+    select,
+    textarea {
+        outline: none;
+        width: 100%;
+        padding: .85rem 1.15rem;
+        background: #fff;
+        border: 2px solid #F1F5F9;
+        border-radius: 12px;
+        font-size: .95rem;
+        transition: all .2s;
 
-    &.disabled {
-        input, select { background: $o-digitalizacion-bg; opacity: .55; pointer-events: none; }
+        &:focus {
+            background: #fff;
+            border-color: $o-digitalizacion-primary;
+            box-shadow: 0 0 0 4px rgba($o-digitalizacion-primary, 0.1);
+        }
+
+        &::placeholder {
+            color: #CBD5E1;
+        }
     }
 }
 
+/* ── Row Cards (Form) ───────────────────────────── */
 .o_digitalizacion_row_card {
-    background: $o-digitalizacion-surface;
-    border: 1px solid $o-digitalizacion-border;
-    border-radius: $o-digitalizacion-radius;
-    padding: 1rem 1.25rem;
-    box-shadow: $o-digitalizacion-shadow;
     position: relative;
+    margin-bottom: 2.5rem;
+    padding: 2.5rem;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.02);
+    border-radius: $o-digitalizacion-radius;
+    box-shadow: $o-digitalizacion-shadow;
 
-    &.error { border-color: $o-digitalizacion-danger; }
+    .o_digitalizacion_row_num {
+        position: absolute;
+        top: -14px;
+        left: 2.5rem;
+        padding: .35rem 1.25rem;
+        background: #0F172A;
+        color: #fff;
+        border-radius: 99px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        font-size: .8rem;
+        font-weight: 800;
+    }
 }
 
-.o_digitalizacion_row_num {
-    position: absolute; top: -10px; left: 1rem;
-    background: $o-digitalizacion-primary; color: #fff;
-    font-size: .7rem; font-weight: 700;
-    padding: .15rem .5rem; border-radius: 99px;
+/* ── Modales & Búsqueda (Premium) ────────────────────────── */
+.o_digitalizacion_modal {
+    .modal-content {
+        border: none;
+        border-radius: $o-digitalizacion-radius;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    .modal-header {
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid #F1F5F9;
+        .modal-title { font-weight: 800; }
+    }
+    .modal-body { padding: 2rem; }
+    .modal-footer { padding: 1.5rem 2rem; border-top: 1px solid #F1F5F9; }
 }
 
-.o_digitalizacion_sticky_footer {
-    position: sticky; bottom: 0; left: 0; right: 0;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(8px);
-    border-top: 1px solid $o-digitalizacion-border;
-    padding: .875rem 1.5rem;
-    z-index: 200;
-    box-shadow: 0 -4px 12px rgba(0,0,0,.05);
-    margin-top: 2rem;
+.o_digitalizacion_search_wrap {
+    position: relative;
+    i {
+        position: absolute;
+        top: 50%;
+        left: 1.25rem;
+        transform: translateY(-50%);
+        color: $o-digitalizacion-muted;
+    }
 }
 
-/* ── Alertas ─────────────────────────────────────── */
+.o_digitalizacion_search_input {
+    width: 100%;
+    padding: .85rem 1.15rem .85rem 3rem;
+    background: #F8FAF9;
+    border: 2px solid #F1F5F9;
+    border-radius: 12px;
+    outline: none;
+    transition: all .2s;
+    &:focus {
+        background: #fff;
+        border-color: $o-digitalizacion-primary;
+        box-shadow: 0 0 0 4px rgba($o-digitalizacion-primary, 0.1);
+    }
+}
+
+.o_digitalizacion_search_results {
+    overflow-y: auto;
+    max-height: 250px;
+    margin-top: .5rem;
+    background: #fff;
+    border: 1px solid #F1F5F9;
+    border-radius: 12px;
+    box-shadow: $o-digitalizacion-shadow;
+}
+
+.o_digitalizacion_result_item {
+    width: 100%;
+    padding: .75rem 1.25rem;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #F8FAFC;
+    color: $o-digitalizacion-text;
+    font-size: .9rem;
+    font-weight: 600;
+    text-align: left;
+    transition: all .2s;
+    &:hover { background: #F1F5F9; color: $o-digitalizacion-primary; }
+    &.selected { background: $o-digitalizacion-primary-light; color: $o-digitalizacion-primary; }
+    &:last-child { border-bottom: none; }
+}
+
+.o_digitalizacion_result_new {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: 1rem;
+    background: #FFFBEB;
+    color: #92400E;
+    border-radius: 10px;
+    font-size: .85rem;
+    font-weight: 600;
+}
+
+/* ── Alertas (Premium) ─────────────────────────────────── */
 .o_digitalizacion_alert {
-    border-radius: 10px; padding: .8rem 1rem; font-size: .875rem;
-    display: flex; align-items: center; gap: .6rem;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: 1rem 1.25rem;
+    border-radius: 12px;
+    font-size: .9rem;
+    font-weight: 600;
 
-    &--info    { background: #dbeafe; color: #1e40af; }
-    &--success { background: #d1fae5; color: #065f46; }
-    &--danger  { background: $o-digitalizacion-color-50; color: $o-digitalizacion-color-800; }
-    &--warning { background: #fef3c7; color: #92400e; }
+    &_success {
+        background: #ECFDF5;
+        color: #065F46;
+        border: 1px solid #A7F3D0;
+    }
+    &_danger {
+        background: #FEF2F2;
+        color: #991B1B;
+        border: 1px solid #FECACA;
+    }
 }
 
-/* ── Estado vacío ────────────────────────────────── */
-.o_digitalizacion_empty {
-    text-align: center; padding: 3rem 1rem; color: $o-digitalizacion-muted;
-    i { font-size: 2.5rem; margin-bottom: .75rem; display: block; opacity: .4; }
+/* ── Floating Footer ───────────────────────────── */
+.o_digitalizacion_sticky_footer {
+    position: sticky;
+    bottom: 1.5rem;
+    left: 1.5rem;
+    right: 1.5rem;
+    z-index: 1000;
+    @include glass(rgba(255, 255, 255, 0.92));
+    margin-top: 3rem;
+    padding: 1.25rem 2.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: $o-digitalizacion-radius;
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
 }
 
-/* ── Responsive ──────────────────────────────────── */
+/* ── Animations ── */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.o_digitalizacion_page > * {
+    animation: fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ── Responsive ── */
 @media (max-width: 768px) {
-    .o_digitalizacion_sticky_footer { padding: .75rem 1rem; .o_digitalizacion_btn--lg { width: 100%; justify-content: center; } }
+    .o_digitalizacion_sticky_footer {
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 1.25rem;
+        background: #fff;
+        border: none;
+        border-top: 1px solid $o-digitalizacion-border;
+        border-radius: 0;
+    }
 }

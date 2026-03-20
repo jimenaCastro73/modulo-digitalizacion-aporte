@@ -3,152 +3,6 @@
     <template id="digitalizacion_portal_miembros_equipo" name="Miembros del Equipo">
         <t t-call="portal.portal_layout">
             <t t-set="breadcrumbs_searchbar" t-value="True" />
-                }
-
-                /* ── Botones ─────────────────────────────────────── */
-                .dg-btn {
-                    display: inline-flex; align-items: center; gap: .4rem;
-                    padding: .55rem 1.1rem; border-radius: 8px;
-                    font-weight: 600; font-size: .875rem;
-                    cursor: pointer; border: none; transition: all .15s;
-                    text-decoration: none;
-                }
-                .dg-btn--primary { background: var(--dg-primary); color: #fff; }
-                .dg-btn--primary:hover { background: var(--color-700); color: var(--color-white); transform: translateY(-1px); }
-                .dg-btn--outline {
-                    background: transparent; color: var(--dg-primary);
-                    border: 1.5px solid var(--dg-primary);
-                }
-                .dg-btn--outline:hover { background: var(--dg-primary-light); color: var(--dg-primary); }
-                .dg-btn--ghost {
-                    background: var(--dg-bg); color: var(--dg-muted);
-                    border: 1px solid var(--dg-border);
-                }
-
-                /* ── Card de miembro ─────────────────────────────── */
-                .dg-member-card {
-                    background: var(--dg-surface);
-                    border: 1px solid var(--dg-border);
-                    border-radius: var(--dg-radius);
-                    padding: 1rem 1.25rem;
-                    display: flex; align-items: center; gap: 1rem;
-                    box-shadow: var(--dg-shadow);
-                    transition: box-shadow .15s;
-                }
-                .dg-member-card:hover { box-shadow: var(--dg-shadow-md); }
-                .dg-member-card.inactive { opacity: .6; }
-
-                /* Avatar */
-                .dg-avatar {
-                    width: 42px; height: 42px; border-radius: 50%;
-                    background: var(--dg-primary-light);
-                    color: var(--dg-primary);
-                    display: flex; align-items: center; justify-content: center;
-                    font-weight: 800; font-size: 1rem; flex-shrink: 0;
-                    text-transform: uppercase;
-                }
-                .dg-avatar--lider {
-                    background: linear-gradient(135deg, #fef3c7, #fde68a);
-                    color: #92400e;
-                    border: 2px solid #f59e0b;
-                }
-
-                .dg-member-name { font-weight: 700; font-size: .925rem; color: var(--dg-text); }
-                .dg-member-meta { font-size: .78rem; color: var(--dg-muted); margin-top: .1rem; }
-
-                /* Badges */
-                .dg-badge {
-                    display: inline-flex; align-items: center; gap: .3rem;
-                    padding: .2rem .65rem; border-radius: 99px;
-                    font-size: .72rem; font-weight: 600;
-                }
-                .dg-badge--active  { background: #d1fae5; color: var(--dg-success); }
-                .dg-badge--inactive{ background: var(--color-50); color: var(--dg-danger); }
-                .dg-badge--lider   { background: #fef3c7; color: #92400e; }
-
-                /* ── Alertas ─────────────────────────────────────── */
-                .dg-alert {
-                    border-radius: 10px; padding: .8rem 1rem;
-                    font-size: .875rem; display: flex; align-items: center; gap: .6rem;
-                }
-                .dg-alert--success { background: #d1fae5; color: #065f46; }
-                .dg-alert--danger  { background: var(--color-50); color: var(--color-800); }
-                .dg-alert--info    { background: #dbeafe; color: #1e40af; }
-
-                /* ── Vacío ───────────────────────────────────────── */
-                .dg-empty {
-                    text-align: center; padding: 3.5rem 1rem; color: var(--dg-muted);
-                }
-                .dg-empty i { font-size: 2.5rem; opacity: .3; display: block; margin-bottom: .75rem; }
-                .dg-empty p { font-size: .875rem; margin: 0; }
-
-                /* ── Modal personalizado ─────────────────────────── */
-                .dg-modal .modal-content {
-                    border-radius: var(--dg-radius);
-                    border: none;
-                    box-shadow: 0 20px 60px rgba(0,0,0,.15);
-                }
-                .dg-modal .modal-header {
-                    border-bottom: 1px solid var(--dg-border);
-                    padding: 1.25rem 1.5rem;
-                }
-                .dg-modal .modal-title {
-                    font-weight: 800; font-size: 1.05rem; color: var(--dg-text);
-                }
-                .dg-modal .modal-body { padding: 1.5rem; }
-                .dg-modal .modal-footer {
-                    border-top: 1px solid var(--dg-border);
-                    padding: 1rem 1.5rem;
-                }
-
-                /* Input de búsqueda del modal */
-                .dg-search-input {
-                    width: 100%;
-                    border: 1.5px solid var(--dg-border);
-                    border-radius: 10px;
-                    padding: .6rem 1rem .6rem 2.5rem;
-                    font-size: .9rem; color: var(--dg-text);
-                    outline: none; transition: border-color .15s;
-                    background: var(--dg-bg);
-                }
-                .dg-search-input:focus { border-color: var(--dg-primary); background: #fff; }
-                .dg-search-wrap { position: relative; }
-                .dg-search-wrap i {
-                    position: absolute; left: .85rem; top: 50%;
-                    transform: translateY(-50%); color: var(--dg-muted);
-                    pointer-events: none;
-                }
-
-                /* Resultados de búsqueda */
-                .dg-search-results { margin-top: .5rem; }
-                .dg-result-item {
-                    display: flex; align-items: center; gap: .75rem;
-                    padding: .65rem .9rem; border-radius: 8px;
-                    cursor: pointer; transition: background .1s;
-                    border: none; width: 100%; text-align: left;
-                    background: transparent; color: var(--dg-text);
-                    font-size: .875rem;
-                }
-                .dg-result-item:hover { background: var(--dg-primary-light); color: var(--dg-primary); }
-                .dg-result-item.selected {
-                    background: var(--dg-primary-light);
-                    color: var(--dg-primary); font-weight: 600;
-                }
-                .dg-result-item i { color: var(--dg-muted); font-size: .85rem; }
-                .dg-result-new {
-                    padding: .6rem .9rem; border-radius: 8px;
-                    background: #fef3c7; color: #92400e;
-                    font-size: .82rem; display: flex; align-items: center; gap: .5rem;
-                }
-
-                /* ── Volver ──────────────────────────────────────── */
-                .dg-back {
-                    display: inline-flex; align-items: center; gap: .4rem;
-                    color: var(--dg-muted); font-size: .82rem;
-                    text-decoration: none; margin-bottom: 1.25rem;
-                    transition: color .15s;
-                }
-                .dg-back:hover { color: var(--dg-primary); }</style>
             <div class="o_digitalizacion_page pb-5">
                 <div class="container-fluid px-3 px-md-4 mt-4">
                     <a t-attf-href="/digitalizacion/v1/proyectos/#{proyecto.id}" class="o_digitalizacion_back">
@@ -164,13 +18,13 @@
                         </t>
                     </t>
                     <!-- Alertas de feedback -->
-                    <div id="msg-miembro-exito" class="o_digitalizacion_alert o_digitalizacion_alert--success d-none mb-3">
+                    <div id="msg-miembro-exito" class="o_digitalizacion_alert o_digitalizacion_alert_success d-none mb-3">
                         <i class="fa fa-check-circle" />
                         Miembro agregado correctamente.
                     </div>
-                    <div id="msg-miembro-error" class="o_digitalizacion_alert o_digitalizacion_alert--danger d-none mb-3" />
+                    <div id="msg-miembro-error" class="o_digitalizacion_alert o_digitalizacion_alert_danger d-none mb-3" />
                     <!-- Header -->
-                    <div class="o_digitalizacion_section-header">
+                    <div class="o_digitalizacion_section_header">
                         <div>
                             <h3>
                                 <i class="fa fa-users me-2" style="color: var(--o_digitalizacion_primary);" />
@@ -185,7 +39,7 @@
                                 miembro(s) activo(s)
                             </div>
                         </div>
-                        <button class="o_digitalizacion_btn o_digitalizacion_btn--primary" data-bs-toggle="modal" data-bs-target="#modalAgregarMiembro">
+                        <button class="o_digitalizacion_btn o_digitalizacion_btn_primary" data-bs-toggle="modal" data-bs-target="#modalAgregarMiembro">
                             <i class="fa fa-user-plus" />
                             Agregar miembro
                         </button>
@@ -200,23 +54,23 @@
                     </t>
                     <div t-if="miembros" id="lista-miembros" class="d-flex flex-column gap-2">
                         <t t-foreach="miembros" t-as="m">
-                            <div t-att-class="'o_digitalizacion_member-card' + (' inactive' if m.fecha_salida else '')">
+                            <div t-att-class="'o_digitalizacion_member_card' + (' inactive' if m.fecha_salida else '')">
                                 <!-- Avatar con inicial -->
-                                <div t-att-class="'o_digitalizacion_avatar' + (' o_digitalizacion_avatar--lider' if m.es_lider else '')">
+                                <div t-att-class="'o_digitalizacion_avatar' + (' o_digitalizacion_avatar_lider' if m.es_lider else '')">
                                     <t t-esc="(m.partner_id.name or '?')[0].upper()" />
                                 </div>
                                 <!-- Info -->
                                 <div class="flex-grow-1 min-w-0">
-                                    <div class="o_digitalizacion_member-name">
+                                    <div class="o_digitalizacion_member_name">
                                         <t t-esc="m.partner_id.name" />
                                         <t t-if="m.es_lider">
-                                            <span class="o_digitalizacion_badge o_digitalizacion_badge--lider ms-2">
+                                            <span class="o_digitalizacion_badge o_digitalizacion_badge_lider ms-2">
                                                 <i class="fa fa-star" />
                                                 Líder
                                             </span>
                                         </t>
                                     </div>
-                                    <div class="o_digitalizacion_member-meta">
+                                    <div class="o_digitalizacion_member_meta">
                                         <i class="fa fa-calendar-o me-1" />
                                         Ingresó:
                                         <t t-esc="m.fecha_integracion" />
@@ -229,13 +83,13 @@
                                 <!-- Estado -->
                                 <div class="flex-shrink-0">
                                     <t t-if="m.active and not m.fecha_salida">
-                                        <span class="o_digitalizacion_badge o_digitalizacion_badge--active">
+                                        <span class="o_digitalizacion_badge o_digitalizacion_badge_active">
                                             <i class="fa fa-circle" style="font-size:.5rem;" />
                                             Activo
                                         </span>
                                     </t>
                                     <t t-else="">
-                                        <span class="o_digitalizacion_badge o_digitalizacion_badge--inactive">
+                                        <span class="o_digitalizacion_badge o_digitalizacion_badge_inactive">
                                             <i class="fa fa-circle" style="font-size:.5rem;" />
                                             Baja
                                         </span>
@@ -259,19 +113,19 @@
                         </div>
                         <div class="modal-body">
                             <p class="text-muted small mb-3">Busca un contacto existente o escribe un nombre nuevo para crearlo.</p>
-                            <div class="o_digitalizacion_search-wrap mb-2">
+                            <div class="o_digitalizacion_search_wrap mb-2">
                                 <i class="fa fa-search" />
-                                <input id="inputBuscarMiembro" type="text" class="o_digitalizacion_search-input" placeholder="Escribe el nombre del digitalizador..." autocomplete="off" />
+                                <input id="inputBuscarMiembro" type="text" class="o_digitalizacion_search_input" placeholder="Escribe el nombre del digitalizador..." autocomplete="off" />
                             </div>
-                            <div id="resultadosMiembros" class="o_digitalizacion_search-results" />
-                            <div id="divNuevoMiembro" class="o_digitalizacion_result-new d-none mt-2">
+                            <div id="resultadosMiembros" class="o_digitalizacion_search_results" />
+                            <div id="divNuevoMiembro" class="o_digitalizacion_result_new d-none mt-2">
                                 <i class="fa fa-user-plus" />
                                 Se creará un nuevo contacto con este nombre.
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="o_digitalizacion_btn o_digitalizacion_btn--ghost" data-bs-dismiss="modal">Cancelar</button>
-                            <button id="btnConfirmarMiembro" type="button" class="o_digitalizacion_btn o_digitalizacion_btn--primary" disabled="1">
+                            <button type="button" class="o_digitalizacion_btn o_digitalizacion_btn_ghost" data-bs-dismiss="modal">Cancelar</button>
+                            <button id="btnConfirmarMiembro" type="button" class="o_digitalizacion_btn o_digitalizacion_btn_primary" disabled="1">
                                 <i class="fa fa-check" />
                                 Agregar
                             </button>
@@ -282,137 +136,176 @@
             <script type="text/javascript">
                 <![CDATA[
                 (function() {
-                'use strict';
+                "use strict";
 
-                var proyectoId = <t t-esc="proyecto.id" />;
-                var csrfToken  = ']]><t t-esc="request.csrf_token()" /><![CDATA[';
+                const proyectoId = <t t-esc="proyecto.id" />;
+                const csrfToken  = "]]><t t-esc="request.csrf_token()" /><![CDATA[";
 
-                var inputBuscar   = document.getElementById('inputBuscarMiembro');
-                var divResultados = document.getElementById('resultadosMiembros');
-                var btnConfirmar  = document.getElementById('btnConfirmarMiembro');
-                var divNuevo      = document.getElementById('divNuevoMiembro');
-                var msgExito      = document.getElementById('msg-miembro-exito');
-                var msgError      = document.getElementById('msg-miembro-error');
+                const inputBuscar   = document.getElementById("inputBuscarMiembro");
+                const divResultados = document.getElementById("resultadosMiembros");
+                const btnConfirmar  = document.getElementById("btnConfirmarMiembro");
+                const divNuevo      = document.getElementById("divNuevoMiembro");
+                const msgExito      = document.getElementById("msg-miembro-exito");
+                const msgError      = document.getElementById("msg-miembro-error");
 
-                var partnerId   = null;
-                var nombreNuevo = null;
-                var debounceTimer;
+                let partnerId   = null;
+                let nombreNuevo = null;
+                let debounceTimer;
 
-                inputBuscar.addEventListener('input', function() {
+                /**
+                 * Maneja la búsqueda de contactos para el equipo.
+                 * 
+                 * @private
+                 */
+                inputBuscar.addEventListener("input", function() {
                     clearTimeout(debounceTimer);
-                    var term = this.value.trim();
-                    partnerId = null; nombreNuevo = null;
+                    const term = this.value.trim();
+                    partnerId = null; 
+                    nombreNuevo = null;
                     btnConfirmar.disabled = true;
-                    divResultados.innerHTML = '';
-                    divNuevo.classList.add('d-none');
+                    divResultados.innerHTML = "";
+                    divNuevo.classList.add("d-none");
 
-                    if (term.length < 2) return;
+                    if (term.length < 2) {
+                        return;
+                    }
 
                     debounceTimer = setTimeout(function() {
-                        fetch('/digitalizacion/api/v1/partners/search', {
-                            method: 'POST',
+                        fetch("/digitalizacion/api/v1/partners/search", {
+                            method: "POST",
                             headers: { 
-                                'Content-Type': 'application/json',
-                                'X-CSRF-Token': csrfToken
+                                "Content-Type": "application/json",
+                                "X-CSRF-Token": csrfToken
                             },
                             body: JSON.stringify({
-                                jsonrpc: '2.0', method: 'call', id: 1,
-                                params: { term: term, proyecto_id: proyectoId }
+                                "jsonrpc": "2.0", 
+                                "method": "call", 
+                                "id": 1,
+                                "params": { 
+                                    "term": term, 
+                                    "proyecto_id": proyectoId 
+                                }
                             })
                         })
                         .then(function(r) { return r.json(); })
                         .then(function(response) {
-                            var data = response.result || {};
-                            var partners = data.data || [];
-                            divResultados.innerHTML = '';
+                            const data = response.result || {};
+                            const partners = data.data || [];
+                            divResultados.innerHTML = "";
 
                             if (partners.length === 0) {
                                 nombreNuevo = term;
-                                divNuevo.classList.remove('d-none');
+                                divNuevo.classList.remove("d-none");
                                 btnConfirmar.disabled = false;
                             } else {
                                 partners.forEach(function(p) {
-                                    var btn = document.createElement('button');
-                                    btn.className = 'o_digitalizacion_result-item';
-                                    var label = p.name;
-                                    if (p.email) label += ' (' + p.email + ')';
+                                    const btn = document.createElement("button");
+                                    btn.className = "o_digitalizacion_result_item";
+                                    let label = p.name;
+                                    if (p.email) {
+                                        label += " (" + p.email + ")";
+                                    }
                                     btn.textContent = label;
-                                    btn.addEventListener('click', function() {
-                                        partnerId = p.id; nombreNuevo = null;
+                                    btn.addEventListener("click", function() {
+                                        partnerId = p.id; 
+                                        nombreNuevo = null;
                                         inputBuscar.value = p.name;
-                                        divResultados.innerHTML = '';
-                                        divNuevo.classList.add('d-none');
+                                        divResultados.innerHTML = "";
+                                        divNuevo.classList.add("d-none");
                                         btnConfirmar.disabled = false;
-                                        btn.classList.add('selected');
+                                        btn.classList.add("selected");
                                     });
                                     divResultados.appendChild(btn);
                                 });
                             }
                         })
                         .catch(function() {
-                            divResultados.textContent = 'Error al buscar contactos.';
+                            divResultados.textContent = "Error al buscar contactos.";
                         });
                     }, 350);
                 });
 
-                btnConfirmar.addEventListener('click', function() {
+                /**
+                 * Confirma y agrega el miembro seleccionado al proyecto.
+                 * 
+                 * @private
+                 */
+                btnConfirmar.addEventListener("click", function() {
                     btnConfirmar.disabled = true;
-                    fetch('/digitalizacion/api/v1/proyectos/' + proyectoId + '/miembros', {
-                        method: 'POST',
+                    fetch("/digitalizacion/api/v1/proyectos/" + proyectoId + "/miembros", {
+                        method: "POST",
                         headers: { 
-                            'Content-Type': 'application/json',
-                            'X-CSRF-Token': csrfToken
+                            "Content-Type": "application/json",
+                            "X-CSRF-Token": csrfToken
                         },
                         body: JSON.stringify({
-                            jsonrpc: '2.0', method: 'call', id: 1,
-                            params: {
-                                proyecto_id: proyectoId,
-                                partner_id:  partnerId   || null,
-                                nombre_nuevo: nombreNuevo || null
+                            "jsonrpc": "2.0", 
+                            "method": "call", 
+                            "id": 1,
+                            "params": {
+                                "proyecto_id": proyectoId,
+                                "partner_id":  partnerId   || null,
+                                "nombre_nuevo": nombreNuevo || null
                             }
                         })
                     })
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
-                        var result = data.result || {};
+                        const result = data.result || {};
                         try {
                             if (window.bootstrap) {
-                                var modal = window.bootstrap.Modal.getInstance(document.getElementById('modalAgregarMiembro'));
-                                if (modal) modal.hide();
+                                const modal = window.bootstrap.Modal.getInstance(document.getElementById("modalAgregarMiembro"));
+                                if (modal) {
+                                    modal.hide();
+                                }
                             } else {
-                                document.getElementById('modalAgregarMiembro').classList.remove('show');
-                                document.getElementById('modalAgregarMiembro').style.display = 'none';
-                                document.body.classList.remove('modal-open');
-                                var backdrop = document.querySelector('.modal-backdrop');
-                                if (backdrop) backdrop.remove();
+                                const m = document.getElementById("modalAgregarMiembro");
+                                m.classList.remove("show");
+                                m.style.display = "none";
+                                document.body.classList.remove("modal-open");
+                                const backdrop = document.querySelector(".modal-backdrop");
+                                if (backdrop) {
+                                    backdrop.remove();
+                                }
                             }
-                        } catch(e) { console.warn(e); }
+                        } catch(e) {
+                            console.warn(e);
+                        }
                         if (result.success) {
-                            msgExito.classList.remove('d-none');
-                            msgError.classList.add('d-none');
-                            setTimeout(function() { location.reload(); }, 800);
+                            msgExito.classList.remove("d-none");
+                            msgError.classList.add("d-none");
+                            setTimeout(function() { 
+                                location.reload(); 
+                            }, 800);
                         } else {
-                            var errMsg = result.error ? (result.error.message ? result.error.message : 'Error al agregar miembro.') : 'Error al agregar miembro.';
+                            const errObj = result.error || {};
+                            const errMsg = errObj.message || "Error al agregar miembro.";
                             msgError.textContent = errMsg;
-                            msgError.classList.remove('d-none');
-                            msgExito.classList.add('d-none');
+                            msgError.classList.remove("d-none");
+                            msgExito.classList.add("d-none");
                             btnConfirmar.disabled = false;
                         }
                     })
                     .catch(function(err) {
-                        msgError.textContent = 'Error de conexión / JS: ' + (err ? err.message : 'Desconocido');
-                        msgError.classList.remove('d-none');
+                        msgError.textContent = "Error de conexión / JS: " + (err ? err.message : "Desconocido");
+                        msgError.classList.remove("d-none");
                         btnConfirmar.disabled = false;
                     });
                 });
 
-                document.getElementById('modalAgregarMiembro')
-                    .addEventListener('hidden.bs.modal', function() {
-                        inputBuscar.value = '';
-                        divResultados.innerHTML = '';
-                        divNuevo.classList.add('d-none');
+                /**
+                 * Limpia el modal al cerrarse.
+                 * 
+                 * @private
+                 */
+                document.getElementById("modalAgregarMiembro")
+                    .addEventListener("hidden.bs.modal", function() {
+                        inputBuscar.value = "";
+                        divResultados.innerHTML = "";
+                        divNuevo.classList.add("d-none");
                         btnConfirmar.disabled = true;
-                        partnerId = null; nombreNuevo = null;
+                        partnerId = null; 
+                        nombreNuevo = null;
                     });
                 })();
                 ]]>

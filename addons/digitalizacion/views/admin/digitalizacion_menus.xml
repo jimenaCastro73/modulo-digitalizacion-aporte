@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- Menús Raíz -->
-    <menuitem id="digitalizacion_menu_root" name="Digitalización" sequence="10" groups="digitalizacion.digitalizacion_group_admin" />
+    <menuitem id="digitalizacion_menu_root" name="Digitalización" sequence="10" groups="digitalizacion.group_digitalizacion_admin" />
     
     <!-- Menú: Proyectos -->
-    <menuitem id="digitalizacion_proyectos_menu_root" name="Proyectos" parent="digitalizacion_menu_root" sequence="10" groups="digitalizacion.digitalizacion_group_admin" />
-    <menuitem id="digitalizacion_proyecto_menu" name="Proyectos" parent="digitalizacion_proyectos_menu_root" action="digitalizacion.digitalizacion_proyecto_action" sequence="10" groups="digitalizacion.digitalizacion_group_admin" />
-    <menuitem id="digitalizacion_asignacion_menu" name="Asignar Líderes" parent="digitalizacion_proyectos_menu_root" action="digitalizacion.digitalizacion_asignacion_action" sequence="20" groups="digitalizacion.digitalizacion_group_admin" />
+    <menuitem id="digitalizacion_proyectos_menu_root" name="Proyectos" parent="digitalizacion_menu_root" sequence="10" groups="digitalizacion.group_digitalizacion_admin" />
+    <menuitem id="digitalizacion_proyecto_menu" name="Proyectos" parent="digitalizacion_proyectos_menu_root" action="digitalizacion.digitalizacion_proyecto_action" sequence="10" groups="digitalizacion.group_digitalizacion_admin" />
+    <menuitem id="digitalizacion_asignacion_menu" name="Asignar Líderes" parent="digitalizacion_proyectos_menu_root" action="digitalizacion.digitalizacion_asignacion_action" sequence="20" groups="digitalizacion.group_digitalizacion_admin" />
     
     <!-- Menú: Operaciones -->
-    <menuitem id="digitalizacion_operaciones_menu" name="Operaciones" parent="digitalizacion_menu_root" sequence="20" groups="digitalizacion.digitalizacion_group_admin" />
-    <menuitem id="digitalizacion_dashboard_menu" name="Dashboard" parent="digitalizacion_operaciones_menu" action="digitalizacion_dashboard_action" sequence="1" groups="digitalizacion.digitalizacion_group_admin" />
-    <menuitem id="digitalizacion_miembro_proyecto_menu" name="Miembros del Equipo" parent="digitalizacion_operaciones_menu" action="digitalizacion.digitalizacion_miembro_proyecto_action" sequence="10" groups="digitalizacion.digitalizacion_group_admin" />
-    <menuitem id="digitalizacion_registro_menu" name="Registros de Trabajo" parent="digitalizacion_operaciones_menu" action="digitalizacion.digitalizacion_registro_action" sequence="20" groups="digitalizacion.digitalizacion_group_admin" />
+    <menuitem id="digitalizacion_operaciones_menu" name="Operaciones" parent="digitalizacion_menu_root" sequence="20" groups="digitalizacion.group_digitalizacion_admin" />
+    <menuitem id="digitalizacion_dashboard_menu" name="Dashboard" parent="digitalizacion_operaciones_menu" action="digitalizacion_dashboard_action" sequence="1" groups="digitalizacion.group_digitalizacion_admin" />
+    <menuitem id="digitalizacion_miembro_proyecto_menu" name="Miembros del Equipo" parent="digitalizacion_operaciones_menu" action="digitalizacion.digitalizacion_miembro_proyecto_action" sequence="10" groups="digitalizacion.group_digitalizacion_admin" />
+    <menuitem id="digitalizacion_registro_menu" name="Registros de Trabajo" parent="digitalizacion_operaciones_menu" action="digitalizacion.digitalizacion_registro_action" sequence="20" groups="digitalizacion.group_digitalizacion_admin" />
     
     <!-- Menú: Configuración -->
-    <menuitem id="digitalizacion_configuracion_menu" name="Configuración" parent="digitalizacion_menu_root" sequence="30" groups="digitalizacion.digitalizacion_group_admin" />
-    <menuitem id="digitalizacion_etapa_menu" name="Etapas" parent="digitalizacion_configuracion_menu" action="digitalizacion.digitalizacion_etapa_action" sequence="10" groups="digitalizacion.digitalizacion_group_admin" />
-    <menuitem id="digitalizacion_escaner_menu" name="Tipos de Escáner" parent="digitalizacion_configuracion_menu" action="digitalizacion.digitalizacion_tipo_escaner_action" sequence="20" groups="digitalizacion.digitalizacion_group_admin" />
+    <menuitem id="digitalizacion_configuracion_menu" name="Configuración" parent="digitalizacion_menu_root" sequence="30" groups="digitalizacion.group_digitalizacion_admin" />
+    <menuitem id="digitalizacion_etapa_menu" name="Etapas" parent="digitalizacion_configuracion_menu" action="digitalizacion.digitalizacion_etapa_action" sequence="10" groups="digitalizacion.group_digitalizacion_admin" />
+    <menuitem id="digitalizacion_escaner_menu" name="Tipos de Escáner" parent="digitalizacion_configuracion_menu" action="digitalizacion.digitalizacion_tipo_escaner_action" sequence="20" groups="digitalizacion.group_digitalizacion_admin" />
 </odoo>
