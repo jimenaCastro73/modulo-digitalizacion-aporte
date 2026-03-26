@@ -10,15 +10,13 @@ agregar nuevos y registrar incorporaciones tardías.
 Reglas de negocio clave:
   - UNIQUE(proyecto_id, partner_id): un contacto no puede aparecer dos veces
     en el mismo proyecto.
-  - Al marcar es_lider = True en un miembro, el sistema crea/reactiva
-    automáticamente su registro en digitalizacion.asignacion (T-04),
-    que es el que habilita el acceso al portal y controla las reglas de
-    seguridad. Solo puede haber un líder activo por proyecto.
+  - es_lider = True crea/reactiva automáticamente el registro en
+    digitalizacion.asignacion (T-04), habilitando el acceso al portal.
+    Solo puede haber un líder activo por proyecto.
   - Al desmarcar es_lider, se desactiva la asignación correspondiente.
   - Si fecha_salida está informada, el miembro NO aparece en el selector del
-    formulario de registro (filtro en domain de registro.miembro_id).
-  - Un mismo contacto puede ser miembro de múltiples proyectos con distintas
-    fechas de integración.
+    formulario de registro.
+  - Un mismo contacto puede ser miembro de múltiples proyectos.
 
 Referenciado por:
   - digitalizacion.registro (miembro_id)  → T-06
@@ -26,7 +24,7 @@ Referenciado por:
 
 import logging
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
@@ -37,6 +35,14 @@ class MiembroProyecto(models.Model):
     _description = "Miembro del Equipo de Digitalización"
     _order = "proyecto_id asc, partner_id asc"
     _rec_name = "display_name"
+
+    _sql_constraints = [
+        (
+            "unique_miembro_proyecto",
+            "UNIQUE(proyecto_id, partner_id)",
+            "Este contacto ya es miembro del proyecto seleccionado.",
+        ),
+    ]
 
     # ── Campos ────────────────────────────────────────────────────────────────
 
@@ -55,29 +61,24 @@ class MiembroProyecto(models.Model):
         required=True,
         ondelete="restrict",
         index=True,
-        help="Integrante del equipo. Referencia a res.partner. "
-        "Si no existe, se crea desde el portal antes de vincular.",
+        help="Integrante del equipo. Referencia a res.partner.",
     )
 
     fecha_integracion = fields.Date(
         string="Fecha de integración",
         default=fields.Date.today,
-        help="Fecha en que el integrante se sumó al proyecto. "
-        "Permite incorporaciones tardías.",
+        help="Fecha en que el integrante se sumó al proyecto.",
     )
 
     fecha_salida = fields.Date(
         string="Fecha de salida",
-        help="Opcional. Fecha en que el integrante dejó el proyecto. "
-        "Si está informada, el miembro NO aparece en el selector "
-        "del formulario de registro.",
+        help="Opcional. Si está informada, el miembro no aparece en el selector del formulario de registro.",
     )
 
     active = fields.Boolean(
         string="Activo",
         default=True,
-        help="Soft delete. False = miembro inactivo, no aparece en el "
-        "selector del formulario de registro.",
+        help="Soft delete. False = miembro inactivo.",
     )
 
     es_lider = fields.Boolean(
@@ -85,17 +86,16 @@ class MiembroProyecto(models.Model):
         default=False,
         help="Marca este miembro como líder del proyecto. "
         "Solo puede haber un líder activo por proyecto. "
-        "Al activar, crea o reactiva la asignación en T-04, "
-        "habilitando el acceso al portal. Al desactivar, "
-        "desactiva la asignación correspondiente.",
+        "Al activar, crea o reactiva la asignación en T-04. "
+        "Al desactivar, desactiva la asignación correspondiente.",
     )
 
-    # ── Campos relacionados (lectura rápida sin JOIN explícito) ───────────────
+    # ── Campos relacionados almacenados ───────────────────────────────────────
 
     partner_name = fields.Char(
         string="Nombre del miembro",
         related="partner_id.name",
-        store=True,  # almacenado para búsquedas y ordenamiento eficiente
+        store=True,
         readonly=True,
     )
 
@@ -106,7 +106,7 @@ class MiembroProyecto(models.Model):
         readonly=True,
     )
 
-    # ── Campo computado ───────────────────────────────────────────────────────
+    # ── Campos computados ─────────────────────────────────────────────────────
 
     display_name = fields.Char(
         string="Nombre",
@@ -122,166 +122,160 @@ class MiembroProyecto(models.Model):
         help="Cantidad de registros de trabajo asociados a este miembro en el proyecto.",
     )
 
-    # ── Restricciones SQL ─────────────────────────────────────────────────────
-
-    _sql_constraints = [
-        (
-            "unique_miembro_proyecto",
-            "UNIQUE(proyecto_id, partner_id)",
-            "Este contacto ya es miembro del proyecto seleccionado.",
-        ),
-    ]
-
     # ── Restricciones Python ──────────────────────────────────────────────────
 
     @api.constrains("fecha_integracion", "fecha_salida")
     def _check_fechas(self):
-        for rec in self:
-            if rec.fecha_salida and rec.fecha_integracion:
-                if rec.fecha_salida < rec.fecha_integracion:
+        for record in self:
+            if record.fecha_salida and record.fecha_integracion:
+                if record.fecha_salida < record.fecha_integracion:
                     raise ValidationError(
-                        f"La fecha de salida de '{rec.partner_id.name}' "
-                        f"no puede ser anterior a su fecha de integración."
+                        _(
+                            "La fecha de salida de '%s' no puede ser anterior "
+                            "a su fecha de integración.",
+                            record.partner_id.name,
+                        )
                     )
 
     @api.constrains("es_lider", "proyecto_id")
     def _check_lider_unico(self):
         """Garantiza que solo haya un líder activo por proyecto."""
-        for rec in self:
-            if rec.es_lider and rec.proyecto_id:
+        for record in self:
+            if record.es_lider and record.proyecto_id:
                 otros = self.search(
                     [
-                        ("proyecto_id", "=", rec.proyecto_id.id),
+                        ("proyecto_id", "=", record.proyecto_id.id),
                         ("es_lider", "=", True),
-                        ("id", "!=", rec.id),
+                        ("id", "!=", record.id),
                         ("active", "=", True),
                     ]
                 )
                 if otros:
                     raise ValidationError(
-                        f"El proyecto '{rec.proyecto_id.name}' ya tiene un líder activo: "
-                        f"'{otros[0].partner_id.name}'. Desactívalo primero."
+                        _(
+                            "El proyecto '%s' ya tiene un líder activo: '%s'. "
+                            "Desactívalo primero.",
+                            record.proyecto_id.name,
+                            otros[0].partner_id.name,
+                        )
                     )
 
-    # ── Overrides write / create ──────────────────────────────────────────────
+    # ── Overrides CRUD ────────────────────────────────────────────────────────
 
     def write(self, vals):
         """
         Sincroniza es_lider con digitalizacion.asignacion (T-04).
-        Normaliza fecha_salida: si se informa, desactiva el miembro.
+        Si se informa fecha_salida, desactiva el miembro y limpia liderazgo.
         """
         res = super().write(vals)
 
-        # Sincronizar liderazgo si cambió es_lider
         if "es_lider" in vals:
-            for rec in self:
-                rec._sincronizar_liderazgo(rec.es_lider)
+            for record in self:
+                record._sincronizar_liderazgo(record.es_lider)
 
-        # Si se escribe fecha_salida, desactivar miembro y limpiar liderazgo
-        if "fecha_salida" in vals and vals["fecha_salida"]:
+        if vals.get("fecha_salida"):
             activos = self.filtered(lambda r: r.active)
             if activos:
                 super(MiembroProyecto, activos).write({"active": False})
-            # Si era líder, quitar liderazgo y desactivar asignación
             lideres = self.filtered(lambda r: r.es_lider)
             if lideres:
-                for rec in lideres:
-                    rec._sincronizar_liderazgo(False)
+                for record in lideres:
+                    record._sincronizar_liderazgo(False)
                 super(MiembroProyecto, lideres).write({"es_lider": False})
 
         return res
 
-    # ── Métodos de sincronización con asignacion ──────────────────────────────
+    # ── Sincronización con digitalizacion.asignacion ──────────────────────────
 
-    def _sincronizar_liderazgo(self, activar: bool):
+    def _sincronizar_liderazgo(self, activar):
         """
-        Sincroniza el campo es_lider con digitalizacion.asignacion (T-04).
+        Sincroniza es_lider con digitalizacion.asignacion (T-04).
 
-        Lógica:
-          activar=True:
-            1. Verificar que el partner tenga un usuario Odoo portal activo.
-            2. Desmarcar otros miembros líderes del mismo proyecto (write directo
-               a super() para evitar recursión) y desactivar sus asignaciones.
-            3. Crear o reactivar la asignación para este miembro.
+        activar=True:
+          1. Verificar que el partner tenga usuario portal activo.
+          2. Desmarcar otros líderes del mismo proyecto.
+          3. Crear o reactivar la asignación.
 
-          activar=False:
-            1. Buscar la asignación activa del usuario correspondiente.
-            2. Desactivarla.
+        activar=False:
+          1. Buscar y desactivar la asignación activa.
         """
+        self.ensure_one()
+        if activar:
+            self._activar_liderazgo()
+        else:
+            self._desactivar_asignacion()
+
+    def _activar_liderazgo(self):
+        """Valida usuario portal y crea/reactiva la asignación en T-04."""
         self.ensure_one()
         Asignacion = self.env["digitalizacion.asignacion"].sudo()
 
-        if activar:
-            # 1. Buscar usuario portal del partner
-            usuario = (
-                self.env["res.users"]
-                .sudo()
-                .search(
-                    [
-                        ("partner_id", "=", self.partner_id.id),
-                        ("share", "=", True),  # usuario portal
-                        ("active", "=", True),
-                    ],
-                    limit=1,
-                )
-            )
-
-            if not usuario:
-                raise ValidationError(
-                    f"'{self.partner_id.name}' no tiene un usuario portal de Odoo. "
-                    f"Crea el usuario antes de marcarlo como líder."
-                )
-
-            # 2. Desmarcar otros líderes del mismo proyecto y desactivar sus asignaciones
-            otros_lideres = self.search(
+        usuario = (
+            self.env["res.users"]
+            .sudo()
+            .search(
                 [
-                    ("proyecto_id", "=", self.proyecto_id.id),
-                    ("es_lider", "=", True),
-                    ("id", "!=", self.id),
+                    ("partner_id", "=", self.partner_id.id),
+                    ("share", "=", True),
                     ("active", "=", True),
-                ]
-            )
-            for otro in otros_lideres:
-                otro._desactivar_asignacion()
-            if otros_lideres:
-                # Usar super() para evitar recursión en write
-                super(MiembroProyecto, otros_lideres).write({"es_lider": False})
-
-            # 3. Crear o reactivar asignación para este miembro
-            asig_existente = Asignacion.with_context(active_test=False).search(
-                [
-                    ("proyecto_id", "=", self.proyecto_id.id),
-                    ("lider_id", "=", usuario.id),
                 ],
                 limit=1,
             )
+        )
 
-            if asig_existente:
-                if not asig_existente.active:
-                    asig_existente.write({"active": True})
-                    _logger.info(
-                        "Asignación reactivada: líder '%s' en proyecto '%s'.",
-                        self.partner_id.name,
-                        self.proyecto_id.name,
-                    )
-            else:
-                Asignacion.create(
-                    {
-                        "proyecto_id": self.proyecto_id.id,
-                        "lider_id": usuario.id,
-                        "fecha_asignacion": self.fecha_integracion
-                        or fields.Date.today(),
-                    }
+        if not usuario:
+            raise ValidationError(
+                _(
+                    "'%s' no tiene un usuario portal de Odoo. "
+                    "Crea el usuario antes de marcarlo como líder.",
+                    self.partner_id.name,
                 )
+            )
+
+        # Desmarcar otros líderes del mismo proyecto
+        otros_lideres = self.search(
+            [
+                ("proyecto_id", "=", self.proyecto_id.id),
+                ("es_lider", "=", True),
+                ("id", "!=", self.id),
+                ("active", "=", True),
+            ]
+        )
+        for otro in otros_lideres:
+            otro._desactivar_asignacion()
+        if otros_lideres:
+            super(MiembroProyecto, otros_lideres).write({"es_lider": False})
+
+        # Crear o reactivar asignación
+        asig = Asignacion.with_context(active_test=False).search(
+            [
+                ("proyecto_id", "=", self.proyecto_id.id),
+                ("lider_id", "=", usuario.id),
+            ],
+            limit=1,
+        )
+
+        if asig:
+            if not asig.active:
+                asig.write({"active": True})
                 _logger.info(
-                    "Asignación creada: líder '%s' en proyecto '%s'.",
+                    "Asignación reactivada: líder '%s' en proyecto '%s'.",
                     self.partner_id.name,
                     self.proyecto_id.name,
                 )
-
         else:
-            # Desactivar asignación si existe
-            self._desactivar_asignacion()
+            Asignacion.create(
+                {
+                    "proyecto_id": self.proyecto_id.id,
+                    "lider_id": usuario.id,
+                    "fecha_asignacion": self.fecha_integracion or fields.Date.today(),
+                }
+            )
+            _logger.info(
+                "Asignación creada: líder '%s' en proyecto '%s'.",
+                self.partner_id.name,
+                self.proyecto_id.name,
+            )
 
     def _desactivar_asignacion(self):
         """Busca y desactiva la asignación activa de este miembro en su proyecto."""
@@ -323,10 +317,10 @@ class MiembroProyecto(models.Model):
 
     @api.depends("partner_id", "proyecto_id")
     def _compute_display_name(self):
-        for rec in self:
-            nombre = rec.partner_id.name or "Sin nombre"
-            proyecto = rec.proyecto_id.name or "Sin proyecto"
-            rec.display_name = f"{nombre} ({proyecto})"
+        for record in self:
+            nombre = record.partner_id.name or "Sin nombre"
+            proyecto = record.proyecto_id.name or "Sin proyecto"
+            record.display_name = f"{nombre} ({proyecto})"
 
     @api.depends("proyecto_id", "partner_id")
     def _compute_total_registros(self):
@@ -334,64 +328,59 @@ class MiembroProyecto(models.Model):
         conteos = {}
         reales = self.filtered(lambda r: r.id)
         if reales:
-            Registro = self.env["digitalizacion.registro"]
-            datos = Registro._read_group(
+            datos = self.env["digitalizacion.registro"]._read_group(
                 domain=[("miembro_id", "in", reales.ids)],
                 groupby=["miembro_id"],
                 aggregates=["__count"],
             )
             conteos = {miembro.id: count for miembro, count in datos}
-
-        for rec in self:
-            rec.total_registros = conteos.get(rec.id, 0)
+        for record in self:
+            record.total_registros = conteos.get(record.id, 0)
 
     def _search_total_registros(self, operator, value):
+        # Optimizado: _read_group en vez de search([]).mapped()
+        datos = self.env["digitalizacion.registro"]._read_group(
+            [], ["miembro_id"], ["__count"]
+        )
+        miembros_con = [miembro.id for miembro, _ in datos if miembro]
+
         if operator == "=" and value == 0:
-            miembros_con = (
-                self.env["digitalizacion.registro"].search([]).mapped("miembro_id.id")
-            )
             return [("id", "not in", miembros_con)]
-        elif (operator == ">" and value == 0) or (operator == "!=" and value == 0):
-            miembros_con = (
-                self.env["digitalizacion.registro"].search([]).mapped("miembro_id.id")
-            )
+        if (operator == ">" and value == 0) or (operator == "!=" and value == 0):
             return [("id", "in", miembros_con)]
         raise NotImplementedError(
-            "Búsqueda no soportada para total_registros con este operador y valor."
+            _("Búsqueda no soportada para total_registros con este operador.")
         )
 
     # ── Métodos de negocio ────────────────────────────────────────────────────
 
     def action_registrar_salida(self):
-        """
-        Registra la salida del miembro: asigna fecha_salida = hoy y
-        desactiva el registro (soft delete).
-        """
+        """Registra la salida del miembro: asigna fecha_salida=hoy y desactiva."""
         hoy = fields.Date.today()
-        for rec in self:
-            if rec.fecha_salida:
+        for record in self:
+            if record.fecha_salida:
                 raise ValidationError(
-                    f"'{rec.partner_id.name}' ya tiene fecha de salida registrada: "
-                    f"{rec.fecha_salida}."
+                    _(
+                        "'%s' ya tiene fecha de salida registrada: %s.",
+                        record.partner_id.name,
+                        record.fecha_salida,
+                    )
                 )
-            rec.write({"fecha_salida": hoy, "active": False})
+            record.write({"fecha_salida": hoy, "active": False})
 
     def action_reintegrar(self):
-        """
-        Cancela la salida del miembro: limpia fecha_salida y reactiva.
-        Útil para corregir registros erróneos.
-        """
-        for rec in self:
-            rec.write({"fecha_salida": False, "active": True})
+        """Cancela la salida: limpia fecha_salida y reactiva."""
+        for record in self:
+            record.write({"fecha_salida": False, "active": True})
 
     def action_ver_registros(self):
         """Abre los registros de trabajo de este miembro en el proyecto."""
         self.ensure_one()
         return {
             "type": "ir.actions.act_window",
-            "name": f"Registros — {self.partner_id.name}",
+            "name": _("Registros — %s", self.partner_id.name),
             "res_model": "digitalizacion.registro",
-            "view_mode": "list,form",
+            "view_mode": "tree,form",
             "domain": [
                 ("miembro_id", "=", self.id),
                 ("proyecto_id", "=", self.proyecto_id.id),
@@ -400,17 +389,14 @@ class MiembroProyecto(models.Model):
                 "default_miembro_id": self.id,
                 "default_proyecto_id": self.proyecto_id.id,
             },
+            "target": "current",
         }
 
-    # ── Método de clase: creación desde el portal (API pública) ──────────────
+    # ── Método de clase: creación desde el portal ─────────────────────────────
 
     @api.model
     def crear_desde_portal(
-        self,
-        proyecto_id: int,
-        nombre: str,
-        partner_id: int = None,
-        fecha_integracion=None,
+        self, proyecto_id, nombre, partner_id=None, fecha_integracion=None
     ):
         """
         Método de alto nivel llamado desde el controlador al agregar un miembro
@@ -421,11 +407,11 @@ class MiembroProyecto(models.Model):
         if partner_id:
             partner = Partner.browse(partner_id)
             if not partner.exists():
-                raise ValidationError(f"El contacto ID {partner_id} no existe.")
+                raise ValidationError(_("El contacto ID %s no existe.", partner_id))
         else:
             nombre_limpio = (nombre or "").strip()
             if not nombre_limpio:
-                raise ValidationError("El nombre del miembro no puede estar vacío.")
+                raise ValidationError(_("El nombre del miembro no puede estar vacío."))
             partner = Partner.search(
                 [("name", "=ilike", nombre_limpio), ("active", "=", True)],
                 limit=1,
@@ -446,27 +432,24 @@ class MiembroProyecto(models.Model):
         if existente:
             if existente.active:
                 raise ValidationError(
-                    f"'{partner.name}' ya es miembro activo de este proyecto."
+                    _("'%s' ya es miembro activo de este proyecto.", partner.name)
                 )
-            else:
-                existente.write({"active": True, "fecha_salida": False})
-                _logger.info(
-                    "Miembro_proyecto reactivado: '%s' en proyecto ID %d.",
-                    partner.name,
-                    proyecto_id,
-                )
-                return {"id": existente.id, "name": partner.name}
+            existente.write({"active": True, "fecha_salida": False})
+            _logger.info(
+                "Miembro_proyecto reactivado: '%s' en proyecto ID %d.",
+                partner.name,
+                proyecto_id,
+            )
+            return {"id": existente.id, "name": partner.name}
 
-        fecha = fecha_integracion or fields.Date.today()
         nuevo = self.sudo().create(
             {
                 "proyecto_id": proyecto_id,
                 "partner_id": partner.id,
-                "fecha_integracion": fecha,
+                "fecha_integracion": fecha_integracion or fields.Date.today(),
                 "active": True,
             }
         )
-
         _logger.info(
             "Miembro_proyecto creado desde portal: '%s' (ID %d) en proyecto ID %d.",
             partner.name,

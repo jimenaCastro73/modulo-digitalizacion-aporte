@@ -2,19 +2,23 @@
 """
 tipo_escaner.py — Modelo: digitalizacion.tipo_escaner
 Tabla T-02 · Catálogo global de tipos de escáneres
-
-Catálogo compartido por todos los proyectos. Permite registrar el equipo
-utilizado durante la etapa de Digitalizado. Referenciado desde
-digitalizacion.registro mediante el campo Many2many tipo_escaner_ids.
 """
 
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class DigitalizacionTipoEscaner(models.Model):
     _name = "digitalizacion.tipo_escaner"
     _description = "Tipo de Escáner"
     _order = "name asc"
+
+    _sql_constraints = [
+        (
+            "unique_tipo_escaner_name",
+            "UNIQUE(name)",
+            "Ya existe un tipo de escáner con ese nombre.",
+        ),
+    ]
 
     # ── Campos ────────────────────────────────────────────────────────────────
 
@@ -32,16 +36,30 @@ class DigitalizacionTipoEscaner(models.Model):
     active = fields.Boolean(
         string="Activo",
         default=True,
-        help="Soft delete de Odoo. False = escáner archivado/fuera de uso. "
-        "No aparece en el formulario de registro.",
+        help="Soft delete. False = escáner archivado/fuera de uso.",
     )
 
-    # ── Restricciones SQL ─────────────────────────────────────────────────────
+    registro_count = fields.Integer(
+        string="Usos en registros",
+        compute="_compute_registro_count",
+        store=False,
+        help="Cantidad de registros que usan este escáner.",
+    )
 
-    _sql_constraints = [
-        (
-            "unique_tipo_escaner_name",
-            "UNIQUE(name)",
-            "Ya existe un tipo de escáner con ese nombre.",
-        ),
-    ]
+    # ── Métodos computados ────────────────────────────────────────────────────
+
+    @api.depends("name")
+    def _compute_registro_count(self):
+        """Cuenta usos en registros via _read_group."""
+        if not self.ids:
+            for record in self:
+                record.registro_count = 0
+            return
+        datos = self.env["digitalizacion.registro"]._read_group(
+            domain=[("tipo_escaner_ids", "in", self.ids)],
+            groupby=["tipo_escaner_ids"],
+            aggregates=["__count"],
+        )
+        conteos = {escaner.id: count for escaner, count in datos}
+        for record in self:
+            record.registro_count = conteos.get(record.id, 0)
