@@ -150,6 +150,50 @@ class Proyecto(models.Model):
                         )
                     )
 
+    @api.constrains("meta_escaneos")
+    def _check_meta_escaneos(self):
+        for record in self:
+            if record.meta_escaneos < 0:
+                raise ValidationError(_("La meta de escaneos no puede ser negativa."))
+            if record.meta_escaneos > 100_000_000:
+                raise ValidationError(
+                    _(
+                        "La meta de escaneos (%d) supera el límite permitido de 100,000,000.",
+                        record.meta_escaneos,
+                    )
+                )
+
+    @api.constrains("name")
+    def _check_name(self):
+        """El nombre del proyecto no puede estar vacío ni ser solo números."""
+        for record in self:
+            nombre = (record.name or "").strip()
+            if not nombre:
+                raise ValidationError(
+                    _("El nombre del proyecto no puede estar vacío.")
+                )
+            if nombre.isdigit():
+                raise ValidationError(
+                    _(
+                        "El nombre del proyecto no puede ser solo números: '%s'. "
+                        "Usa un nombre descriptivo. Ej: 'Imprema 2026'.",
+                        nombre,
+                    )
+                )
+
+    @api.constrains("description")
+    def _check_description_longitud(self):
+        """La descripción no debe superar 5000 caracteres."""
+        _MAX = 5000
+        for record in self:
+            if record.description and len(record.description) > _MAX:
+                raise ValidationError(
+                    _(
+                        "La descripción no puede superar %d caracteres (actual: %d).",
+                        _MAX, len(record.description),
+                    )
+                )
+
     # ── Métodos computados ────────────────────────────────────────────────────
 
     @api.depends("fecha_inicio", "fecha_fin_estimada")

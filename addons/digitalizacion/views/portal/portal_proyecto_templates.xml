@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- ================================================================
          portal_proyecto_templates.xml
@@ -48,7 +48,7 @@
                     </div>
                 </div>
                 <!-- Barra de progreso -->
-                <t t-if="proyecto.meta_escaneos > 0">
+                <t t-if="proyecto.meta_escaneos &gt; 0">
                     <div class="card mb-4">
                         <div class="card-body">
                             <div class="d-flex justify-content-between mb-2">
@@ -65,7 +65,7 @@
                             </div>
                             <div class="progress" style="height: 20px;">
                                 <div t-attf-style="width: {{ min(proyecto.progreso, 100) }}%" t-attf-aria-valuenow="{{ proyecto.progreso }}" class="progress-bar bg-success" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                                    <t t-if="proyecto.progreso >= 15">
+                                    <t t-if="proyecto.progreso &gt;= 15">
                                         <t t-esc="'%.1f' % proyecto.progreso" />
                                         %
                                     </t>

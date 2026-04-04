@@ -16,7 +16,7 @@
         <field name="name">digitalizacion.registro.list</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
-            <tree string="Registros de Trabajo" default_order="fecha desc, id desc" decoration-muted="not fecha">
+            <tree string="Registros de Trabajo" default_order="fecha desc, id desc" decoration-muted="not fecha" decoration-danger="produccion_principal == 0">
                 <field name="fecha" string="Fecha" />
                 <field name="miembro_nombre" string="Digitalizador" />
                 <field name="proyecto_nombre" string="Proyecto" optional="show" />
@@ -62,40 +62,40 @@
                     <group string="Datos de producción — Limpieza / Ordenado" invisible="etapa_nombre not in ['Limpieza', 'Ordenado']">
                         <group>
                             <field name="referencia_cajas" string="Referencia de cajas" placeholder="Ej: BF202, BF199, BF208 o '7 cajas'" invisible="etapa_nombre not in ['Limpieza', 'Ordenado']" />
-                            <field name="no_expedientes" string="Cantidad de expedientes" invisible="etapa_nombre not in ['Limpieza', 'Ordenado']" />
+                            <field name="no_expedientes" string="Cantidad de expedientes" options="{'type': 'number', 'min': 0}" invisible="etapa_nombre not in ['Limpieza', 'Ordenado']" />
                         </group>
                         <group>
-                            <field name="total_folios" string="Cantidad de folios" invisible="etapa_nombre not in ['Limpieza', 'Ordenado']" />
+                            <field name="total_folios" string="Cantidad de folios" options="{'type': 'number', 'min': 0}" invisible="etapa_nombre not in ['Limpieza', 'Ordenado']" />
                         </group>
                     </group>
                     <!-- ── Campos Digitalizado ── -->
                     <group string="Datos de producción — Digitalizado" invisible="etapa_nombre != 'Digitalizado'">
                         <group>
                             <field name="referencia_cajas" string="Referencia de cajas" placeholder="Ej: BF202, BF199, BF208 o '5 cajas'" invisible="etapa_nombre != 'Digitalizado'" />
-                            <field name="no_expedientes" string="Cantidad de expedientes" invisible="etapa_nombre != 'Digitalizado'" />
+                            <field name="no_expedientes" string="Cantidad de expedientes" options="{'type': 'number', 'min': 0}" invisible="etapa_nombre != 'Digitalizado'" />
                         </group>
                         <group>
-                            <field name="total_folios" string="Cantidad de folios (físicos)" invisible="etapa_nombre != 'Digitalizado'" />
-                            <field name="total_escaneos" string="Número de escaneos (hojas digitales)" invisible="etapa_nombre != 'Digitalizado'" />
+                            <field name="total_folios" string="Cantidad de folios (físicos)" options="{'type': 'number', 'min': 0}" invisible="etapa_nombre != 'Digitalizado'" />
+                            <field name="total_escaneos" string="Número de escaneos (hojas digitales)" options="{'type': 'number', 'min': 0}" invisible="etapa_nombre != 'Digitalizado'" />
                             <field name="tipo_escaner_ids" string="Tipo(s) de escáner" widget="many2many_tags" invisible="etapa_nombre != 'Digitalizado'" />
                         </group>
                     </group>
                     <!-- ── Campos Editado ── -->
                     <group string="Datos de producción — Editado" invisible="etapa_nombre != 'Editado'">
                         <group>
-                            <field name="expedientes_editados" string="Expedientes editados" invisible="etapa_nombre != 'Editado'" />
+                            <field name="expedientes_editados" string="Expedientes editados" options="{'type': 'number', 'min': 0}" invisible="etapa_nombre != 'Editado'" />
                         </group>
                         <group>
-                            <field name="folios_editados" string="Folios editados" invisible="etapa_nombre != 'Editado'" />
+                            <field name="folios_editados" string="Folios editados" options="{'type': 'number', 'min': 0}" invisible="etapa_nombre != 'Editado'" />
                         </group>
                     </group>
                     <!-- ── Campos Indexado ── -->
                     <group string="Datos de producción — Indexado" invisible="etapa_nombre != 'Indexado'">
                         <group>
-                            <field name="expedientes_indexados" string="Expedientes indexados" invisible="etapa_nombre != 'Indexado'" />
+                            <field name="expedientes_indexados" string="Expedientes indexados" options="{'type': 'number', 'min': 0}" invisible="etapa_nombre != 'Indexado'" />
                         </group>
                         <group>
-                            <field name="folios_indexados" string="Folios indexados" invisible="etapa_nombre != 'Indexado'" />
+                            <field name="folios_indexados" string="Folios indexados" options="{'type': 'number', 'min': 0}" invisible="etapa_nombre != 'Indexado'" />
                         </group>
                     </group>
                     <!-- Campos invisibles para usar en expresiones -->

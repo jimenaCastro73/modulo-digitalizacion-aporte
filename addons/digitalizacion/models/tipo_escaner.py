@@ -4,7 +4,8 @@ tipo_escaner.py — Modelo: digitalizacion.tipo_escaner
 Tabla T-02 · Catálogo global de tipos de escáneres
 """
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class DigitalizacionTipoEscaner(models.Model):
@@ -45,6 +46,25 @@ class DigitalizacionTipoEscaner(models.Model):
         store=False,
         help="Cantidad de registros que usan este escáner.",
     )
+
+    # ── Restricciones Python ──────────────────────────────────────────────────
+
+    @api.constrains("name")
+    def _check_name(self):
+        for record in self:
+            nombre = (record.name or "").strip()
+            if not nombre:
+                raise ValidationError(
+                    _("El nombre del tipo de escáner no puede estar vacío.")
+                )
+            if nombre.isdigit():
+                raise ValidationError(
+                    _(
+                        "El nombre del escáner no puede ser solo números: '%s'. "
+                        "Usa el modelo o marca. Ej: 'Fujitsu fi-7300NX'.",
+                        nombre,
+                    )
+                )
 
     # ── Métodos computados ────────────────────────────────────────────────────
 

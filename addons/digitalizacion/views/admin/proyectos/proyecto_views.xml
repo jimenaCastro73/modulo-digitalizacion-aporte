@@ -130,7 +130,7 @@
                             <field name="fecha_inicio" required="1" />
                             <field name="fecha_fin_estimada" />
                             <field name="duracion_estimada" readonly="1" invisible="not fecha_fin_estimada" />
-                            <field name="meta_escaneos" string="Meta de escaneos" help="Cantidad objetivo de escaneos para calcular el progreso." />
+                            <field name="meta_escaneos" string="Meta de escaneos" options="{'type': 'number', 'min': 0}" help="Cantidad objetivo de escaneos para calcular el progreso." />
                         </group>
                         <group string="Estado">
                             <field name="state" widget="radio" options="{'horizontal': true}" />

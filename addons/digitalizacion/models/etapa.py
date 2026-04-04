@@ -4,6 +4,8 @@ etapa.py — Modelo: digitalizacion.etapa
 Tabla T-01 · Catálogo de etapas del proceso de digitalización
 """
 
+import re
+
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
@@ -51,10 +53,27 @@ class DigitalizacionEtapa(models.Model):
     # ── Restricciones Python ──────────────────────────────────────────────────
 
     @api.constrains("name")
-    def _check_name_not_empty(self):
+    def _check_name(self):
         for record in self:
-            if not record.name or not record.name.strip():
+            nombre = (record.name or "").strip()
+            if not nombre:
                 raise ValidationError(_("El nombre de la etapa no puede estar vacío."))
+            if nombre.isdigit():
+                raise ValidationError(
+                    _("El nombre de la etapa no puede ser solo números: '%s'.", nombre)
+                )
+            if re.fullmatch(r'[^\w\s\-\.áéíóúÁÉÍÓÚüÜñÑ]+', nombre):
+                raise ValidationError(
+                    _("El nombre de la etapa contiene solo caracteres especiales: '%s'.", nombre)
+                )
+
+    @api.constrains("sequence")
+    def _check_sequence(self):
+        for record in self:
+            if record.sequence < 0:
+                raise ValidationError(
+                    _("La secuencia no puede ser negativa (valor actual: %d).", record.sequence)
+                )
 
     # ── Métodos computados ────────────────────────────────────────────────────
 

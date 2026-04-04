@@ -32,6 +32,7 @@ Relaciones:
 """
 
 import logging
+import re
 
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
@@ -257,6 +258,43 @@ class Registro(models.Model):
                 )
 
     @api.constrains(
+        "no_expedientes",
+        "total_folios",
+        "total_escaneos",
+        "expedientes_editados",
+        "folios_editados",
+        "expedientes_indexados",
+        "folios_indexados",
+    )
+    def _check_valores_positivos(self):
+        # Límite superior razonable: 999 999 unidades por jornada
+        _MAX = 999_999
+        campos = [
+            ("no_expedientes",       _("Cantidad de expedientes")),
+            ("total_folios",         _("Cantidad de folios")),
+            ("total_escaneos",       _("Número de escaneos")),
+            ("expedientes_editados", _("Expedientes editados")),
+            ("folios_editados",      _("Folios editados")),
+            ("expedientes_indexados",_("Expedientes indexados")),
+            ("folios_indexados",     _("Folios indexados")),
+        ]
+        for record in self:
+            for campo, etiqueta in campos:
+                valor = getattr(record, campo)
+                if valor < 0:
+                    raise ValidationError(
+                        _("%s no puede ser negativo (valor: %d).", etiqueta, valor)
+                    )
+                if valor > _MAX:
+                    raise ValidationError(
+                        _(
+                            "%s supera el límite permitido de %d por jornada (valor: %d). "
+                            "Verifica que el dato sea correcto.",
+                            etiqueta, _MAX, valor,
+                        )
+                    )
+
+    @api.constrains(
         "etapa_id",
         "total_escaneos",
         "expedientes_editados",
@@ -308,6 +346,47 @@ class Registro(models.Model):
                             record.etapa_id.name,
                         )
                     )
+
+    @api.constrains("referencia_cajas")
+    def _check_referencia_cajas(self):
+        """
+        referencia_cajas es texto libre, pero si se ingresa debe:
+          - No ser solo espacios en blanco.
+          - Contener al menos una letra o un dígito (no solo símbolos).
+        """
+        for record in self:
+            ref = record.referencia_cajas
+            if ref is False or ref is None:
+                continue
+            ref_strip = ref.strip()
+            if not ref_strip:
+                raise ValidationError(
+                    _("'Referencia de cajas' no puede contener solo espacios en blanco.")
+                )
+            # Debe tener al menos un caracter alfanumérico
+            if not re.search(r'[\w\d]', ref_strip):
+                raise ValidationError(
+                    _(
+                        "'Referencia de cajas' debe contener al menos una letra o número "
+                        "(valor ingresado: '%s').",
+                        ref_strip,
+                    )
+                )
+
+    @api.constrains("observacion")
+    def _check_observacion_longitud(self):
+        """La observación no debe superar los 2000 caracteres."""
+        _MAX_CHARS = 2000
+        for record in self:
+            if record.observacion and len(record.observacion) > _MAX_CHARS:
+                raise ValidationError(
+                    _(
+                        "Las observaciones no pueden superar %d caracteres "
+                        "(actual: %d).",
+                        _MAX_CHARS,
+                        len(record.observacion),
+                    )
+                )
 
     # ── Métodos computados ────────────────────────────────────────────────────
 

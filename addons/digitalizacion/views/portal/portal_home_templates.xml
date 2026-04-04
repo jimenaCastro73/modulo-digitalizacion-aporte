@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- ================================================================
          portal_home_templates.xml
@@ -28,7 +28,7 @@
                             <t t-esc="periodo_actual" />
                         </p>
                     </div>
-                    <t t-if="asignaciones and len(asignaciones) > 1">
+                    <t t-if="asignaciones and len(asignaciones) &gt; 1">
                         <form method="GET" action="/digitalizacion/v1/dashboard" class="d-flex align-items-center gap-2">
                             <label class="text-muted small mb-0">Proyecto:</label>
                             <select name="proyecto_id" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
@@ -136,7 +136,7 @@
                                         </div>
                                         <div class="flex-grow-1 bg-light rounded" style="height:20px;overflow:hidden;">
                                             <div t-attf-style="width:{{ etapa['porcentaje'] }}%;min-width:0;" class="bg-primary rounded h-100 d-flex align-items-center px-2">
-                                                <t t-if="etapa['porcentaje'] >= 15">
+                                                <t t-if="etapa['porcentaje'] &gt;= 15">
                                                     <small class="text-white fw-semibold">
                                                         <t t-esc="etapa['cantidad']" />
                                                     </small>

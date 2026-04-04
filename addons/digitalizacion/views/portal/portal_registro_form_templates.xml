@@ -121,8 +121,18 @@
                 };
                 const REGLA_DEFAULT = { caja: true, expedientes: true, folios: true, escaneos: false, escaner: false, expEditados: false, foliosEditados: false, expIndexados: false, foliosIndexados: false };
 
-                // Inicializar fecha al día de hoy
-                document.getElementById('campo-fecha').valueAsDate = new Date();
+                // Inicializar fecha al día de hoy y bloquear fechas futuras
+                (function() {
+                    var campofecha = document.getElementById('campo-fecha');
+                    var hoy = new Date();
+                    var yyyy = hoy.getFullYear();
+                    var mm   = String(hoy.getMonth() + 1).padStart(2, '0');
+                    var dd   = String(hoy.getDate()).padStart(2, '0');
+                    var hoyStr = yyyy + '-' + mm + '-' + dd;
+                    campofecha.value = hoyStr;
+                    campofecha.max   = hoyStr;  // bloquea futuras en el picker nativo
+                })();
+
 
                 // ── Construir opciones de select ──
                 function opcionesSelect(lista) {
@@ -158,34 +168,34 @@
                     </select>
                 </td>
                 <td class="col-caja">
-                    <input type="text" class="form-control form-control-sm inp-caja" placeholder="BF202, BF199..." />
+                    <input type="text" class="form-control form-control-sm inp-caja" placeholder="BF202, BF199..." maxlength="200" />
                 </td>
                 <td class="col-expedientes">
-                    <input type="number" class="form-control form-control-sm inp-expedientes" min="0" value="0" />
+                    <input type="number" class="form-control form-control-sm inp-expedientes" min="0" max="999999" value="0" />
                 </td>
                 <td class="col-folios">
-                    <input type="number" class="form-control form-control-sm inp-folios" min="0" value="0" />
+                    <input type="number" class="form-control form-control-sm inp-folios" min="0" max="999999" value="0" />
                 </td>
                 <td class="col-escaneos">
-                    <input type="number" class="form-control form-control-sm inp-escaneos" min="0" value="0" />
+                    <input type="number" class="form-control form-control-sm inp-escaneos" min="0" max="999999" value="0" />
                 </td>
                 <td class="col-escaner">
                     <select class="form-select form-select-sm sel-escaner" multiple="multiple" style="min-height:32px">${opcionesSelect(ESCANERES)}</select>
                 </td>
                 <td class="col-exp-editados">
-                    <input type="number" class="form-control form-control-sm inp-exp-editados" min="0" value="0" />
+                    <input type="number" class="form-control form-control-sm inp-exp-editados" min="0" max="999999" value="0" />
                 </td>
                 <td class="col-folios-editados">
-                    <input type="number" class="form-control form-control-sm inp-folios-editados" min="0" value="0" />
+                    <input type="number" class="form-control form-control-sm inp-folios-editados" min="0" max="999999" value="0" />
                 </td>
                 <td class="col-exp-indexados">
-                    <input type="number" class="form-control form-control-sm inp-exp-indexados" min="0" value="0" />
+                    <input type="number" class="form-control form-control-sm inp-exp-indexados" min="0" max="999999" value="0" />
                 </td>
                 <td class="col-folios-indexados">
-                    <input type="number" class="form-control form-control-sm inp-folios-indexados" min="0" value="0" />
+                    <input type="number" class="form-control form-control-sm inp-folios-indexados" min="0" max="999999" value="0" />
                 </td>
                 <td>
-                    <input type="text" class="form-control form-control-sm inp-observacion" placeholder="Observaciones..." />
+                    <input type="text" class="form-control form-control-sm inp-observacion" placeholder="Observaciones..." maxlength="2000" />
                 </td>
                 <td class="text-center">
                     <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-fila" title="Eliminar fila">
@@ -280,7 +290,7 @@
                         const escaner = Array.from(tr.querySelector('.sel-escaner').selectedOptions)
                                              .map(function(o) { return parseInt(o.value); });
 
-                        payload.push({
+                        const payload_row = {
                             miembro_id:          miembroId,
                             etapa_id:            etapaId,
                             referencia_cajas:    tr.querySelector('.inp-caja').value || null,
@@ -293,7 +303,19 @@
                             expedientes_indexados: parseInt(tr.querySelector('.inp-exp-indexados').value) || 0,
                             folios_indexados:      parseInt(tr.querySelector('.inp-folios-indexados').value) || 0,
                             observacion:           tr.querySelector('.inp-observacion').value || null,
-                        });
+                        };
+
+                        if (
+                            payload_row.no_expedientes &lt; 0 || payload_row.total_folios &lt; 0 ||
+                            payload_row.total_escaneos &lt; 0 || payload_row.expedientes_editados &lt; 0 ||
+                            payload_row.folios_editados &lt; 0 || payload_row.expedientes_indexados &lt; 0 ||
+                            payload_row.folios_indexados &lt; 0
+                        ) {
+                            mostrarAlerta('warning', 'Validación fallida: No se permiten cantidades negativas.');
+                            return;
+                        }
+
+                        payload.push(payload_row);
                     }
 
                     const btn = document.getElementById('btn-guardar');

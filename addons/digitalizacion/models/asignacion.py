@@ -97,6 +97,19 @@ class Asignacion(models.Model):
                     )
                 )
 
+    @api.constrains("fecha_asignacion")
+    def _check_fecha_asignacion(self):
+        """La fecha de asignación no puede ser futura."""
+        hoy = fields.Date.today()
+        for record in self:
+            if record.fecha_asignacion and record.fecha_asignacion > hoy:
+                raise ValidationError(
+                    _(
+                        "La fecha de asignación (%s) no puede ser futura.",
+                        record.fecha_asignacion,
+                    )
+                )
+
     # ── Métodos computados ────────────────────────────────────────────────────
 
     @api.depends("lider_id", "proyecto_id")
