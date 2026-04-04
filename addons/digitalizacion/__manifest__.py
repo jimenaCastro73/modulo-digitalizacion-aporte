@@ -36,6 +36,7 @@
         'views/portal/portal_proyecto_templates.xml',
         'views/portal/portal_registro_form_templates.xml',
         'views/portal/portal_miembros_templates.xml',
+        'views/portal/website_menu.xml',
     ],
     'installable':
     True,

@@ -126,9 +126,11 @@
 
                 // ── Construir opciones de select ──
                 function opcionesSelect(lista) {
-                    return lista.map(i => `
+                    return lista.map(function(i) {
+                        return `
                 <option value="${i.id}">${i.name}</option>
-                `).join('');
+                `;
+                    }).join('');
                 }
 
                 // ── Crear una nueva fila ──
@@ -148,9 +150,11 @@
                 <td>
                     <select class="form-select form-select-sm sel-etapa" required="required">
                         <option value="" data-nombre="">— Seleccionar —</option>
-                        ${ETAPAS.map(e => `
+                        ${ETAPAS.map(function(e) {
+                            return `
                         <option value="${e.id}" data-nombre="${e.name}">${e.name}</option>
-                        `).join('')}
+                        `;
+                        }).join('')}
                     </select>
                 </td>
                 <td class="col-caja">
@@ -227,13 +231,14 @@
                     for (const [cls, visible] of Object.entries(mapa)) {
                         const td = tr.querySelector(`.${cls}`);
                         if (td) {
-                            td.style.display = visible ? '' : 'none';
-                            // Resetear valor si se oculta
-                            if (!visible) {
-                                const inp = td.querySelector('input, select');
-                                if (inp) {
+                            const inp = td.querySelector('input, select');
+                            if (inp) {
+                                inp.disabled = !visible;
+                                inp.style.visibility = visible ? 'visible' : 'hidden';
+                                // Resetear valor si se deshabilita
+                                if (!visible) {
                                     if (inp.type === 'number') inp.value = 0;
-                                    else if (inp.tagName === 'SELECT') Array.from(inp.options).forEach(o => o.selected = false);
+                                    else if (inp.tagName === 'SELECT') Array.from(inp.options).forEach(function(o) { o.selected = false; });
                                     else inp.value = '';
                                 }
                             }
@@ -268,12 +273,12 @@
                         const miembroId = parseInt(tr.querySelector('.sel-miembro').value);
                         const etapaId   = parseInt(tr.querySelector('.sel-etapa').value);
                         if (!miembroId || !etapaId) {
-                            mostrarAlerta('warning', 'Completa el Digitalizador y la Etapa en todas las filas.');
+                            mostrarAlerta('warning', 'Por favor, selecciona un Integrante y una Etapa en todas las filas agregadas.');
                             return;
                         }
 
                         const escaner = Array.from(tr.querySelector('.sel-escaner').selectedOptions)
-                                             .map(o => parseInt(o.value));
+                                             .map(function(o) { return parseInt(o.value); });
 
                         payload.push({
                             miembro_id:          miembroId,
@@ -293,9 +298,9 @@
 
                     const btn = document.getElementById('btn-guardar');
                     btn.disabled = true;
-                    btn.innerHTML = '
+                    btn.innerHTML = `
                 <i class="fa fa-spinner fa-spin me-1" />
-                Guardando...';
+                Guardando...`;
 
                     try {
                         // CSRF token de la cookie de Odoo
@@ -319,25 +324,38 @@
 
                         const data = await resp.json();
 
-                        if (data.result &amp;&amp; data.result.success) {
-                            mostrarAlerta('success', `✓ ${payload.length} registro(s) guardado(s) correctamente.`);
-                            // Limpiar tabla
-                            document.getElementById('tbody-registros').innerHTML = '';
-                            document.getElementById('tbody-registros').appendChild(crearFila());
+                        if (data.result) {
+                            if (data.result.success) {
+                                mostrarAlerta('success', `✓ ${payload.length} registro(s) guardado(s) correctamente.`);
+                                // Limpiar tabla
+                                document.getElementById('tbody-registros').innerHTML = '';
+                                document.getElementById('tbody-registros').appendChild(crearFila());
+                            } else {
+                                let msg = 'Error desconocido al guardar.';
+                                if (data.result.error) {
+                                    if (data.result.error.message) {
+                                        msg = data.result.error.message;
+                                    }
+                                }
+                                mostrarAlerta('danger', msg);
+                            }
+                        } else if (data.error) {
+                            if (data.error.message) {
+                                mostrarAlerta('danger', data.error.message);
+                            } else {
+                                mostrarAlerta('danger', 'Error desconocido al guardar.');
+                            }
                         } else {
-                            const msg = (data.result &amp;&amp; data.result.error &amp;&amp; data.result.error.message)
-                                || (data.error &amp;&amp; data.error.message)
-                                || 'Error desconocido al guardar.';
-                            mostrarAlerta('danger', msg);
+                            mostrarAlerta('danger', 'Error desconocido al guardar.');
                         }
                     } catch(err) {
                         mostrarAlerta('danger', 'Error de conexión. Verifica tu acceso a internet.');
                         console.error(err);
                     } finally {
                         btn.disabled = false;
-                        btn.innerHTML = '
+                        btn.innerHTML = `
                 <i class="fa fa-save me-1" />
-                Guardar registros';
+                Guardar registros`;
                     }
                 });
 

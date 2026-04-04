@@ -22,6 +22,7 @@ Permisos:
 import json
 import logging
 from datetime import date, timedelta
+from markupsafe import Markup
 
 from odoo import _, fields, http
 from odoo.exceptions import AccessError, ValidationError, UserError
@@ -315,15 +316,15 @@ class DigitalizacionPortal(http.Controller):
             "digitalizacion.digitalizacion_portal_registro_form",
             {
                 "proyecto": proyecto,
-                "etapas_json": json.dumps(
+                "etapas_json": Markup(json.dumps(
                     [{"id": e.id, "name": e.name} for e in etapas]
-                ),
-                "miembros_json": json.dumps(
+                )),
+                "miembros_json": Markup(json.dumps(
                     [{"id": m.id, "name": m.partner_name} for m in miembros]
-                ),
-                "escaneres_json": json.dumps(
+                )),
+                "escaneres_json": Markup(json.dumps(
                     [{"id": e.id, "name": e.name} for e in escaneres]
-                ),
+                )),
                 "notifications": request.session.pop("notifications", []),
                 "page_name": "digitalizacion_formulario",
             },
