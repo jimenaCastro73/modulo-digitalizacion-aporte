@@ -1,285 +1,192 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- ================================================================
-         registro_views.xml — Vistas backend: digitalizacion.registro
-         Modelo T-06 · Registro diario de trabajo de digitalizacion
-         Acceso: Admin (CRUD) / Lider (R+W+C desde portal unicamente)
+         registro_views.xml — Vistas del backend para digitalizacion.registro
+         Modelo T-06 · Registro diario de trabajo de digitalización
 
-         Vistas incluidas:
-           1. Vista lista      (list)   — con agrupacion y totales
-           2. Vista formulario (form)   — campos dinamicos por etapa
-           3. Vista pivot      (pivot)  — analisis cruzado de produccion
-           4. Vista grafico    (graph)  — tendencia de escaneos en el tiempo
-           5. Vista busqueda   (search) — filtros y agrupaciones completos
-           6. Enlace view_id a la accion central de menus.xml
-
-         Estrategia de visibilidad de campos por etapa:
-           Los campos de detalle se muestran/ocultan con invisible="..."
-           evaluado contra etapa_id.name (flexible, sin IDs hardcodeados).
-           Mismo criterio que el JS del portal (WF-03 digCambiarEtapa).
+         Campos visibles según etapa (expresiones Python directas, sin attrs):
+           Limpieza / Ordenado → referencia_cajas, no_expedientes, total_folios
+           Digitalizado        → referencia_cajas, no_expedientes, total_folios,
+                                 total_escaneos, tipo_escaner_ids
+           Editado             → expedientes_editados, folios_editados
+           Indexado            → expedientes_indexados, folios_indexados
          ================================================================ -->
-    <!-- ================================================================
-         1. VISTA LISTA
-         Columnas fijas: fecha, lider, miembro, proyecto, etapa, caja.
-         Columna dinamica "Produccion": muestra produccion_principal
-         y unidad_produccion como resumen unificado de la etapa.
-         Totales opcionales para columnas numericas clave.
-         ================================================================ -->
+    <!-- 1. VISTA LISTA -->
     <record id="digitalizacion_registro_view_tree" model="ir.ui.view">
         <field name="name">digitalizacion.registro.list</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
-            <tree string="Registros de Trabajo" default_order="fecha desc, id desc" decoration-muted="not fecha" create="0">
-                <!-- create="0": los registros se crean unicamente desde
-                     el portal (WF-03). El Admin puede leer y corregir,
-                     pero no crear desde el backend para mantener el flujo. -->
-                <field name="fecha" string="Fecha" readonly="1" />
-                <field name="lider_id" string="Registrado por" readonly="1" optional="show" />
-                <field name="miembro_id" string="Digitalizador" readonly="1" />
-                <field name="proyecto_id" string="Proyecto" readonly="1" />
-                <field name="etapa_id" string="Etapa" readonly="1" widget="badge" />
-                <field name="no_caja" string="Caja / ID" readonly="1" optional="show" />
-                <!-- Produccion principal segun etapa -->
-                <field name="produccion_principal" string="Produccion" readonly="1" sum="Total produccion" />
-                <field name="unidad_produccion" string="Unidad" readonly="1" optional="show" />
-                <!-- Columnas detalle opcionales para drill-down -->
-                <field name="total_escaneos" string="Escaneos" readonly="1" optional="hide" sum="Total escaneos" />
-                <field name="total_folios" string="Folios fisicos" readonly="1" optional="hide" sum="Total folios" />
-                <field name="no_expedientes" string="Expedientes" readonly="1" optional="hide" sum="Total expedientes" />
-                <field name="expedientes_editados" string="Exp. editados" readonly="1" optional="hide" sum="Total editados" />
-                <field name="expedientes_indexados" string="Exp. indexados" readonly="1" optional="hide" sum="Total indexados" />
-                <field name="hora" string="Hora envio" readonly="1" optional="hide" />
-                <!-- Invisible: necesarios para logica interna -->
-                <field name="etapa_nombre" column_invisible="1" />
-                <field name="proyecto_nombre" column_invisible="1" />
+            <tree string="Registros de Trabajo" default_order="fecha desc, id desc" decoration-muted="not fecha">
+                <field name="fecha" string="Fecha" />
+                <field name="miembro_nombre" string="Digitalizador" />
+                <field name="proyecto_nombre" string="Proyecto" optional="show" />
+                <field name="etapa_nombre" string="Etapa" />
+                <field name="referencia_cajas" string="Ref. cajas" optional="show" />
+                <field name="produccion_principal" string="Producción" />
+                <field name="unidad_produccion" string="Unidad" />
+                <field name="total_folios" string="Folios" optional="hide" />
+                <field name="total_escaneos" string="Escaneos" optional="hide" />
+                <field name="lider_nombre" string="Registrado por" optional="hide" />
+                <field name="hora" string="Hora envío" optional="hide" />
+                <!-- Campos invisibles necesarios para expresiones -->
+                <field name="etapa_id" column_invisible="True" />
+                <field name="miembro_id" column_invisible="True" />
+                <field name="proyecto_id" column_invisible="True" />
             </tree>
         </field>
     </record>
-    <!-- ================================================================
-         2. VISTA FORMULARIO
-         Campos de detalle organizados en secciones colapsables por etapa.
-         Cada bloque usa invisible="..." contra etapa_id.name para
-         mostrar solo los campos relevantes a la etapa seleccionada.
-         El Admin puede corregir valores pero no cambiar lider_id.
-         ================================================================ -->
+    <!-- 2. VISTA FORMULARIO -->
     <record id="digitalizacion_registro_view_form" model="ir.ui.view">
         <field name="name">digitalizacion.registro.form</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
             <form string="Registro de Trabajo">
                 <header>
-                    <button name="action_duplicar_para_hoy" string="Duplicar para hoy" type="object" class="btn-secondary" help="Crea una copia de este registro con fecha de hoy. Util para jornadas con la misma estructura." />
+                    <button name="action_duplicar_para_hoy" string="Duplicar para hoy" type="object" class="btn-secondary" />
                 </header>
-                <!-- ── Stat button: ir al proyecto ───────────────────── -->
-                <div name="button_box" class="oe_button_box">
-                    <button name="digitalizacion.digitalizacion_proyecto_action" type="action" class="oe_stat_button" icon="fa-folder-open" invisible="not proyecto_id">
-                        <div class="o_stat_info">
-                            <span class="o_stat_text">
-                                <field name="proyecto_nombre" readonly="1" />
-                            </span>
-                        </div>
-                    </button>
-                </div>
                 <sheet>
-                    <!-- ── Encabezado: auditoria (readonly) ──────────── -->
-                    <div class="oe_title">
-                        <label string="Digitalizador" for="miembro_id" />
-                        <h1>
-                            <field name="miembro_id" readonly="1" options="{'no_create': True}" />
-                        </h1>
-                    </div>
-                    <!-- Bloque de auditoria: lider + timestamps -->
+                    <!-- ── Identificación del registro ── -->
                     <group>
-                        <group string="Auditoria (no editable)">
-                            <field name="lider_id" string="Registrado por" readonly="1" />
-                            <field name="fecha" string="Fecha de jornada" readonly="1" />
-                            <field name="hora" string="Hora de envio" readonly="1" />
+                        <group string="Registro">
+                            <field name="fecha" required="1" />
+                            <field name="hora" readonly="1" />
+                            <field name="lider_id" readonly="1" options="{'no_create': True, 'no_open': True}" />
                         </group>
-                        <group string="Contexto">
-                            <field name="proyecto_id" string="Proyecto" readonly="1" options="{'no_create': True}" />
-                            <field name="etapa_id" string="Etapa" readonly="1" options="{'no_create': True}" />
-                            <field name="no_caja" string="Caja / ID" readonly="1" />
-                        </group>
-                    </group>
-                    <!-- ── Separador ──────────────────────────────────── -->
-                    <separator string="Datos de produccion de la jornada" />
-                    <!-- ── BLOQUE: LIMPIEZA / ORDENADO ───────────────────
-                         Visible cuando etapa es Limpieza o Ordenado.
-                         Campos: no_caja, cajas, expedientes, folios.
-                         ─────────────────────────────────────────────── -->
-                    <group string="Produccion — Limpieza / Ordenado" invisible="'limpieza' not in (etapa_id.name or '').lower()
-                                      and 'ordenado' not in (etapa_id.name or '').lower()">
-                        <group>
-                            <field name="cantidad_cajas" string="Cantidad de cajas" />
-                            <field name="no_expedientes" string="Expedientes procesados" />
-                        </group>
-                        <group>
-                            <field name="total_folios" string="Folios fisicos procesados" />
+                        <group string="Asignación">
+                            <field name="proyecto_id" required="1" options="{'no_create': True}" />
+                            <field name="miembro_id" required="1" options="{'no_create': True}" domain="[('proyecto_id', '=', proyecto_id), ('active', '=', True), ('fecha_salida', '=', False)]" />
+                            <field name="etapa_id" required="1" options="{'no_create': True}" />
                         </group>
                     </group>
-                    <!-- ── BLOQUE: DIGITALIZADO ───────────────────────────
-                         Visible cuando etapa es Digitalizado.
-                         Campos: folios fisicos, escaneos, tipo_escaner_ids.
-                         ─────────────────────────────────────────────── -->
-                    <group string="Produccion — Digitalizado" invisible="'digitalizado' not in (etapa_id.name or '').lower()">
+                    <!-- ── Campos Limpieza / Ordenado ── -->
+                    <group string="Datos de producción — Limpieza / Ordenado" invisible="etapa_nombre not in ['Limpieza', 'Ordenado']">
                         <group>
-                            <field name="total_folios" string="Folios fisicos escaneados" />
-                            <field name="total_escaneos" string="Numero de escaneos (hojas digitales)" />
+                            <field name="referencia_cajas" string="Referencia de cajas" placeholder="Ej: BF202, BF199, BF208 o '7 cajas'" invisible="etapa_nombre not in ['Limpieza', 'Ordenado']" />
+                            <field name="no_expedientes" string="Cantidad de expedientes" invisible="etapa_nombre not in ['Limpieza', 'Ordenado']" />
                         </group>
                         <group>
-                            <field name="tipo_escaner_ids" string="Escaner(es) utilizados" widget="many2many_tags" options="{'no_create': True}" />
+                            <field name="total_folios" string="Cantidad de folios" invisible="etapa_nombre not in ['Limpieza', 'Ordenado']" />
                         </group>
                     </group>
-                    <!-- ── BLOQUE: EDITADO ────────────────────────────────
-                         Visible cuando etapa es Editado.
-                         Campos: expedientes editados, folios editados.
-                         ─────────────────────────────────────────────── -->
-                    <group string="Produccion — Editado" invisible="'editado' not in (etapa_id.name or '').lower()">
+                    <!-- ── Campos Digitalizado ── -->
+                    <group string="Datos de producción — Digitalizado" invisible="etapa_nombre != 'Digitalizado'">
                         <group>
-                            <field name="expedientes_editados" string="Expedientes editados" />
+                            <field name="referencia_cajas" string="Referencia de cajas" placeholder="Ej: BF202, BF199, BF208 o '5 cajas'" invisible="etapa_nombre != 'Digitalizado'" />
+                            <field name="no_expedientes" string="Cantidad de expedientes" invisible="etapa_nombre != 'Digitalizado'" />
                         </group>
                         <group>
-                            <field name="folios_editados" string="Folios editados" />
-                        </group>
-                    </group>
-                    <!-- ── BLOQUE: INDEXADO ───────────────────────────────
-                         Visible cuando etapa es Indexado.
-                         Campos: expedientes indexados, folios indexados.
-                         ─────────────────────────────────────────────── -->
-                    <group string="Produccion — Indexado" invisible="'indexado' not in (etapa_id.name or '').lower()">
-                        <group>
-                            <field name="expedientes_indexados" string="Expedientes indexados" />
-                        </group>
-                        <group>
-                            <field name="folios_indexados" string="Folios indexados" />
+                            <field name="total_folios" string="Cantidad de folios (físicos)" invisible="etapa_nombre != 'Digitalizado'" />
+                            <field name="total_escaneos" string="Número de escaneos (hojas digitales)" invisible="etapa_nombre != 'Digitalizado'" />
+                            <field name="tipo_escaner_ids" string="Tipo(s) de escáner" widget="many2many_tags" invisible="etapa_nombre != 'Digitalizado'" />
                         </group>
                     </group>
-                    <!-- ── Resumen computado ──────────────────────────── -->
-                    <group string="Resumen de produccion" invisible="produccion_principal == 0">
+                    <!-- ── Campos Editado ── -->
+                    <group string="Datos de producción — Editado" invisible="etapa_nombre != 'Editado'">
                         <group>
-                            <field name="produccion_principal" string="Produccion principal" readonly="1" />
+                            <field name="expedientes_editados" string="Expedientes editados" invisible="etapa_nombre != 'Editado'" />
+                        </group>
+                        <group>
+                            <field name="folios_editados" string="Folios editados" invisible="etapa_nombre != 'Editado'" />
+                        </group>
+                    </group>
+                    <!-- ── Campos Indexado ── -->
+                    <group string="Datos de producción — Indexado" invisible="etapa_nombre != 'Indexado'">
+                        <group>
+                            <field name="expedientes_indexados" string="Expedientes indexados" invisible="etapa_nombre != 'Indexado'" />
+                        </group>
+                        <group>
+                            <field name="folios_indexados" string="Folios indexados" invisible="etapa_nombre != 'Indexado'" />
+                        </group>
+                    </group>
+                    <!-- Campos invisibles para usar en expresiones -->
+                    <field name="etapa_nombre" invisible="1" />
+                    <field name="proyecto_nombre" invisible="1" />
+                    <field name="miembro_nombre" invisible="1" />
+                    <!-- ── Producción resumida (readonly) ── -->
+                    <group string="Resumen" invisible="not produccion_principal">
+                        <group>
+                            <field name="produccion_principal" string="Producción del día" readonly="1" />
                             <field name="unidad_produccion" string="Unidad" readonly="1" />
                         </group>
                     </group>
-                    <!-- ── Observaciones ──────────────────────────────── -->
-                    <group string="Observaciones">
-                        <field name="observacion" string="Observaciones de la jornada" placeholder="Incidencias, notas del lider, atascos de escaner..." nolabel="1" />
+                    <!-- ── Observaciones ── -->
+                    <group>
+                        <field name="observacion" string="Observaciones" placeholder="Incidencias, notas de la jornada..." />
                     </group>
                 </sheet>
-                <!-- chatter eliminado: modelo no hereda mail.thread.
-                     Para agregar seguimiento, heredar mail.thread en registro.py
-                     y agregar mail en depends del __manifest__ -->
             </form>
         </field>
     </record>
-    <!-- ================================================================
-         3. VISTA PIVOT
-         Analisis cruzado de produccion:
-           Filas:    proyecto + miembro
-           Columnas: etapa
-           Medidas:  produccion_principal, total_escaneos, expedientes
-         ================================================================ -->
+    <!-- 3. VISTA PIVOT -->
     <record id="digitalizacion_registro_view_pivot" model="ir.ui.view">
         <field name="name">digitalizacion.registro.pivot</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
-            <pivot string="Analisis de Produccion" disable_linking="false">
-                <!-- Filas: proyecto → miembro -->
-                <field name="proyecto_id" type="row" />
-                <field name="miembro_id" type="row" />
-                <!-- Columnas: etapa -->
-                <field name="etapa_id" type="col" />
-                <!-- Medidas predefinidas -->
-                <field name="produccion_principal" string="Produccion" type="measure" />
+            <pivot string="Análisis de Producción" disable_linking="0">
+                <field name="proyecto_nombre" type="row" />
+                <field name="miembro_nombre" type="row" />
+                <field name="etapa_nombre" type="col" />
+                <field name="produccion_principal" string="Producción" type="measure" />
                 <field name="total_escaneos" string="Escaneos" type="measure" />
-                <field name="total_folios" string="Folios fisicos" type="measure" />
-                <field name="no_expedientes" string="Expedientes" type="measure" />
-                <field name="expedientes_editados" string="Exp. editados" type="measure" />
+                <field name="total_folios" string="Folios" type="measure" />
                 <field name="expedientes_indexados" string="Exp. indexados" type="measure" />
+                <field name="fecha" type="col" interval="month" invisible="1" />
             </pivot>
         </field>
     </record>
-    <!-- ================================================================
-         4. VISTA GRAFICO
-         Grafico de barras: escaneos por fecha agrupados por proyecto.
-         Permite ver la tendencia de produccion en el tiempo.
-         ================================================================ -->
+    <!-- 4. VISTA GRÁFICO -->
     <record id="digitalizacion_registro_view_graph" model="ir.ui.view">
         <field name="name">digitalizacion.registro.graph</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
-            <graph string="Produccion Diaria" type="bar" stacked="1">
-                <!-- Eje X: fecha de registro -->
-                <field name="fecha" type="row" interval="day" />
-                <!-- Series: una barra por proyecto -->
-                <field name="proyecto_id" type="col" />
-                <!-- Medida: escaneos como metrica principal -->
-                <field name="produccion_principal" string="Produccion" type="measure" />
+            <graph string="Producción por Digitalizador" type="bar" stacked="1">
+                <field name="miembro_nombre" string="Digitalizador" type="row" />
+                <field name="etapa_nombre" string="Etapa" type="col" />
+                <field name="produccion_principal" string="Producción" type="measure" />
             </graph>
         </field>
     </record>
-    <!-- ================================================================
-         5. VISTA BUSQUEDA
-         Filtros completos para navegacion y reportes del Admin.
-         ================================================================ -->
+    <!-- 5. VISTA BÚSQUEDA -->
     <record id="digitalizacion_registro_view_search" model="ir.ui.view">
         <field name="name">digitalizacion.registro.search</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
             <search string="Buscar registros">
-                <!-- Busqueda por texto -->
-                <field name="miembro_id" string="Digitalizador" filter_domain="[('miembro_id.partner_id.name', 'ilike', self)]" />
-                <field name="proyecto_id" string="Proyecto" filter_domain="[('proyecto_id.name', 'ilike', self)]" />
-                <field name="lider_id" string="Lider" filter_domain="[('lider_id.name', 'ilike', self)]" />
-                <field name="no_caja" string="Caja / ID" filter_domain="[('no_caja', 'ilike', self)]" />
-                <!-- ── Filtros por periodo ────────────────────────────── -->
-                <filter name="filter_hoy" string="Hoy" domain="[('fecha', '=', context_today().strftime('%Y-%m-%d'))]" />
-                <filter name="filter_esta_semana" string="Esta semana" domain="[('fecha', '&gt;=', (context_today() - relativedelta(days=context_today().weekday())).strftime('%Y-%m-%d')),
-                                 ('fecha', '&lt;=', context_today().strftime('%Y-%m-%d'))]" />
-                <filter name="filter_este_mes" string="Este mes" domain="[('fecha', '&gt;=', context_today().strftime('%Y-%m-01')),
-                                 ('fecha', '&lt;=', context_today().strftime('%Y-%m-%d'))]" />
+                <field name="miembro_nombre" string="Digitalizador" filter_domain="[('miembro_nombre', 'ilike', self)]" />
+                <field name="proyecto_nombre" string="Proyecto" filter_domain="[('proyecto_nombre', 'ilike', self)]" />
+                <field name="etapa_nombre" string="Etapa" filter_domain="[('etapa_nombre', 'ilike', self)]" />
+                <field name="referencia_cajas" string="Ref. cajas" filter_domain="[('referencia_cajas', 'ilike', self)]" />
                 <separator />
-                <!-- ── Filtros por etapa ──────────────────────────────── -->
-                <filter name="filter_limpieza" string="Limpieza" domain="[('etapa_nombre', 'ilike', 'Limpieza')]" />
-                <filter name="filter_digitalizado" string="Digitalizado" domain="[('etapa_nombre', 'ilike', 'Digitalizado')]" />
-                <filter name="filter_editado" string="Editado" domain="[('etapa_nombre', 'ilike', 'Editado')]" />
-                <filter name="filter_indexado" string="Indexado" domain="[('etapa_nombre', 'ilike', 'Indexado')]" />
-                <filter name="filter_ordenado" string="Ordenado" domain="[('etapa_nombre', 'ilike', 'Ordenado')]" />
+                <filter name="hoy" string="Hoy" domain="[('fecha', '=', context_today().strftime('%Y-%m-%d'))]" />
+                <filter name="semana" string="Esta semana" domain="[('fecha', '>=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]" />
+                <filter name="mes" string="Este mes" domain="[('fecha', '>=', context_today().strftime('%Y-%m-01'))]" />
                 <separator />
-                <!-- ── Filtros de produccion ──────────────────────────── -->
-                <filter name="filter_con_escaneos" string="Con escaneos" domain="[('total_escaneos', '>', 0)]" />
-                <filter name="filter_sin_produccion" string="Sin produccion registrada" domain="[('produccion_principal', '=', 0)]" />
-                <!-- ── Agrupaciones ───────────────────────────────────── -->
-                <group string="Agrupar por" expand="0">
-                    <filter name="group_proyecto" string="Proyecto" context="{'group_by': 'proyecto_id'}" />
-                    <filter name="group_miembro" string="Digitalizador" context="{'group_by': 'miembro_id'}" />
-                    <filter name="group_etapa" string="Etapa" context="{'group_by': 'etapa_id'}" />
-                    <filter name="group_lider" string="Lider" context="{'group_by': 'lider_id'}" />
-                    <filter name="group_fecha_dia" string="Fecha (dia)" context="{'group_by': 'fecha:day'}" />
-                    <filter name="group_fecha_semana" string="Fecha (semana)" context="{'group_by': 'fecha:week'}" />
-                    <filter name="group_fecha_mes" string="Fecha (mes)" context="{'group_by': 'fecha:month'}" />
+                <filter name="limpieza" string="Limpieza" domain="[('etapa_nombre', '=', 'Limpieza')]" />
+                <filter name="ordenado" string="Ordenado" domain="[('etapa_nombre', '=', 'Ordenado')]" />
+                <filter name="digitalizado" string="Digitalizado" domain="[('etapa_nombre', '=', 'Digitalizado')]" />
+                <filter name="editado" string="Editado" domain="[('etapa_nombre', '=', 'Editado')]" />
+                <filter name="indexado" string="Indexado" domain="[('etapa_nombre', '=', 'Indexado')]" />
+                <group string="Agrupar por" expand="1">
+                    <filter name="group_proyecto" string="Proyecto" context="{'group_by': 'proyecto_nombre'}" />
+                    <filter name="group_miembro" string="Digitalizador" context="{'group_by': 'miembro_nombre'}" />
+                    <filter name="group_etapa" string="Etapa" context="{'group_by': 'etapa_nombre'}" />
+                    <filter name="group_fecha" string="Fecha" context="{'group_by': 'fecha:day'}" />
+                    <filter name="group_mes" string="Mes" context="{'group_by': 'fecha:month'}" />
                 </group>
             </search>
         </field>
     </record>
-    <!-- ================================================================
-         6. ACCION PRINCIPAL DEL MODELO
-         Declaracion completa aqui. menus.xml la referencia
-         mediante action="digitalizacion.action_digitalizacion_registro".
-         ================================================================ -->
+    <!-- 6. ACCIÓN -->
     <record id="digitalizacion_registro_action" model="ir.actions.act_window">
         <field name="name">Registros de Trabajo</field>
         <field name="res_model">digitalizacion.registro</field>
         <field name="view_mode">list,form,pivot,graph</field>
-        <field name="view_id" ref="digitalizacion_registro_view_tree" />
         <field name="search_view_id" ref="digitalizacion_registro_view_search" />
-        <field name="context">{
-            "search_default_group_proyecto": 1,
-            "search_default_filter_este_mes": 1
-        }</field>
+        <field name="context">{'search_default_mes': 1}</field>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">Sin registros de trabajo aun</p>
-            <p>Los registros son creados por los Lideres desde el portal al final de cada jornada.</p>
+            <p class="o_view_nocontent_smiling_face">Aún no hay registros de trabajo</p>
+            <p>Los registros son creados por el Líder desde el portal web
+                al final de cada jornada de digitalización.</p>
         </field>
     </record>
 </odoo>

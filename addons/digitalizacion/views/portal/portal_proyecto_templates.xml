@@ -1,149 +1,148 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <template id="digitalizacion_portal_proyecto_detalle" name="Detalle del Proyecto">
+    <!-- ================================================================
+         portal_proyecto_templates.xml
+         Detalle del proyecto para el Líder:
+         - Progreso hacia la meta
+         - Datos generales del proyecto
+         - Accesos rápidos: registrar producción y ver equipo
+         ================================================================ -->
+    <template id="digitalizacion_portal_proyecto_detalle" name="Portal: detalle del proyecto">
         <t t-call="portal.portal_layout">
-            <t t-set="breadcrumbs_searchbar" t-value="True" />
-            <div class="o_digitalizacion_page pb-5">
-                <div class="container-fluid px-0 px-md-0">
-                    <!-- Hero -->
-                    <div class="o_digitalizacion_project_hero">
-                        <a href="/digitalizacion/v1/dashboard" class="o_digitalizacion_back" style="color: rgba(255,255,255,.7);">
-                            <i class="fa fa-arrow-left" />
-                            Volver al dashboard
-                        </a>
-                        <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+            <!-- Notificaciones flash -->
+            <t t-if="notifications">
+                <div class="container mt-3">
+                    <t t-foreach="notifications" t-as="notif">
+                        <div t-attf-class="alert alert-{{ notif['type'] }} alert-dismissible" role="alert">
+                            <t t-esc="notif['message']" />
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" />
+                        </div>
+                    </t>
+                </div>
+            </t>
+            <div class="container py-4">
+                <!-- Cabecera -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
                             <div>
-                                <h2>
+                                <h2 class="mb-1">
                                     <t t-esc="proyecto.name" />
                                 </h2>
-                                <span class="o_digitalizacion_status">
-                                    <i class="fa fa-circle" style="font-size:.5rem;" />
-                                    <t t-esc="proyecto.state.capitalize() if proyecto.state else 'Activo'" />
+                                <span t-attf-class="badge #{'bg-success' if proyecto.state == 'activo' else 'bg-secondary'}">
+                                    <t t-esc="'Activo' if proyecto.state == 'activo' else 'Inactivo'" />
                                 </span>
-                                <div class="o_digitalizacion_dates">
-                                    <i class="fa fa-calendar me-1" />
-                                    <t t-esc="proyecto.fecha_inicio" />
-                                    —
-                                    <t t-if="proyecto.fecha_fin_estimada">
-                                        <t t-esc="proyecto.fecha_fin_estimada" />
-                                    </t>
-                                    <t t-else="">Sin fecha fin</t>
-                                </div>
+                            </div>
+                            <!-- Acciones rápidas -->
+                            <div class="d-flex gap-2 flex-wrap">
+                                <a t-attf-href="/digitalizacion/v1/proyectos/{{ proyecto.id }}/form" class="btn btn-primary">
+                                    <i class="fa fa-plus me-1" />
+                                    Registrar producción
+                                </a>
+                                <a t-attf-href="/digitalizacion/v1/proyectos/{{ proyecto.id }}/miembros" class="btn btn-outline-secondary">
+                                    <i class="fa fa-users me-1" />
+                                    Ver equipo
+                                </a>
                             </div>
                         </div>
-                        <!-- Barra de progreso si hay meta -->
-                        <t t-if="proyecto.meta_escaneos and proyecto.meta_escaneos > 0">
-                            <div class="o_digitalizacion_hero_progress">
-                                <div class="o_digitalizacion_hero_progress_label">
-                                    <span>Progreso del proyecto</span>
-                                    <span>
+                    </div>
+                </div>
+                <!-- Barra de progreso -->
+                <t t-if="proyecto.meta_escaneos > 0">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-semibold">Progreso del proyecto</span>
+                                <span class="text-muted">
+                                    <t t-esc="proyecto.total_escaneos" />
+                                    /
+                                    <t t-esc="proyecto.meta_escaneos" />
+                                    escaneos
+                                    (
+                                    <t t-esc="'%.1f' % proyecto.progreso" />
+                                    %)
+                                </span>
+                            </div>
+                            <div class="progress" style="height: 20px;">
+                                <div t-attf-style="width: {{ min(proyecto.progreso, 100) }}%" t-attf-aria-valuenow="{{ proyecto.progreso }}" class="progress-bar bg-success" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                                    <t t-if="proyecto.progreso >= 15">
                                         <t t-esc="'%.1f' % proyecto.progreso" />
                                         %
-                                        (
-                                        <t t-esc="proyecto.total_escaneos" />
-                                        /
-                                        <t t-esc="proyecto.meta_escaneos" />
-                                        esc.)
-                                    </span>
-                                </div>
-                                <div class="o_digitalizacion_hero_progress_bar">
-                                    <div t-attf-style="width: #{proyecto.progreso}%" class="o_digitalizacion_hero_progress_fill" />
-                                </div>
-                            </div>
-                        </t>
-                    </div>
-                    <div class="px-3 px-md-4">
-                        <t t-if="notifications">
-                            <t t-foreach="notifications" t-as="noti">
-                                <div t-attf-class="alert alert-#{noti['type']} alert-dismissible fade show mt-3" role="alert">
-                                    <t t-esc="noti['message']" />
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" />
-                                </div>
-                            </t>
-                        </t>
-                        <!-- Acciones principales -->
-                        <div class="row g-3 mb-4 mt-1">
-                            <div class="col-12 col-md-6">
-                                <a t-attf-href="/digitalizacion/v1/proyectos/#{proyecto.id}/form" class="o_digitalizacion_action_card">
-                                    <div class="o_digitalizacion_action_card_icon o_digitalizacion_action_card_icon_primary">
-                                        <i class="fa fa-pencil-square-o" />
-                                    </div>
-                                    <div>
-                                        <div class="o_digitalizacion_action_card_title">Registrar producción</div>
-                                        <div class="o_digitalizacion_action_card_desc">Carga el trabajo de hoy del equipo</div>
-                                    </div>
-                                    <i class="fa fa-chevron-right o_digitalizacion_action_card_arrow" />
-                                </a>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <a t-attf-href="/digitalizacion/v1/proyectos/#{proyecto.id}/miembros" class="o_digitalizacion_action_card">
-                                    <div class="o_digitalizacion_action_card_icon o_digitalizacion_action_card_icon_green">
-                                        <i class="fa fa-users" />
-                                    </div>
-                                    <div>
-                                        <div class="o_digitalizacion_action_card_title">Gestionar equipo</div>
-                                        <div class="o_digitalizacion_action_card_desc">Ver y agregar digitalizadores</div>
-                                    </div>
-                                    <i class="fa fa-chevron-right o_digitalizacion_action_card_arrow" />
-                                </a>
-                            </div>
-                        </div>
-                        <!-- Info + descripción -->
-                        <div class="row g-3">
-                            <div class="col-12 col-md-5">
-                                <div class="o_digitalizacion_info_card">
-                                    <div class="o_digitalizacion_info_card_title">
-                                        <i class="fa fa-info-circle" />
-                                        Información
-                                    </div>
-                                    <div class="o_digitalizacion_info_row">
-                                        <span class="o_digitalizacion_info_row_label">Miembros</span>
-                                        <span class="o_digitalizacion_info_row_value">
-                                            <t t-esc="proyecto.total_miembros" />
-                                        </span>
-                                    </div>
-                                    <div class="o_digitalizacion_info_row">
-                                        <span class="o_digitalizacion_info_row_label">Miembros</span>
-                                        <span class="o_digitalizacion_info_row_value">
-                                            <t t-esc="proyecto.total_miembros" />
-                                        </span>
-                                    </div>
-                                    <div class="o_digitalizacion_info_row">
-                                        <span class="o_digitalizacion_info_row_label">Registros totales</span>
-                                        <span class="o_digitalizacion_info_row_value">
-                                            <t t-esc="proyecto.total_registros" />
-                                        </span>
-                                    </div>
-                                    <div class="o_digitalizacion_info_row">
-                                        <span class="o_digitalizacion_info_row_label">Escaneos acumulados</span>
-                                        <span class="o_digitalizacion_info_row_value">
-                                            <t t-esc="proyecto.total_escaneos" />
-                                        </span>
-                                    </div>
-                                    <t t-if="proyecto.duracion_estimada">
-                                        <div class="o_digitalizacion_info_row">
-                                            <span class="o_digitalizacion_info_row_label">Duración estimada</span>
-                                            <span class="o_digitalizacion_info_row_value">
-                                                <t t-esc="proyecto.duracion_estimada" />
-                                                días
-                                            </span>
-                                        </div>
                                     </t>
                                 </div>
                             </div>
-                            <div class="col-12 col-md-7">
-                                <t t-if="proyecto.description">
-                                    <div class="o_digitalizacion_desc_card h-100">
-                                        <div class="o_digitalizacion_info_card_title" style="margin-bottom:.75rem;">
-                                            <i class="fa fa-align-left" />
-                                            Descripción
-                                        </div>
-                                        <t t-esc="proyecto.description" />
-                                    </div>
-                                </t>
-                                <t t-if="not proyecto.description">
-                                    <div class="o_digitalizacion_desc_card h-100 d-flex align-items-center justify-content-center" style="color: var(--o_digitalizacion_muted); font-style: italic;">Sin descripción registrada</div>
-                                </t>
+                        </div>
+                    </div>
+                </t>
+                <!-- KPIs del proyecto -->
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-md-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <div class="display-6 fw-bold text-primary">
+                                    <t t-esc="proyecto.total_miembros" />
+                                </div>
+                                <div class="text-muted small">Miembros activos</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <div class="display-6 fw-bold text-success">
+                                    <t t-esc="proyecto.total_escaneos" />
+                                </div>
+                                <div class="text-muted small">Escaneos totales</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <div class="display-6 fw-bold text-info">
+                                    <t t-esc="proyecto.total_registros" />
+                                </div>
+                                <div class="text-muted small">Registros</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <div class="display-6 fw-bold text-warning">
+                                    <t t-esc="proyecto.duracion_estimada or '—'" />
+                                </div>
+                                <div class="text-muted small">Días estimados</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Datos del proyecto -->
+                <div class="card">
+                    <div class="card-header fw-semibold">Información del proyecto</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <dl class="row mb-0">
+                                    <dt class="col-sm-5 text-muted">Fecha inicio</dt>
+                                    <dd class="col-sm-7">
+                                        <t t-esc="proyecto.fecha_inicio" />
+                                    </dd>
+                                    <dt class="col-sm-5 text-muted">Fecha fin est.</dt>
+                                    <dd class="col-sm-7">
+                                        <t t-esc="proyecto.fecha_fin_estimada or '—'" />
+                                    </dd>
+                                    <dt class="col-sm-5 text-muted">Meta escaneos</dt>
+                                    <dd class="col-sm-7">
+                                        <t t-esc="proyecto.meta_escaneos or '—'" />
+                                    </dd>
+                                </dl>
+                            </div>
+                            <div t-if="proyecto.description" class="col-md-6">
+                                <p class="text-muted small mb-1 fw-semibold">Descripción</p>
+                                <p class="mb-0">
+                                    <t t-esc="proyecto.description" />
+                                </p>
                             </div>
                         </div>
                     </div>

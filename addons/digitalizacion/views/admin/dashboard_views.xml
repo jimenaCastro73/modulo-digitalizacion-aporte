@@ -1,82 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Vistas de Análisis para el Dashboard (Administrador) -->
-    
-    <record id="digitalizacion_registro_view_graph_digitalizador" model="ir.ui.view">
-        <field name="name">digitalizacion.registro.graph.digitalizador</field>
+    <!-- ================================================================
+         dashboard_views.xml — Dashboard de producción para el Administrador
+         Vistas de análisis global: gráfico de barras por digitalizador,
+         tendencia diaria de escaneos, y pivot cruzado.
+         Acceso exclusivo: grupo Administrador (group_digitalizacion_admin)
+         ================================================================ -->
+    <!-- 1. GRAPH — Producción por digitalizador (barras) -->
+    <record id="digitalizacion_dashboard_graph_miembro" model="ir.ui.view">
+        <field name="name">digitalizacion.registro.graph.miembro</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
             <graph string="Producción por Digitalizador" type="bar" stacked="0">
-                <field name="miembro_id" type="row" />
+                <field name="miembro_nombre" string="Digitalizador" type="row" />
+                <field name="produccion_principal" string="Producción" type="measure" />
                 <field name="total_escaneos" string="Escaneos" type="measure" />
-                <field name="total_folios" string="Folios físicos" type="measure" />
-                <field name="expedientes_indexados" string="Exp. indexados" type="measure" />
-                <field name="folios_indexados" string="Folios indexados" type="measure" />
             </graph>
         </field>
     </record>
-
-    <record id="digitalizacion_registro_view_graph_tendencia" model="ir.ui.view">
+    <!-- 2. GRAPH — Tendencia diaria de escaneos (línea) -->
+    <record id="digitalizacion_dashboard_graph_tendencia" model="ir.ui.view">
         <field name="name">digitalizacion.registro.graph.tendencia</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
             <graph string="Tendencia Diaria de Escaneos" type="line">
-                <field name="fecha" type="row" interval="day" />
-                <field name="proyecto_id" type="col" />
+                <field name="fecha" string="Fecha" type="row" interval="day" />
                 <field name="total_escaneos" string="Escaneos" type="measure" />
             </graph>
         </field>
     </record>
-
-    <record id="digitalizacion_registro_view_pivot_dashboard" model="ir.ui.view">
+    <!-- 3. PIVOT — Análisis cruzado -->
+    <record id="digitalizacion_dashboard_pivot" model="ir.ui.view">
         <field name="name">digitalizacion.registro.pivot.dashboard</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
-            <pivot string="Producción por Digitalizador" disable_linking="false">
-                <field name="proyecto_id" type="row" />
-                <field name="miembro_id" type="row" />
-                <field name="etapa_id" type="col" />
+            <pivot string="Análisis Cruzado de Producción" display_quantity="1" default_order="miembro_nombre asc">
+                <field name="proyecto_nombre" string="Proyecto" type="row" />
+                <field name="miembro_nombre" string="Digitalizador" type="row" />
+                <field name="etapa_nombre" string="Etapa" type="col" />
+                <field name="produccion_principal" string="Producción" type="measure" />
                 <field name="total_escaneos" string="Escaneos" type="measure" />
                 <field name="total_folios" string="Folios físicos" type="measure" />
                 <field name="expedientes_indexados" string="Exp. indexados" type="measure" />
-                <field name="folios_indexados" string="Folios indexados" type="measure" />
+                <field name="fecha" type="col" interval="month" invisible="1" />
             </pivot>
         </field>
     </record>
-
-    <record id="digitalizacion_registro_view_search_dashboard" model="ir.ui.view">
-        <field name="name">digitalizacion.registro.search.dashboard</field>
-        <field name="model">digitalizacion.registro</field>
-        <field name="arch" type="xml">
-            <search string="Filtros Dashboard">
-                <field name="proyecto_id" string="Proyecto" filter_domain="[('proyecto_id.name', 'ilike', self)]" />
-                <field name="miembro_id" string="Digitalizador" filter_domain="[('miembro_id.partner_id.name', 'ilike', self)]" />
-                <filter name="este_mes" string="Este mes" domain="[('fecha', '&gt;=', context_today().strftime('%Y-%m-01')), ('fecha', '&lt;=', context_today().strftime('%Y-%m-%d'))]" />
-                <filter name="mes_anterior" string="Mes anterior" domain="[('fecha', '&gt;=', (context_today() + relativedelta(months=-1, day=1)).strftime('%Y-%m-%d')), ('fecha', '&lt;=', (context_today() + relativedelta(day=1, days=-1)).strftime('%Y-%m-%d'))]" />
-                <filter name="este_anio" string="Este año" domain="[('fecha', '&gt;=', context_today().strftime('%Y-01-01')), ('fecha', '&lt;=', context_today().strftime('%Y-%m-%d'))]" />
-                <separator />
-                <group string="Agrupar por" expand="1">
-                    <filter name="por_proyecto" string="Proyecto" context="{'group_by': 'proyecto_id'}" />
-                    <filter name="por_digitalizador" string="Digitalizador" context="{'group_by': 'miembro_id'}" />
-                    <filter name="por_etapa" string="Etapa" context="{'group_by': 'etapa_id'}" />
-                    <filter name="por_fecha_dia" string="Día" context="{'group_by': 'fecha:day'}" />
-                    <filter name="por_fecha_mes" string="Mes" context="{'group_by': 'fecha:month'}" />
-                </group>
-            </search>
-        </field>
-    </record>
-
+    <!-- 4. ACCIÓN DASHBOARD — combina las tres vistas -->
     <record id="digitalizacion_dashboard_action" model="ir.actions.act_window">
         <field name="name">Dashboard de Producción</field>
         <field name="res_model">digitalizacion.registro</field>
         <field name="view_mode">graph,pivot,list</field>
-        <field name="search_view_id" ref="digitalizacion_registro_view_search_dashboard" />
-        <field name="view_ids" eval="[(5, 0, 0),
-                       (0, 0, {'view_mode': 'graph', 'view_id': ref('digitalizacion_registro_view_graph_digitalizador')}),
-                       (0, 0, {'view_mode': 'pivot', 'view_id': ref('digitalizacion_registro_view_pivot_dashboard')})]" />
+        <field name="view_id" ref="digitalizacion_dashboard_graph_miembro" />
         <field name="context">{
-            'search_default_este_mes': 1,
-            'search_default_por_proyecto': 1
+            'search_default_mes': 1,
+            'graph_measure': 'produccion_principal',
         }</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aún no hay datos de producción</p>
+            <p>El dashboard mostrará la producción del equipo
+                una vez que el Líder comience a registrar jornadas.</p>
+        </field>
     </record>
 </odoo>

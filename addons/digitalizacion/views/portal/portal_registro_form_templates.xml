@@ -1,512 +1,360 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <template id="digitalizacion_portal_registro_form" name="Formulario de Registro de Trabajo">
+    <!-- ================================================================
+         portal_registro_form_templates.xml
+         Formulario multi-fila de registro de producción diaria.
+
+         Flujo:
+           1. El líder selecciona la fecha de la jornada
+           2. Agrega filas: digitalizador + etapa + cantidades
+           3. Los campos se muestran/ocultan según la etapa elegida
+              (controlado por JS con el mapa reglasEtapa)
+           4. Al enviar → POST JSON a /digitalizacion/api/v1/proyectos/<id>/registros
+
+         Usa fetch nativo (no odoo.define / web.rpc, deprecados en portal Odoo 17)
+         CSRF token obtenido de la cookie csrftoken de Odoo.
+         ================================================================ -->
+    <template id="digitalizacion_portal_registro_form" name="Portal: formulario de registro">
         <t t-call="portal.portal_layout">
-            <t t-set="breadcrumbs_searchbar" t-value="True" />
-            <div class="o_digitalizacion_page pb-5" style="margin-bottom: 80px;">
-                <!-- Encabezado -->
-                <div class="o_digitalizacion_form_header">
-                    <div class="container-fluid px-3 px-md-4">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div>
-                                <h2>Registro de Producción</h2>
-                                <div class="o_digitalizacion_project_name">
-                                    <i class="fa fa-folder-open-o me-1" />
-                                    <t t-esc="proyecto.name" />
-                                </div>
-                            </div>
-                            <a href="/digitalizacion/v1/dashboard" class="o_digitalizacion_btn o_digitalizacion_btn_outline" style="font-size:.8rem;">
-                                <i class="fa fa-arrow-left" />
-                                Volver
-                            </a>
+            <t t-if="notifications">
+                <div class="container mt-3">
+                    <t t-foreach="notifications" t-as="notif">
+                        <div t-attf-class="alert alert-{{ notif['type'] }} alert-dismissible" role="alert">
+                            <t t-esc="notif['message']" />
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" />
                         </div>
-                    </div>
-                </div>
-                <div class="container-fluid px-3 px-md-4 mt-4">
-                    <t t-if="notifications">
-                        <t t-foreach="notifications" t-as="noti">
-                            <div t-attf-class="alert alert-#{noti['type']} alert-dismissible fade show mb-3" role="alert">
-                                <t t-esc="noti['message']" />
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" />
-                            </div>
-                        </t>
                     </t>
-                    <!-- Mensajes de estado -->
-                    <div id="msg-guardando" class="o_digitalizacion_alert o_digitalizacion_alert_info d-none mb-3">
-                        <i class="fa fa-spinner fa-spin" />
-                        Guardando registros, por favor espere...
-                    </div>
-                    <div id="msg-exito" class="o_digitalizacion_alert o_digitalizacion_alert_success d-none mb-3">
-                        <i class="fa fa-check-circle" />
-                        ¡Registros guardados exitosamente!
-                    </div>
-                    <div id="msg-advertencias" class="d-none mb-3" />
-                    <!-- Sin miembros -->
-                    <div id="msg-sin-miembros" class="o_digitalizacion_alert o_digitalizacion_alert_warning d-none mb-3">
-                        <i class="fa fa-exclamation-triangle" />
-                        No hay digitalizadores activos en este proyecto. Agrega miembros desde la
-                        <a t-attf-href="/digitalizacion/v1/proyectos/#{proyecto.id}/miembros" style="color: inherit; font-weight: 700;">gestión del equipo</a>
-                        .
-                    </div>
-                    <!-- Selector de fecha -->
-                    <div class="o_digitalizacion_date_bar mb-4">
-                        <label for="inputFecha">
-                            <i class="fa fa-calendar me-1" />
-                            Fecha de producción
-                        </label>
-                        <input t-att-value="datetime.date.today().strftime('%Y-%m-%d')" id="inputFecha" type="date" />
-                        <span class="text-muted small ms-auto d-none d-md-inline">Registra la jornada de trabajo del día seleccionado</span>
-                    </div>
-                    <!-- Datos ocultos para JS -->
-                    <input t-att-value="proyecto.id" id="proyecto_id" type="hidden" />
-                    <input t-att-value="etapas_json" id="etapas_data" type="hidden" />
-                    <input t-att-value="miembros_json" id="miembros_data" type="hidden" />
-                    <input t-att-value="escaneres_json" id="escaneres_data" type="hidden" />
-                    <!-- Contenedor de filas -->
-                    <div id="contenedor-filas" class="d-flex flex-column gap-3 mb-4" />
-                    <!-- Botón agregar fila -->
-                    <button id="btn-agregar-fila" type="button" class="o_digitalizacion_btn o_digitalizacion_btn_outline">
-                        <i class="fa fa-plus" />
-                        Añadir digitalizador
-                    </button>
                 </div>
-                <!-- Footer fijo con botón guardar -->
-                <div class="o_digitalizacion_sticky_footer">
-                    <div class="container-fluid px-3 px-md-4 d-flex align-items-center justify-content-between gap-2">
+            </t>
+            <div class="container py-4">
+                <!-- Cabecera -->
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                    <div>
+                        <h3 class="mb-0">Registrar producción</h3>
+                        <p class="text-muted mb-0">
+                            <t t-esc="proyecto.name" />
+                        </p>
+                    </div>
+                    <a t-attf-href="/digitalizacion/v1/proyectos/{{ proyecto.id }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fa fa-arrow-left me-1" />
+                        Volver al proyecto
+                    </a>
+                </div>
+                <!-- Alerta de resultado -->
+                <div id="alerta-resultado" class="d-none mb-3" />
+                <!-- Formulario principal -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span class="fw-semibold">Datos de la jornada</span>
                         <div class="d-flex align-items-center gap-2">
-                            <span id="footer-contador" class="text-muted small">0 filas listas</span>
+                            <label class="text-muted small mb-0" for="campo-fecha">Fecha:</label>
+                            <input id="campo-fecha" type="date" class="form-control form-control-sm" style="width:150px" />
                         </div>
-                        <button id="btn-guardar-registros" type="button" class="o_digitalizacion_btn o_digitalizacion_btn_primary o_digitalizacion_btn_lg">
-                            <i class="fa fa-paper-plane" />
-                            Guardar Registros
+                    </div>
+                    <div class="card-body p-0">
+                        <!-- Tabla de filas -->
+                        <div class="table-responsive">
+                            <table id="tabla-registros" class="table table-bordered mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="min-width:150px">Digitalizador</th>
+                                        <th style="min-width:130px">Etapa</th>
+                                        <!-- Limpieza / Ordenado / Digitalizado -->
+                                        <th class="col-caja" style="min-width:140px">Ref. cajas</th>
+                                        <th class="col-expedientes" style="min-width:90px">Expedientes</th>
+                                        <th class="col-folios" style="min-width:80px">Folios</th>
+                                        <!-- Digitalizado -->
+                                        <th class="col-escaneos" style="min-width:90px">Escaneos</th>
+                                        <th class="col-escaner" style="min-width:140px">Escáner(es)</th>
+                                        <!-- Editado -->
+                                        <th class="col-exp-editados" style="min-width:100px">Exp. editados</th>
+                                        <th class="col-folios-editados" style="min-width:100px">Folios edit.</th>
+                                        <!-- Indexado -->
+                                        <th class="col-exp-indexados" style="min-width:100px">Exp. indexados</th>
+                                        <th class="col-folios-indexados" style="min-width:100px">Folios index.</th>
+                                        <!-- Común -->
+                                        <th style="min-width:120px">Observaciones</th>
+                                        <th style="width:44px" />
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-registros" />
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer d-flex justify-content-between align-items-center">
+                        <button id="btn-agregar-fila" type="button" class="btn btn-outline-secondary btn-sm">
+                            <i class="fa fa-plus me-1" />
+                            Agregar fila
+                        </button>
+                        <button id="btn-guardar" type="button" class="btn btn-primary">
+                            <i class="fa fa-save me-1" />
+                            Guardar registros
                         </button>
                     </div>
                 </div>
             </div>
+            <!-- ══════════════════════════════════════════════════════════
+                 JAVASCRIPT — fetch nativo, sin odoo.define
+            ══════════════════════════════════════════════════════════ -->
             <script type="text/javascript">
-                <![CDATA[
-                (function() {
-                "use strict";
-                const csrfToken = "]]><t t-esc="request.csrf_token()" /><![CDATA[";
+                // Datos inyectados desde el controller
+                const PROYECTO_ID =
+                <t t-esc="proyecto.id" />
+                ;
+                const MIEMBROS =
+                <t t-out="miembros_json" />
+                ;
+                const ETAPAS   =
+                <t t-out="etapas_json" />
+                ;
+                const ESCANERES =
+                <t t-out="escaneres_json" />
+                ;
 
-                let rowCounter = 0;
-                let etapas = [];
-                let miembros = [];
-                let escaneres = [];
-
-                const REGLAS = {
-                    "limpieza":     ["caja", "cant_cajas", "expedientes", "folios"],
-                    "ordenado":     ["caja", "cant_cajas", "expedientes", "folios"],
-                    "digitalizado": ["folios", "escaneos", "escaner"],
-                    "editado":      ["exp_editados", "folios_editados"],
-                    "indexado":     ["exp_indexados", "folios_indexados"],
+                // Reglas de visibilidad de columnas por etapa (nombre en minúsculas)
+                const REGLAS_ETAPA = {
+                    'limpieza':     { caja: true,  expedientes: true,  folios: true,  escaneos: false, escaner: false, expEditados: false, foliosEditados: false, expIndexados: false, foliosIndexados: false },
+                    'ordenado':     { caja: true,  expedientes: true,  folios: true,  escaneos: false, escaner: false, expEditados: false, foliosEditados: false, expIndexados: false, foliosIndexados: false },
+                    'digitalizado': { caja: true,  expedientes: true,  folios: true,  escaneos: true,  escaner: true,  expEditados: false, foliosEditados: false, expIndexados: false, foliosIndexados: false },
+                    'editado':      { caja: false, expedientes: false, folios: false, escaneos: false, escaner: false, expEditados: true,  foliosEditados: true,  expIndexados: false, foliosIndexados: false },
+                    'indexado':     { caja: false, expedientes: false, folios: false, escaneos: false, escaner: false, expEditados: false, foliosEditados: false, expIndexados: true,  foliosIndexados: true  },
                 };
-                const TODOS_CAMPOS = ["caja", "cant_cajas", "expedientes", "folios",
-                                      "escaneos", "escaner", "exp_editados", "folios_editados",
-                                      "exp_indexados", "folios_indexados"];
+                const REGLA_DEFAULT = { caja: true, expedientes: true, folios: true, escaneos: false, escaner: false, expEditados: false, foliosEditados: false, expIndexados: false, foliosIndexados: false };
 
-                /**
-                 * Obtiene la regla de visibilidad según el nombre de la etapa.
-                 * 
-                 * @private
-                 * @param {string} nombreEtapa
-                 * @returns {Array} Listado de campos visibles.
-                 */
-                function _getRegla(nombreEtapa) {
-                    const n = (nombreEtapa || "").toLowerCase();
-                    for (const key in REGLAS) {
-                        if (n.includes(key)) {
-                            return REGLAS[key];
-                        }
-                    }
-                    return [];
+                // Inicializar fecha al día de hoy
+                document.getElementById('campo-fecha').valueAsDate = new Date();
+
+                // ── Construir opciones de select ──
+                function opcionesSelect(lista) {
+                    return lista.map(i => `
+                <option value="${i.id}">${i.name}</option>
+                `).join('');
                 }
 
-                /**
-                 * Actualiza la visibilidad de los campos en una fila según la etapa seleccionada.
-                 * 
-                 * @private
-                 * @param {HTMLElement} card Fila del formulario.
-                 */
-                function _actualizarCampos(card) {
-                    const select = card.querySelector(".input-etapa");
-                    const opt = select.options[select.selectedIndex];
-                    const nombreEtapa = opt ? opt.getAttribute("data-name") || "" : "";
-                    const visibles = _getRegla(nombreEtapa);
+                // ── Crear una nueva fila ──
+                let contadorFila = 0;
+                function crearFila() {
+                    contadorFila++;
+                    const id = `fila-${contadorFila}`;
+                    const tr = document.createElement('tr');
+                    tr.id = id;
+                    tr.innerHTML = `
+                <td>
+                    <select class="form-select form-select-sm sel-miembro" required="required">
+                        <option value="">— Seleccionar —</option>
+                        ${opcionesSelect(MIEMBROS)}
+                    </select>
+                </td>
+                <td>
+                    <select class="form-select form-select-sm sel-etapa" required="required">
+                        <option value="" data-nombre="">— Seleccionar —</option>
+                        ${ETAPAS.map(e => `
+                        <option value="${e.id}" data-nombre="${e.name}">${e.name}</option>
+                        `).join('')}
+                    </select>
+                </td>
+                <td class="col-caja">
+                    <input type="text" class="form-control form-control-sm inp-caja" placeholder="BF202, BF199..." />
+                </td>
+                <td class="col-expedientes">
+                    <input type="number" class="form-control form-control-sm inp-expedientes" min="0" value="0" />
+                </td>
+                <td class="col-folios">
+                    <input type="number" class="form-control form-control-sm inp-folios" min="0" value="0" />
+                </td>
+                <td class="col-escaneos">
+                    <input type="number" class="form-control form-control-sm inp-escaneos" min="0" value="0" />
+                </td>
+                <td class="col-escaner">
+                    <select class="form-select form-select-sm sel-escaner" multiple="multiple" style="min-height:32px">${opcionesSelect(ESCANERES)}</select>
+                </td>
+                <td class="col-exp-editados">
+                    <input type="number" class="form-control form-control-sm inp-exp-editados" min="0" value="0" />
+                </td>
+                <td class="col-folios-editados">
+                    <input type="number" class="form-control form-control-sm inp-folios-editados" min="0" value="0" />
+                </td>
+                <td class="col-exp-indexados">
+                    <input type="number" class="form-control form-control-sm inp-exp-indexados" min="0" value="0" />
+                </td>
+                <td class="col-folios-indexados">
+                    <input type="number" class="form-control form-control-sm inp-folios-indexados" min="0" value="0" />
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm inp-observacion" placeholder="Observaciones..." />
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-fila" title="Eliminar fila">
+                        <i class="fa fa-trash" />
+                    </button>
+                </td>
+                `;
 
-                    TODOS_CAMPOS.forEach(function(campo) {
-                        const wrapper = card.querySelector("[data-campo=\"" + campo + "\"]");
-                        if (!wrapper) {
-                            return;
-                        }
-                        if (visibles.includes(campo)) {
-                            wrapper.classList.remove("disabled");
-                            wrapper.style.display = "";
-                        } else {
-                            wrapper.classList.add("disabled");
-                            wrapper.style.display = "none";
-                            const inp = wrapper.querySelector("input, select");
-                            if (inp) { 
-                                inp.value = ""; 
-                                inp.disabled = true; 
+                    // Escuchar cambio de etapa para actualizar visibilidad de columnas
+                    tr.querySelector('.sel-etapa').addEventListener('change', function() {
+                        actualizarColumnasFila(tr, this);
+                    });
+
+                    // Eliminar fila
+                    tr.querySelector('.btn-eliminar-fila').addEventListener('click', function() {
+                        tr.remove();
+                    });
+
+                    // Aplicar reglas por defecto (ocultar todo excepto básicos)
+                    actualizarColumnasFila(tr, tr.querySelector('.sel-etapa'));
+
+                    return tr;
+                }
+
+                // ── Actualizar visibilidad de celdas según etapa ──
+                function actualizarColumnasFila(tr, selectEtapa) {
+                    const option = selectEtapa.selectedOptions[0];
+                    const nombre = (option ? option.dataset.nombre || '' : '').toLowerCase();
+                    const regla = REGLAS_ETAPA[nombre] || REGLA_DEFAULT;
+
+                    const mapa = {
+                        'col-caja':              regla.caja,
+                        'col-expedientes':       regla.expedientes,
+                        'col-folios':            regla.folios,
+                        'col-escaneos':          regla.escaneos,
+                        'col-escaner':           regla.escaner,
+                        'col-exp-editados':      regla.expEditados,
+                        'col-folios-editados':   regla.foliosEditados,
+                        'col-exp-indexados':     regla.expIndexados,
+                        'col-folios-indexados':  regla.foliosIndexados,
+                    };
+
+                    for (const [cls, visible] of Object.entries(mapa)) {
+                        const td = tr.querySelector(`.${cls}`);
+                        if (td) {
+                            td.style.display = visible ? '' : 'none';
+                            // Resetear valor si se oculta
+                            if (!visible) {
+                                const inp = td.querySelector('input, select');
+                                if (inp) {
+                                    if (inp.type === 'number') inp.value = 0;
+                                    else if (inp.tagName === 'SELECT') Array.from(inp.options).forEach(o => o.selected = false);
+                                    else inp.value = '';
+                                }
                             }
                         }
-                    });
-                    visibles.forEach(function(campo) {
-                        const wrapper = card.querySelector("[data-campo=\"" + campo + "\"]");
-                        if (!wrapper) {
-                            return;
-                        }
-                        const inp = wrapper.querySelector("input, select");
-                        if (inp) {
-                            inp.disabled = false;
-                        }
-                    });
-                    _actualizarContador();
-                }
-
-                /**
-                 * Crea un elemento select con opciones dinámicas.
-                 * 
-                 * @private
-                 * @param {string} className Clase CSS.
-                 * @param {Array} opciones Listado de objetos {id, name, dataName}.
-                 * @param {string} placeholder Texto inicial.
-                 * @param {boolean} required Si es obligatorio.
-                 * @returns {HTMLSelectElement} Elemento select.
-                 */
-                function _crearSelect(className, opciones, placeholder, required) {
-                    const sel = document.createElement("select");
-                    sel.className = className;
-                    if (required) {
-                        sel.required = true;
-                    }
-                    const defOpt = document.createElement("option");
-                    defOpt.value = "";
-                    defOpt.textContent = placeholder;
-                    sel.appendChild(defOpt);
-                    opciones.forEach(function(item) {
-                        const o = document.createElement("option");
-                        o.value = item.id;
-                        o.textContent = item.name;
-                        if (item.dataName) {
-                            o.setAttribute("data-name", item.dataName);
-                        }
-                        sel.appendChild(o);
-                    });
-                    return sel;
-                }
-
-                /**
-                 * Crea una nueva fila de registro en el formulario.
-                 * 
-                 * @private
-                 */
-                function _crearFila() {
-                    rowCounter++;
-                    const id = rowCounter;
-                    const card = document.createElement("div");
-                    card.className = "o_digitalizacion_row_card";
-                    card.id = "fila-" + id;
-
-                    /* Badge de número */
-                    const badge = document.createElement("span");
-                    badge.className = "o_digitalizacion_row_num";
-                    badge.textContent = "#" + id;
-                    card.appendChild(badge);
-
-                    /* Fila principal: digitalizador, etapa, eliminar */
-                    const row1 = document.createElement("div");
-                    row1.className = "row g-2 mt-1";
-
-                    /* Digitalizador */
-                    const col1 = document.createElement("div");
-                    col1.className = "col-12 col-sm-6 col-md-4";
-                    const field1 = document.createElement("div");
-                    field1.className = "o_digitalizacion_field";
-                    const label1 = document.createElement("label");
-                    label1.textContent = "Digitalizador ";
-                    const ast1 = document.createElement("span");
-                    ast1.className = "text-danger"; 
-                    ast1.textContent = "*";
-                    label1.appendChild(ast1);
-                    const selMiembro = _crearSelect("input-miembro",
-                        miembros.map(function(m) { return {id: m.id, name: m.name}; }),
-                        "Seleccione digitalizador...", true);
-                    field1.appendChild(label1);
-                    field1.appendChild(selMiembro);
-                    col1.appendChild(field1);
-                    row1.appendChild(col1);
-
-                    /* Etapa */
-                    const col2 = document.createElement("div");
-                    col2.className = "col-12 col-sm-6 col-md-4";
-                    const field2 = document.createElement("div");
-                    field2.className = "o_digitalizacion_field";
-                    const label2 = document.createElement("label");
-                    label2.textContent = "Etapa ";
-                    const ast2 = document.createElement("span");
-                    ast2.className = "text-danger"; 
-                    ast2.textContent = "*";
-                    label2.appendChild(ast2);
-                    const selEtapa = _crearSelect("input-etapa",
-                        etapas.map(function(e) { return {id: e.id, name: e.name, dataName: e.name.toLowerCase()}; }),
-                        "Seleccione etapa...", true);
-                    field2.appendChild(label2);
-                    field2.appendChild(selEtapa);
-                    col2.appendChild(field2);
-                    row1.appendChild(col2);
-
-                    /* Botón eliminar */
-                    const col3 = document.createElement("div");
-                    col3.className = "col-12 col-sm-12 col-md-4 d-flex align-items-end justify-content-end";
-                    const btnElim = document.createElement("button");
-                    btnElim.type = "button";
-                    btnElim.className = "o_digitalizacion_btn o_digitalizacion_btn_ghost btn-eliminar w-100";
-                    const icoTrash = document.createElement("i");
-                    icoTrash.className = "fa fa-trash-o";
-                    btnElim.appendChild(icoTrash);
-                    btnElim.appendChild(document.createTextNode(" Eliminar fila"));
-                    col3.appendChild(btnElim);
-                    row1.appendChild(col3);
-                    card.appendChild(row1);
-
-                    /* Separador "Datos de producción" */
-                    const sepDiv = document.createElement("div");
-                    sepDiv.className = "o_digitalizacion_kpi_label mt-2";
-                    sepDiv.textContent = "Datos de producción";
-                    card.appendChild(sepDiv);
-
-                    /* Fila de campos de producción */
-                    const row2 = document.createElement("div");
-                    row2.className = "row g-2";
-
-                    const camposDef = [
-                        {campo: "caja", label: "Caja / ID", type: "text", cls: "input-caja", col: "col-6 col-sm-4 col-md-3", placeholder: "Ej. A-1"},
-                        {campo: "cant_cajas", label: "Cant. cajas", type: "number", cls: "input-cant-cajas", col: "col-6 col-sm-4 col-md-2"},
-                        {campo: "expedientes", label: "Expedientes", type: "number", cls: "input-expedientes", col: "col-6 col-sm-4 col-md-2"},
-                        {campo: "folios", label: "Folios", type: "number", cls: "input-folios", col: "col-6 col-sm-4 col-md-2"},
-                        {campo: "escaneos", label: "Escaneos", type: "number", cls: "input-escaneos", col: "col-6 col-sm-4 col-md-2"},
-                        {campo: "exp_editados", label: "Exp. editados", type: "number", cls: "input-exp-editados", col: "col-6 col-sm-4 col-md-2"},
-                        {campo: "folios_editados", label: "Folios editados", type: "number", cls: "input-folios-editados", col: "col-6 col-sm-4 col-md-2"},
-                        {campo: "exp_indexados", label: "Exp. indexados", type: "number", cls: "input-exp-indexados", col: "col-6 col-sm-4 col-md-2"},
-                        {campo: "folios_indexados", label: "Folios indexados", type: "number", cls: "input-folios-indexados", col: "col-6 col-sm-4 col-md-2"},
-                    ];
-
-                    camposDef.forEach(function(def) {
-                        const colW = document.createElement("div");
-                        colW.className = def.col + " o_digitalizacion_field";
-                        colW.setAttribute("data-campo", def.campo);
-                        colW.style.display = "none";
-                        const lb = document.createElement("label");
-                        lb.textContent = def.label;
-                        const inp = document.createElement("input");
-                        inp.type = def.type;
-                        inp.className = def.cls;
-                        if (def.type === "number") {
-                            inp.min = "0";
-                        }
-                        if (def.placeholder) {
-                            inp.placeholder = def.placeholder;
-                        }
-                        inp.disabled = true;
-                        colW.appendChild(lb);
-                        colW.appendChild(inp);
-                        row2.appendChild(colW);
-                    });
-
-                    /* Escáner (select) */
-                    const colEsc = document.createElement("div");
-                    colEsc.className = "col-6 col-sm-4 col-md-3 o_digitalizacion_field";
-                    colEsc.setAttribute("data-campo", "escaner");
-                    colEsc.style.display = "none";
-                    const lbEsc = document.createElement("label");
-                    lbEsc.textContent = "Escáner";
-                    const selEsc = _crearSelect("input-escaner",
-                        escaneres.map(function(eq) { return {id: eq.id, name: eq.name}; }),
-                        "No aplica", false);
-                    selEsc.disabled = true;
-                    colEsc.appendChild(lbEsc);
-                    colEsc.appendChild(selEsc);
-                    row2.appendChild(colEsc);
-
-                    /* Observaciones */
-                    const colObs = document.createElement("div");
-                    colObs.className = "col-12 o_digitalizacion_field";
-                    const lbObs = document.createElement("label");
-                    lbObs.textContent = "Observaciones";
-                    const inpObs = document.createElement("input");
-                    inpObs.type = "text";
-                    inpObs.className = "input-observacion";
-                    inpObs.placeholder = "Opcional...";
-                    colObs.appendChild(lbObs);
-                    colObs.appendChild(inpObs);
-                    row2.appendChild(colObs);
-
-                    card.appendChild(row2);
-
-                    /* Listeners */
-                    selEtapa.addEventListener("change", function() {
-                        _actualizarCampos(card);
-                    });
-                    btnElim.addEventListener("click", function() {
-                        card.remove();
-                        if (document.querySelectorAll(".o_digitalizacion_row_card").length === 0) {
-                            _crearFila();
-                        }
-                        _actualizarContador();
-                    });
-                    selMiembro.addEventListener("change", _actualizarContador);
-
-                    document.getElementById("contenedor-filas").appendChild(card);
-                    _actualizarCampos(card);
-                }
-
-                /**
-                 * Actualiza el contador de filas completas en el footer.
-                 * 
-                 * @private
-                 */
-                function _actualizarContador() {
-                    const filas = document.querySelectorAll(".o_digitalizacion_row_card");
-                    const completas = Array.from(filas).filter(function(f) {
-                        return f.querySelector(".input-miembro").value && f.querySelector(".input-etapa").value;
-                    }).length;
-                    const el = document.getElementById("footer-contador");
-                    if (el) {
-                        el.textContent = completas + " de " + filas.length + " filas completas";
                     }
                 }
 
-                /**
-                 * Muestra un mensaje de estado en el formulario.
-                 * 
-                 * @private
-                 * @param {string} tipo 'info', 'success' o 'warning'.
-                 * @param {string} [texto] Mensaje opcional.
-                 */
-                function _mostrarMensaje(tipo, texto) {
-                    const ids = { 
-                        "info": "msg-guardando", 
-                        "success": "msg-exito", 
-                        "warning": "msg-advertencias" 
-                    };
-                    Object.values(ids).forEach(function(id) {
-                        const el = document.getElementById(id);
-                        if (el) {
-                            el.classList.add("d-none");
-                        }
-                    });
-                    const el = document.getElementById(ids[tipo] || "msg-exito");
-                    if (el) {
-                        if (texto) {
-                            el.textContent = texto;
-                        }
-                        el.classList.remove("d-none");
-                    }
-                }
+                // ── Agregar primera fila automáticamente ──
+                document.getElementById('tbody-registros').appendChild(crearFila());
 
-                document.addEventListener("DOMContentLoaded", function() {
-                    const proyectoId = document.getElementById("proyecto_id").value;
-                    etapas    = JSON.parse(document.getElementById("etapas_data").value    || "[]");
-                    miembros  = JSON.parse(document.getElementById("miembros_data").value  || "[]");
-                    escaneres = JSON.parse(document.getElementById("escaneres_data").value || "[]");
+                // ── Botón agregar fila ──
+                document.getElementById('btn-agregar-fila').addEventListener('click', function() {
+                    document.getElementById('tbody-registros').appendChild(crearFila());
+                });
 
-                    if (miembros.length === 0) {
-                        document.getElementById("msg-sin-miembros").classList.remove("d-none");
-                        document.getElementById("btn-agregar-fila").disabled = true;
-                        document.getElementById("btn-guardar-registros").disabled = true;
+                // ── Guardar registros ──
+                document.getElementById('btn-guardar').addEventListener('click', async function() {
+                    const fecha = document.getElementById('campo-fecha').value;
+                    if (!fecha) {
+                        mostrarAlerta('warning', 'Por favor selecciona la fecha de la jornada.');
                         return;
                     }
 
-                    _crearFila();
+                    const filas = Array.from(document.querySelectorAll('#tbody-registros tr'));
+                    if (filas.length === 0) {
+                        mostrarAlerta('warning', 'Agrega al menos una fila antes de guardar.');
+                        return;
+                    }
 
-                    document.getElementById("btn-agregar-fila").addEventListener("click", _crearFila);
-
-                    document.getElementById("btn-guardar-registros").addEventListener("click", function() {
-                        const btnGuardar = this;
-                        const filas = document.querySelectorAll(".o_digitalizacion_row_card");
-                        const payload = [];
-                        let valido = true;
-
-                        filas.forEach(function(card) {
-                            card.classList.remove("error");
-                            const miembroId = card.querySelector(".input-miembro").value;
-                            const etapaId   = card.querySelector(".input-etapa").value;
-                            if (!miembroId || !etapaId) {
-                                valido = false;
-                                card.classList.add("error");
-                                return;
-                            }
-                            const escVal = card.querySelector(".input-escaner");
-                            payload.push({
-                                "miembro_id":             parseInt(miembroId),
-                                "etapa_id":               parseInt(etapaId),
-                                "no_caja":                card.querySelector(".input-caja").value || "",
-                                "cantidad_cajas":         parseInt(card.querySelector(".input-cant-cajas").value)    || 0,
-                                "no_expedientes":         parseInt(card.querySelector(".input-expedientes").value)   || 0,
-                                "total_folios":           parseInt(card.querySelector(".input-folios").value)        || 0,
-                                "total_escaneos":         parseInt(card.querySelector(".input-escaneos").value)      || 0,
-                                "tipo_escaner_ids":       (escVal && escVal.value) ? [parseInt(escVal.value)] : [],
-                                "expedientes_editados":   parseInt(card.querySelector(".input-exp-editados").value)    || 0,
-                                "folios_editados":        parseInt(card.querySelector(".input-folios-editados").value) || 0,
-                                "expedientes_indexados":  parseInt(card.querySelector(".input-exp-indexados").value)   || 0,
-                                "folios_indexados":       parseInt(card.querySelector(".input-folios-indexados").value)|| 0,
-                                "observacion":            card.querySelector(".input-observacion").value || "",
-                            });
-                        });
-
-                        if (!valido || payload.length === 0) {
-                            _mostrarMensaje("warning", "Completa Digitalizador y Etapa en todas las filas marcadas en rojo.");
+                    const payload = [];
+                    for (const tr of filas) {
+                        const miembroId = parseInt(tr.querySelector('.sel-miembro').value);
+                        const etapaId   = parseInt(tr.querySelector('.sel-etapa').value);
+                        if (!miembroId || !etapaId) {
+                            mostrarAlerta('warning', 'Completa el Digitalizador y la Etapa en todas las filas.');
                             return;
                         }
 
-                        btnGuardar.disabled = true;
-                        _mostrarMensaje("info");
+                        const escaner = Array.from(tr.querySelector('.sel-escaner').selectedOptions)
+                                             .map(o => parseInt(o.value));
 
-                        fetch("/digitalizacion/api/v1/proyectos/" + proyectoId + "/registros", {
-                            method: "POST",
-                            headers: { 
-                                "Content-Type": "application/json",
-                                "X-CSRF-Token": csrfToken
-                            },
-                            body: JSON.stringify({
-                                "jsonrpc": "2.0", 
-                                "method": "call", 
-                                "id": 1,
-                                "params": {
-                                    "proyecto_id": parseInt(proyectoId),
-                                    "fecha": document.getElementById("inputFecha").value,
-                                    "filas": payload
-                                }
-                            })
-                        })
-                        .then(function(r) { return r.json(); })
-                        .then(function(response) {
-                            const data = response.result || {};
-                            btnGuardar.disabled = false;
-                            document.getElementById("msg-guardando").classList.add("d-none");
-                            if (data.success) {
-                                const adv = data.meta ? (data.meta.advertencias ? data.meta.advertencias.join(" | ") : null) : null;
-                                _mostrarMensaje("success", adv);
-                                document.getElementById("contenedor-filas").innerHTML = "";
-                                rowCounter = 0;
-                                _crearFila();
-                                window.scrollTo({ top: 0, behavior: "smooth" });
-                            } else {
-                                const errMsg = data.error ? (data.error.message ? data.error.message : "Error desconocido.") : "Error desconocido.";
-                                _mostrarMensaje("warning", errMsg);
-                            }
-                        })
-                        .catch(function() {
-                            btnGuardar.disabled = false;
-                            document.getElementById("msg-guardando").classList.add("d-none");
-                            _mostrarMensaje("warning", "Error de conexión al servidor. Intenta de nuevo.");
+                        payload.push({
+                            miembro_id:          miembroId,
+                            etapa_id:            etapaId,
+                            referencia_cajas:    tr.querySelector('.inp-caja').value || null,
+                            no_expedientes:      parseInt(tr.querySelector('.inp-expedientes').value) || 0,
+                            total_folios:        parseInt(tr.querySelector('.inp-folios').value) || 0,
+                            total_escaneos:      parseInt(tr.querySelector('.inp-escaneos').value) || 0,
+                            tipo_escaner_ids:    escaner,
+                            expedientes_editados:  parseInt(tr.querySelector('.inp-exp-editados').value) || 0,
+                            folios_editados:       parseInt(tr.querySelector('.inp-folios-editados').value) || 0,
+                            expedientes_indexados: parseInt(tr.querySelector('.inp-exp-indexados').value) || 0,
+                            folios_indexados:      parseInt(tr.querySelector('.inp-folios-indexados').value) || 0,
+                            observacion:           tr.querySelector('.inp-observacion').value || null,
                         });
-                    });
+                    }
+
+                    const btn = document.getElementById('btn-guardar');
+                    btn.disabled = true;
+                    btn.innerHTML = '
+                <i class="fa fa-spinner fa-spin me-1" />
+                Guardando...';
+
+                    try {
+                        // CSRF token de la cookie de Odoo
+                        const csrf = getCookie('csrf_token') || '';
+
+                        const resp = await fetch(
+                            `/digitalizacion/api/v1/proyectos/${PROYECTO_ID}/registros`,
+                            {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': csrf,
+                                },
+                                body: JSON.stringify({
+                                    jsonrpc: '2.0',
+                                    method: 'call',
+                                    params: { fecha: fecha, filas: payload },
+                                }),
+                            }
+                        );
+
+                        const data = await resp.json();
+
+                        if (data.result && data.result.success) {
+                            mostrarAlerta('success', `✓ ${payload.length} registro(s) guardado(s) correctamente.`);
+                            // Limpiar tabla
+                            document.getElementById('tbody-registros').innerHTML = '';
+                            document.getElementById('tbody-registros').appendChild(crearFila());
+                        } else {
+                            const msg = (data.result && data.result.error && data.result.error.message)
+                                || (data.error && data.error.message)
+                                || 'Error desconocido al guardar.';
+                            mostrarAlerta('danger', msg);
+                        }
+                    } catch(err) {
+                        mostrarAlerta('danger', 'Error de conexión. Verifica tu acceso a internet.');
+                        console.error(err);
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerHTML = '
+                <i class="fa fa-save me-1" />
+                Guardar registros';
+                    }
                 });
-                })();
-                ]]>
+
+                // ── Helpers ──
+                function mostrarAlerta(tipo, mensaje) {
+                    const el = document.getElementById('alerta-resultado');
+                    el.className = `alert alert-${tipo} alert-dismissible`;
+                    el.innerHTML = `${mensaje}
+                <button type="button" class="btn-close" onclick="this.parentElement.classList.add('d-none')" />
+                `;
+                    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+
+                function getCookie(name) {
+                    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+                    return match ? decodeURIComponent(match[2]) : null;
+                }
             </script>
         </t>
     </template>

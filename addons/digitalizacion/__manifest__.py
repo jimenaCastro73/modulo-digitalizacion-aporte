@@ -37,11 +37,6 @@
         'views/portal/portal_registro_form_templates.xml',
         'views/portal/portal_miembros_templates.xml',
     ],
-    'assets': {
-        'web.assets_frontend': [
-            'digitalizacion/static/src/scss/portal.scss',
-        ],
-    },
     'installable':
     True,
     'auto_install':

@@ -1,296 +1,294 @@
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Google Fonts: Outfit -->
-    <template id="digitalizacion_portal_assets" inherit_id="portal.portal_layout">
-        <xpath expr="//t[1]" position="inside">
-            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&amp;display=swap" />
-        </xpath>
-    </template>
-
-    <!-- Breadcrumbs -->
-    <template id="digitalizacion_portal_breadcrumbs" name="Portal layout : digitalizacion menu entries" inherit_id="portal.portal_breadcrumbs" priority="20">
-        <xpath expr="//ol[hasclass('o_portal_submenu')]" position="inside">
-            <li t-if="page_name == 'digitalizacion_dashboard'" class="breadcrumb-item">
-                <a href="/digitalizacion/v1/dashboard">Producción</a>
-            </li>
-            <li t-if="page_name == 'digitalizacion_formulario'" class="breadcrumb-item">
-                <a href="/digitalizacion/v1/dashboard">Producción</a>
-            </li>
-            <li t-if="page_name == 'digitalizacion_formulario'" class="breadcrumb-item active">Registro Diario</li>
-            <li t-if="page_name == 'digitalizacion_proyecto'" class="breadcrumb-item">
-                <a href="/digitalizacion/v1/dashboard">Producción</a>
-            </li>
-            <li t-if="page_name == 'digitalizacion_proyecto'" class="breadcrumb-item active">Proyecto</li>
-            <li t-if="page_name == 'digitalizacion_miembros'" class="breadcrumb-item">
-                <a href="/digitalizacion/v1/dashboard">Producción</a>
-            </li>
-            <li t-if="page_name == 'digitalizacion_miembros'" class="breadcrumb-item active">Equipo</li>
-        </xpath>
-    </template>
-    <!-- Enlace en navbar — solo visible para líderes -->
-    <template id="digitalizacion_website_menu" inherit_id="website.navbar_nav">
-        <xpath expr="//ul[@id='top_menu']" position="inside">
-            <t t-if="request.env.user.has_group('digitalizacion.group_digitalizacion_lider')">
-                <li class="nav-item">
-                    <a href="/digitalizacion/v1/dashboard" class="nav-link">
-                        <i class="fa fa-th-large me-1" />
-                        Digitalizacion
-                    </a>
-                </li>
-            </t>
-        </xpath>
-    </template>
-    <!-- Portal home entry -->
-    <template id="digitalizacion_portal_home_entry" name="Displays Digitalizacion in Portal Home" inherit_id="portal.portal_my_home" customize_show="True" priority="20">
-        <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
-            <t t-call="portal.portal_docs_entry">
-                <t t-set="title">Registro de Producción</t>
-                <t t-set="url" t-value="'/digitalizacion/v1/dashboard'" />
-                <t t-set="placeholder_count" t-value="'digitalizacion_count'" />
-            </t>
-        </xpath>
-    </template>
     <!-- ================================================================
-         DASHBOARD DEL LÍDER — /digitalizacion
+         portal_home_templates.xml
+         1. Dashboard principal del Líder (KPIs, filtros, registros)
+         2. Entrada en el home del portal
+         3. Breadcrumbs del módulo
          ================================================================ -->
-    <template id="digitalizacion_portal_dashboard" name="Dashboard Líder">
+    <!-- ── DASHBOARD PRINCIPAL ──────────────────────────────────────── -->
+    <template id="digitalizacion_portal_dashboard" name="Portal: dashboard del Líder">
         <t t-call="portal.portal_layout">
-            <t t-set="breadcrumbs_searchbar" t-value="True" />
-            <!-- Sin proyectos asignados -->
-            <div t-if="not asignaciones" class="o_digitalizacion_empty mt-5">
-                <i class="fa fa-folder-open-o" />
-                <p class="fw-bold">Sin proyectos asignados</p>
-                <p class="small">Contacta al administrador para que te asigne a un proyecto.</p>
-            </div>
-            <div t-if="asignaciones" class="o_digitalizacion_page pb-5">
-                <!-- ── Hero ───────────────────────────────────── -->
-                <div class="o_digitalizacion_project_hero">
-                    <div class="container-fluid px-3 px-md-4">
-                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-                            <div>
-                                <h2 class="mb-1">
-                                    Panel de Producción
-                                </h2>
-                                <div class="o_digitalizacion_status">
-                                    <i class="fa fa-circle text-success" style="font-size: .5rem;" />
-                                    Sistema Operativo
-                                </div>
-                                <div class="o_digitalizacion_dates mt-2">
-                                    <i class="fa fa-calendar-o me-1" />
-                                    Período: <t t-esc="periodo_actual" />
-                                </div>
-                            </div>
-                            <div class="d-none d-lg-block">
-                                <i class="fa fa-rocket" style="font-size: 4rem; opacity: 0.2;" />
-                            </div>
+            <t t-if="notifications">
+                <div class="container mt-3">
+                    <t t-foreach="notifications" t-as="notif">
+                        <div t-attf-class="alert alert-{{ notif['type'] }} alert-dismissible" role="alert">
+                            <t t-esc="notif['message']" />
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" />
                         </div>
-                    </div>
-                </div>
-
-                <!-- ── Topbar sticky ──────────────────────────── -->
-                <div class="o_digitalizacion_topbar">
-                    <div class="container-fluid px-3 px-md-4">
-                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 o_digitalizacion_topbar_actions">
-                            <div class="d-flex align-items-center gap-3">
-                                <!-- Selector de proyecto -->
-                                <form method="GET" action="/digitalizacion/v1/dashboard" class="d-flex align-items-center gap-2">
-                                    <i class="fa fa-folder-open text-primary" />
-                                    <select name="proyecto_id" class="o_digitalizacion_project_select" onchange="this.form.submit()">
-                                        <t t-foreach="asignaciones" t-as="asig">
-                                            <option t-att-value="asig.proyecto_id.id" t-att-selected="request.params.get('proyecto_id') == str(asig.proyecto_id.id)">
-                                                <t t-esc="asig.proyecto_id.name" />
-                                            </option>
-                                        </t>
-                                    </select>
-                                </form>
-                                <span class="o_digitalizacion_period text-muted small d-none d-md-inline">
-                                    <i class="fa fa-calendar-o me-1" />
-                                    <t t-esc="periodo_actual" />
-                                </span>
-                            </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <!-- Filtros período -->
-                                <div class="o_digitalizacion_period_pills">
-                                    <a t-attf-href="/digitalizacion/v1/dashboard?proyecto_id=#{request.params.get('proyecto_id', '')}&amp;periodo=hoy" t-att-class="'active' if request.params.get('periodo') == 'hoy' else ''">Hoy</a>
-                                    <a t-attf-href="/digitalizacion/v1/dashboard?proyecto_id=#{request.params.get('proyecto_id', '')}&amp;periodo=semana" t-att-class="'active' if request.params.get('periodo') == 'semana' else ''">Semana</a>
-                                    <a t-attf-href="/digitalizacion/v1/dashboard?proyecto_id=#{request.params.get('proyecto_id', '')}&amp;periodo=mes" t-att-class="'active' if not request.params.get('periodo') or request.params.get('periodo') == 'mes' else ''">Mes</a>
-                                </div>
-                                <!-- Botón registrar -->
-                                <a t-attf-href="/digitalizacion/v1/proyectos/#{request.params.get('proyecto_id') or asignaciones[0].proyecto_id.id}/form" class="o_digitalizacion_btn o_digitalizacion_btn_primary">
-                                    <i class="fa fa-plus" />
-                                    Registrar
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="container-fluid px-3 px-md-4 mt-4">
-                    <t t-if="notifications">
-                        <t t-foreach="notifications" t-as="noti">
-                            <div t-attf-class="alert alert-#{noti['type']} alert-dismissible fade show" role="alert">
-                                <t t-esc="noti['message']" />
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" />
-                            </div>
-                        </t>
                     </t>
-                    <!-- ── Accesos rápidos ────────────────────── -->
-                    <div class="row g-3 mt-1">
-                        <div class="col-12">
-                            <div class="o_digitalizacion_card">
-                                <div class="o_digitalizacion_card__body d-flex flex-wrap gap-2 align-items-center">
-                                    <span class="text-muted small me-2">Accesos rápidos:</span>
-                                    <t t-foreach="asignaciones" t-as="asig">
-                                        <a t-attf-href="/digitalizacion/v1/proyectos/#{asig.proyecto_id.id}" class="o_digitalizacion_btn o_digitalizacion_btn_outline" style="font-size:.8rem;">
-                                            <i class="fa fa-folder-o" />
-                                            <t t-esc="asig.proyecto_id.name" />
-                                        </a>
-                                    </t>
+                </div>
+            </t>
+            <div class="container py-4">
+                <!-- Cabecera con selector de proyecto -->
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+                    <div>
+                        <h2 class="mb-1">Dashboard</h2>
+                        <p class="text-muted mb-0">
+                            <t t-esc="periodo_actual" />
+                        </p>
+                    </div>
+                    <t t-if="asignaciones and len(asignaciones) > 1">
+                        <form method="GET" action="/digitalizacion/v1/dashboard" class="d-flex align-items-center gap-2">
+                            <label class="text-muted small mb-0">Proyecto:</label>
+                            <select name="proyecto_id" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+                                <t t-foreach="asignaciones" t-as="asig">
+                                    <option t-att-value="asig.proyecto_id.id" t-att-selected="'selected' if proyecto_actual and asig.proyecto_id.id == proyecto_actual.id else None">
+                                        <t t-esc="asig.proyecto_id.name" />
+                                    </option>
+                                </t>
+                            </select>
+                        </form>
+                    </t>
+                </div>
+                <!-- Sin proyectos -->
+                <t t-if="not asignaciones">
+                    <div class="alert alert-warning">
+                        <i class="fa fa-exclamation-triangle me-1" />
+                        No tienes proyectos asignados. Contacta al administrador.
+                    </div>
+                </t>
+                <t t-if="proyecto_actual">
+                    <!-- Filtros de período -->
+                    <div class="card mb-4">
+                        <div class="card-body py-2">
+                            <form method="GET" action="/digitalizacion/v1/dashboard" class="d-flex flex-wrap align-items-center gap-2">
+                                <input t-att-value="proyecto_actual.id" name="proyecto_id" type="hidden" />
+                                <small class="text-muted me-1">Período:</small>
+                                <div class="btn-group btn-group-sm">
+                                    <button t-attf-class="btn #{'btn-primary' if periodo == 'hoy' else 'btn-outline-secondary'}" name="periodo" type="submit" value="hoy">Hoy</button>
+                                    <button t-attf-class="btn #{'btn-primary' if periodo == 'semana' else 'btn-outline-secondary'}" name="periodo" type="submit" value="semana">Semana</button>
+                                    <button t-attf-class="btn #{'btn-primary' if periodo == 'mes' else 'btn-outline-secondary'}" name="periodo" type="submit" value="mes">Mes</button>
                                 </div>
-                            </div>
+                                <input t-att-value="fecha_desde" name="fecha_desde" type="date" class="form-control form-control-sm" style="width:140px" />
+                                <span class="text-muted">—</span>
+                                <input t-att-value="fecha_hasta" name="fecha_hasta" type="date" class="form-control form-control-sm" style="width:140px" />
+                                <button name="periodo" type="submit" value="custom" class="btn btn-sm btn-outline-secondary">Aplicar</button>
+                            </form>
                         </div>
                     </div>
-                    <!-- ── KPIs ───────────────────────────────── -->
+                    <!-- KPIs -->
                     <div class="row g-3 mb-4">
                         <div class="col-6 col-md-3">
-                            <div class="o_digitalizacion_kpi o_digitalizacion_kpi_escaneos">
-                                <div class="o_digitalizacion_kpi_label">
-                                    <i class="fa fa-barcode me-1" />
-                                    Escaneos
+                            <div class="card text-center h-100 border-0 bg-light">
+                                <div class="card-body">
+                                    <div class="display-6 fw-bold text-success">
+                                        <t t-esc="kpis.get('escaneos', 0)" />
+                                    </div>
+                                    <div class="text-muted small mt-1">
+                                        <i class="fa fa-camera me-1" />
+                                        Escaneos
+                                    </div>
                                 </div>
-                                <div class="o_digitalizacion_kpi_value">
-                                    <t t-esc="kpis.get('escaneos', 0)" />
-                                </div>
-                                <div class="o_digitalizacion_kpi_sub">Hojas digitalizadas</div>
                             </div>
                         </div>
                         <div class="col-6 col-md-3">
-                            <div class="o_digitalizacion_kpi o_digitalizacion_kpi_folios">
-                                <div class="o_digitalizacion_kpi_label">
-                                    <i class="fa fa-file-o me-1" />
-                                    Folios físicos
+                            <div class="card text-center h-100 border-0 bg-light">
+                                <div class="card-body">
+                                    <div class="display-6 fw-bold text-primary">
+                                        <t t-esc="kpis.get('folios_fisicos', 0)" />
+                                    </div>
+                                    <div class="text-muted small mt-1">
+                                        <i class="fa fa-file-o me-1" />
+                                        Folios
+                                    </div>
                                 </div>
-                                <div class="o_digitalizacion_kpi_value">
-                                    <t t-esc="kpis.get('folios_fisicos', 0)" />
-                                </div>
-                                <div class="o_digitalizacion_kpi_sub">Procesados</div>
                             </div>
                         </div>
                         <div class="col-6 col-md-3">
-                            <div class="o_digitalizacion_kpi o_digitalizacion_kpi_indexados">
-                                <div class="o_digitalizacion_kpi_label">
-                                    <i class="fa fa-tags me-1" />
-                                    Exp. indexados
+                            <div class="card text-center h-100 border-0 bg-light">
+                                <div class="card-body">
+                                    <div class="display-6 fw-bold text-info">
+                                        <t t-esc="kpis.get('exp_indexados', 0)" />
+                                    </div>
+                                    <div class="text-muted small mt-1">
+                                        <i class="fa fa-tag me-1" />
+                                        Exp. indexados
+                                    </div>
                                 </div>
-                                <div class="o_digitalizacion_kpi_value">
-                                    <t t-esc="kpis.get('exp_indexados', 0)" />
-                                </div>
-                                <div class="o_digitalizacion_kpi_sub">Expedientes</div>
                             </div>
                         </div>
                         <div class="col-6 col-md-3">
-                            <div class="o_digitalizacion_kpi o_digitalizacion_kpi_registros">
-                                <div class="o_digitalizacion_kpi_label">
-                                    <i class="fa fa-send-o me-1" />
-                                    Envíos
+                            <div class="card text-center h-100 border-0 bg-light">
+                                <div class="card-body">
+                                    <div class="display-6 fw-bold text-secondary">
+                                        <t t-esc="kpis.get('total_registros', 0)" />
+                                    </div>
+                                    <div class="text-muted small mt-1">
+                                        <i class="fa fa-list me-1" />
+                                        Registros
+                                    </div>
                                 </div>
-                                <div class="o_digitalizacion_kpi_value">
-                                    <t t-esc="kpis.get('total_registros', 0)" />
-                                </div>
-                                <div class="o_digitalizacion_kpi_sub">Formularios enviados</div>
                             </div>
                         </div>
                     </div>
-                    <!-- ── Contenido principal ────────────────── -->
-                    <div class="row g-3">
-                        <!-- Producción por etapa -->
-                        <div class="col-12 col-lg-4">
-                            <div class="o_digitalizacion_card h-100">
-                                <div class="o_digitalizacion_card_header">
-                                    <i class="fa fa-bar-chart" />
-                                    Producción por etapa
-                                </div>
-                                <div class="o_digitalizacion_card_body">
-                                    <t t-if="not resumen_etapas">
-                                        <div class="o_digitalizacion_empty">
-                                            <i class="fa fa-inbox" />
-                                            <p class="small mb-0">Sin datos en este período</p>
+                    <!-- Resumen por etapa -->
+                    <t t-if="resumen_etapas">
+                        <div class="card mb-4">
+                            <div class="card-header fw-semibold">Producción por etapa</div>
+                            <div class="card-body">
+                                <t t-foreach="resumen_etapas" t-as="etapa">
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <div style="width:100px;text-align:right;flex-shrink:0;">
+                                            <small class="text-muted">
+                                                <t t-esc="etapa['nombre']" />
+                                            </small>
                                         </div>
-                                    </t>
-                                    <t t-foreach="resumen_etapas" t-as="etapa">
-                                        <div class="o_digitalizacion_etapa_bar">
-                                            <span>
-                                                <strong t-esc="etapa.get('nombre')" />
-                                                <t t-esc="etapa.get('cantidad')" />
-                                            </span>
+                                        <div class="flex-grow-1 bg-light rounded" style="height:20px;overflow:hidden;">
+                                            <div t-attf-style="width:{{ etapa['porcentaje'] }}%;min-width:0;" class="bg-primary rounded h-100 d-flex align-items-center px-2">
+                                                <t t-if="etapa['porcentaje'] >= 15">
+                                                    <small class="text-white fw-semibold">
+                                                        <t t-esc="etapa['cantidad']" />
+                                                    </small>
+                                                </t>
+                                            </div>
                                         </div>
-                                        <div class="o_digitalizacion_progress">
-                                            <div t-attf-style="width: #{etapa.get('porcentaje')}%" class="o_digitalizacion_progress_fill" />
+                                        <div style="width:45px;flex-shrink:0;">
+                                            <small class="text-muted">
+                                                <t t-esc="etapa['cantidad']" />
+                                            </small>
                                         </div>
-                                    </t>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Registros recientes -->
-                        <div class="col-12 col-lg-8">
-                            <div class="o_digitalizacion_card h-100">
-                                <div class="o_digitalizacion_card_header">
-                                    <i class="fa fa-history" />
-                                    Envíos recientes
-                                    <span class="ms-auto">
-                                        <a t-attf-href="/digitalizacion/v1/proyectos/#{request.params.get('proyecto_id') or asignaciones[0].proyecto_id.id}/form" class="o_digitalizacion_btn o_digitalizacion_btn_outline" style="font-size:.78rem; padding:.25rem .7rem;">
-                                            <i class="fa fa-plus" />
-                                            Nuevo registro
-                                        </a>
-                                    </span>
-                                </div>
-                                <t t-if="not ultimos_registros">
-                                    <div class="o_digitalizacion_empty">
-                                        <i class="fa fa-inbox" />
-                                        <p class="small mb-0">No hay registros en este período</p>
                                     </div>
                                 </t>
-                                <div t-if="ultimos_registros" class="table-responsive">
-                                    <table class="o_digitalizacion_table">
-                                        <thead>
-                                            <tr>
-                                                <th>Fecha</th>
-                                                <th>Miembro</th>
-                                                <th>Etapa</th>
-                                                <th class="text-end">Producción</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <t t-foreach="ultimos_registros" t-as="reg">
-                                                <tr>
-                                                    <td class="text-muted">
-                                                        <t t-esc="reg.fecha.strftime('%d/%m') if reg.fecha else ''" />
-                                                    </td>
-                                                    <td class="fw-500">
-                                                        <t t-esc="reg.miembro_id.partner_id.name.split(' ')[0] if reg.miembro_id else '?'" />
-                                                    </td>
-                                                    <td>
-                                                        <span class="o_digitalizacion_badge">
-                                                            <t t-esc="reg.etapa_id.name" />
-                                                        </span>
-                                                    </td>
-                                                    <td class="text-end fw-bold">
-                                                        <t t-esc="reg.produccion_principal" />
-                                                        <span class="text-muted fw-normal ms-1" style="font-size:.78rem;">
-                                                            <t t-esc="reg.unidad_produccion" />
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            </t>
-                                        </tbody>
-                                    </table>
-                                </div>
                             </div>
                         </div>
+                    </t>
+                    <!-- Últimos registros -->
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <h5 class="mb-0">Últimos registros</h5>
+                        <a t-attf-href="/digitalizacion/v1/proyectos/{{ proyecto_actual.id }}/form" class="btn btn-primary btn-sm">
+                            <i class="fa fa-plus me-1" />
+                            Registrar producción
+                        </a>
                     </div>
-                    <!-- /row -->
-                </div>
-                <!-- /container -->
+                    <t t-if="ultimos_registros">
+                        <div class="card mb-3">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-sm mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Fecha</th>
+                                            <th>Digitalizador</th>
+                                            <th>Etapa</th>
+                                            <th class="text-end">Producción</th>
+                                            <th>Unidad</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="ultimos_registros" t-as="reg">
+                                            <tr>
+                                                <td class="text-muted small">
+                                                    <t t-esc="reg.fecha" />
+                                                </td>
+                                                <td>
+                                                    <t t-esc="reg.miembro_nombre" />
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-light text-dark">
+                                                        <t t-esc="reg.etapa_nombre" />
+                                                    </span>
+                                                </td>
+                                                <td class="text-end fw-semibold">
+                                                    <t t-esc="reg.produccion_principal" />
+                                                </td>
+                                                <td class="text-muted small">
+                                                    <t t-esc="reg.unidad_produccion" />
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <!-- Paginación -->
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div>
+                                <t t-if="has_prev">
+                                    <a t-attf-href="/digitalizacion/v1/dashboard?proyecto_id={{ proyecto_actual.id }}&periodo={{ periodo }}&page={{ page - 1 }}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fa fa-chevron-left" />
+                                        Anterior
+                                    </a>
+                                </t>
+                            </div>
+                            <small class="text-muted">
+                                Página
+                                <t t-esc="page" />
+                            </small>
+                            <div>
+                                <t t-if="has_next">
+                                    <a t-attf-href="/digitalizacion/v1/dashboard?proyecto_id={{ proyecto_actual.id }}&periodo={{ periodo }}&page={{ page + 1 }}" class="btn btn-sm btn-outline-secondary">
+                                        Siguiente
+                                        <i class="fa fa-chevron-right" />
+                                    </a>
+                                </t>
+                            </div>
+                        </div>
+                    </t>
+                    <t t-else="">
+                        <div class="card mb-4">
+                            <div class="card-body text-center text-muted py-4">
+                                <i class="fa fa-list fa-2x mb-2 d-block" />
+                                No hay registros para el período seleccionado.
+                            </div>
+                        </div>
+                    </t>
+                    <!-- Accesos rápidos -->
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <a t-attf-href="/digitalizacion/v1/proyectos/{{ proyecto_actual.id }}" class="card text-decoration-none h-100 border-0 bg-light">
+                                <div class="card-body d-flex align-items-center gap-3">
+                                    <i class="fa fa-folder-open fa-2x text-primary" />
+                                    <div>
+                                        <div class="fw-semibold">Ver proyecto</div>
+                                        <div class="text-muted small">Progreso y datos generales</div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a t-attf-href="/digitalizacion/v1/proyectos/{{ proyecto_actual.id }}/miembros" class="card text-decoration-none h-100 border-0 bg-light">
+                                <div class="card-body d-flex align-items-center gap-3">
+                                    <i class="fa fa-users fa-2x text-success" />
+                                    <div>
+                                        <div class="fw-semibold">Ver equipo</div>
+                                        <div class="text-muted small">Participación por etapa</div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </t>
             </div>
-            <!-- /o_digitalizacion_page -->
         </t>
+    </template>
+    <!-- ── ENTRADA EN EL HOME DEL PORTAL ─────────────────────────────── -->
+    <template id="digitalizacion_portal_home_entry" name="Portal home: entrada digitalización" inherit_id="portal.portal_my_home" priority="30">
+        <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
+            <t t-if="digitalizacion_count" t-call="portal.portal_docs_entry">
+                <t t-set="title">Digitalización</t>
+                <t t-set="url">/digitalizacion/v1/dashboard</t>
+                <t t-set="count" t-value="digitalizacion_count" />
+                <t t-set="text">registros de trabajo</t>
+            </t>
+        </xpath>
+    </template>
+    <!-- ── BREADCRUMBS ───────────────────────────────────────────────── -->
+    <template id="digitalizacion_portal_breadcrumbs" name="Portal breadcrumbs: digitalización" inherit_id="portal.portal_breadcrumbs" priority="30">
+        <xpath expr="//ol[hasclass('o_portal_submenu')]" position="inside">
+            <li t-if="page_name in ('digitalizacion_dashboard', 'digitalizacion_proyecto', 'digitalizacion_formulario', 'digitalizacion_miembros')" t-attf-class="breadcrumb-item #{'active' if page_name == 'digitalizacion_dashboard' else ''}">
+                <a t-if="page_name != 'digitalizacion_dashboard'" href="/digitalizacion/v1/dashboard">Dashboard</a>
+                <t t-if="page_name == 'digitalizacion_dashboard'">Dashboard</t>
+            </li>
+            <li t-if="page_name in ('digitalizacion_proyecto', 'digitalizacion_formulario', 'digitalizacion_miembros') and proyecto_actual" t-attf-class="breadcrumb-item #{'active' if page_name == 'digitalizacion_proyecto' else ''}">
+                <a t-if="page_name != 'digitalizacion_proyecto'" t-attf-href="/digitalizacion/v1/proyectos/{{ proyecto_actual.id }}">
+                    <t t-esc="proyecto_actual.name" />
+                </a>
+                <t t-if="page_name == 'digitalizacion_proyecto'">
+                    <t t-esc="proyecto_actual.name" />
+                </t>
+            </li>
+            <li t-if="page_name == 'digitalizacion_formulario'" class="breadcrumb-item active">Registrar producción</li>
+            <li t-if="page_name == 'digitalizacion_miembros'" class="breadcrumb-item active">Equipo</li>
+        </xpath>
     </template>
 </odoo>

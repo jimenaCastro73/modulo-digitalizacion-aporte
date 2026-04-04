@@ -1,315 +1,232 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <template id="digitalizacion_portal_miembros_equipo" name="Miembros del Equipo">
+    <!-- ================================================================
+         portal_miembros_templates.xml
+         Vista de miembros del equipo para el Líder (SOLO LECTURA).
+         Incluye:
+           1. Gráfico de barras apiladas por etapa (CSS puro, sin librerías)
+           2. Tabla heatmap con conteo exacto por miembro/etapa
+           3. Lista de miembros activos con estado
+         El Administrador gestiona el equipo desde el backoffice.
+         ================================================================ -->
+    <!-- Colores por etapa — alineados con colores del controller -->
+    <!-- Limpieza:#378ADD Ordenado:#639922 Digitalizado:#1D9E75 Editado:#EF9F27 Indexado:#7F77DD -->
+    <template id="digitalizacion_portal_miembros_equipo" name="Portal: equipo del proyecto">
         <t t-call="portal.portal_layout">
-            <t t-set="breadcrumbs_searchbar" t-value="True" />
-            <div class="o_digitalizacion_page pb-5">
-                <div class="container-fluid px-3 px-md-4 mt-4">
-                    <a t-attf-href="/digitalizacion/v1/proyectos/#{proyecto.id}" class="o_digitalizacion_back">
-                        <i class="fa fa-arrow-left" />
+            <!-- Notificaciones flash -->
+            <t t-if="notifications">
+                <div class="container mt-3">
+                    <t t-foreach="notifications" t-as="notif">
+                        <div t-attf-class="alert alert-{{ notif['type'] }} alert-dismissible" role="alert">
+                            <t t-esc="notif['message']" />
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" />
+                        </div>
+                    </t>
+                </div>
+            </t>
+            <div class="container py-4">
+                <!-- Cabecera -->
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                    <div>
+                        <h3 class="mb-0">Equipo</h3>
+                        <p class="text-muted mb-0">
+                            <t t-esc="proyecto.name" />
+                            ·
+                            <t t-esc="len(miembros)" />
+                            miembro(s) activo(s)
+                        </p>
+                    </div>
+                    <a t-attf-href="/digitalizacion/v1/proyectos/{{ proyecto.id }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fa fa-arrow-left me-1" />
                         Volver al proyecto
                     </a>
-                    <t t-if="notifications">
-                        <t t-foreach="notifications" t-as="noti">
-                            <div t-attf-class="alert alert-#{noti['type']} alert-dismissible fade show" role="alert">
-                                <t t-esc="noti['message']" />
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" />
+                </div>
+                <!-- ═══════════════════════════════════════════════════
+                     GRÁFICO: BARRAS APILADAS POR ETAPA
+                     Datos pasados desde el controller como 'participacion'
+                     CSS puro, sin librerías externas
+                ════════════════════════════════════════════════════ -->
+                <t t-if="participacion and participacion.get('miembros')">
+                    <div class="card mb-4">
+                        <div class="card-header fw-semibold">Participación por etapa</div>
+                        <div class="card-body">
+                            <!-- Leyenda de colores -->
+                            <div class="d-flex flex-wrap gap-3 mb-3">
+                                <t t-foreach="etapas_con_color" t-as="ec">
+                                    <div class="d-flex align-items-center gap-1">
+                                        <div t-attf-style="width:12px;height:12px;border-radius:2px;background:{{ ec['color'] }};" style="width:12px;height:12px;border-radius:2px;" />
+                                        <small class="text-muted">
+                                            <t t-esc="ec['nombre']" />
+                                        </small>
+                                    </div>
+                                </t>
                             </div>
-                        </t>
-                    </t>
-                    <!-- Alertas de feedback -->
-                    <div id="msg-miembro-exito" class="o_digitalizacion_alert o_digitalizacion_alert_success d-none mb-3">
-                        <i class="fa fa-check-circle" />
-                        Miembro agregado correctamente.
-                    </div>
-                    <div id="msg-miembro-error" class="o_digitalizacion_alert o_digitalizacion_alert_danger d-none mb-3" />
-                    <!-- Header -->
-                    <div class="o_digitalizacion_section_header">
-                        <div>
-                            <h3>
-                                <i class="fa fa-users me-2" style="color: var(--o_digitalizacion_primary);" />
-                                Equipo del proyecto
-                            </h3>
-                            <div class="o_digitalizacion_subtitle">
-                                <strong>
-                                    <t t-esc="proyecto.name" />
-                                </strong>
-                                ·
-                                <t t-esc="len(miembros)" />
-                                miembro(s) activo(s)
-                            </div>
-                        </div>
-                        <button class="o_digitalizacion_btn o_digitalizacion_btn_primary" data-bs-toggle="modal" data-bs-target="#modalAgregarMiembro">
-                            <i class="fa fa-user-plus" />
-                            Agregar miembro
-                        </button>
-                    </div>
-                    <!-- Lista de miembros -->
-                    <t t-if="not miembros">
-                        <div class="o_digitalizacion_empty">
-                            <i class="fa fa-user-plus" />
-                            <p class="fw-bold">Sin miembros registrados</p>
-                            <p>Agrega digitalizadores usando el botón de arriba.</p>
-                        </div>
-                    </t>
-                    <div t-if="miembros" id="lista-miembros" class="d-flex flex-column gap-2">
-                        <t t-foreach="miembros" t-as="m">
-                            <div t-att-class="'o_digitalizacion_member_card' + (' inactive' if m.fecha_salida else '')">
-                                <!-- Avatar con inicial -->
-                                <div t-att-class="'o_digitalizacion_avatar' + (' o_digitalizacion_avatar_lider' if m.es_lider else '')">
-                                    <t t-esc="(m.partner_id.name or '?')[0].upper()" />
-                                </div>
-                                <!-- Info -->
-                                <div class="flex-grow-1 min-w-0">
-                                    <div class="o_digitalizacion_member_name">
-                                        <t t-esc="m.partner_id.name" />
-                                        <t t-if="m.es_lider">
-                                            <span class="o_digitalizacion_badge o_digitalizacion_badge_lider ms-2">
-                                                <i class="fa fa-star" />
-                                                Líder
-                                            </span>
+                            <!-- Barras apiladas -->
+                            <t t-foreach="participacion['miembros']" t-as="m">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <!-- Nombre del miembro -->
+                                    <div style="width:110px;flex-shrink:0;text-align:right;">
+                                        <small class="text-muted text-truncate d-block">
+                                            <t t-esc="m['nombre'].split()[0] if m['nombre'] else '—'" />
+                                        </small>
+                                    </div>
+                                    <!-- Barra apilada -->
+                                    <div class="flex-grow-1" style="height:24px;border-radius:4px;overflow:hidden;display:flex;background:#f0f0f0;">
+                                        <t t-foreach="m['segmentos']" t-as="seg">
+                                            <t t-if="seg['count'] > 0">
+                                                <!-- Buscar color del segmento -->
+                                                <t t-foreach="etapas_con_color" t-as="ec">
+                                                    <t t-if="ec['nombre'] == seg['etapa']">
+                                                        <div t-attf-style="width:{{ seg['pct'] }}%;background:{{ ec['color'] }};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#fff;min-width:0;" t-attf-title="{{ seg['etapa'] }}: {{ seg['count'] }} registros">
+                                                            <t t-if="seg['pct'] >= 12">
+                                                                <t t-esc="seg['count']" />
+                                                            </t>
+                                                        </div>
+                                                    </t>
+                                                </t>
+                                            </t>
                                         </t>
                                     </div>
-                                    <div class="o_digitalizacion_member_meta">
-                                        <i class="fa fa-calendar-o me-1" />
-                                        Ingresó:
-                                        <t t-esc="m.fecha_integracion" />
-                                        <t t-if="m.fecha_salida">
-                                            · Salida:
-                                            <t t-esc="m.fecha_salida" />
-                                        </t>
+                                    <!-- Total -->
+                                    <div style="width:32px;flex-shrink:0;">
+                                        <small class="text-muted">
+                                            <t t-esc="m['total']" />
+                                        </small>
                                     </div>
                                 </div>
-                                <!-- Estado -->
-                                <div class="flex-shrink-0">
-                                    <t t-if="m.active and not m.fecha_salida">
-                                        <span class="o_digitalizacion_badge o_digitalizacion_badge_active">
-                                            <i class="fa fa-circle" style="font-size:.5rem;" />
-                                            Activo
-                                        </span>
-                                    </t>
-                                    <t t-else="">
-                                        <span class="o_digitalizacion_badge o_digitalizacion_badge_inactive">
-                                            <i class="fa fa-circle" style="font-size:.5rem;" />
-                                            Baja
-                                        </span>
-                                    </t>
-                                </div>
-                            </div>
-                        </t>
-                    </div>
-                </div>
-            </div>
-            <!-- ── Modal Agregar Miembro ──────────────────────────── -->
-            <div id="modalAgregarMiembro" class="modal fade o_digitalizacion_modal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">
-                                <i class="fa fa-user-plus me-2" style="color: var(--o_digitalizacion_primary);" />
-                                Agregar miembro al equipo
-                            </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" />
-                        </div>
-                        <div class="modal-body">
-                            <p class="text-muted small mb-3">Busca un contacto existente o escribe un nombre nuevo para crearlo.</p>
-                            <div class="o_digitalizacion_search_wrap mb-2">
-                                <i class="fa fa-search" />
-                                <input id="inputBuscarMiembro" type="text" class="o_digitalizacion_search_input" placeholder="Escribe el nombre del digitalizador..." autocomplete="off" />
-                            </div>
-                            <div id="resultadosMiembros" class="o_digitalizacion_search_results" />
-                            <div id="divNuevoMiembro" class="o_digitalizacion_result_new d-none mt-2">
-                                <i class="fa fa-user-plus" />
-                                Se creará un nuevo contacto con este nombre.
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="o_digitalizacion_btn o_digitalizacion_btn_ghost" data-bs-dismiss="modal">Cancelar</button>
-                            <button id="btnConfirmarMiembro" type="button" class="o_digitalizacion_btn o_digitalizacion_btn_primary" disabled="1">
-                                <i class="fa fa-check" />
-                                Agregar
-                            </button>
+                            </t>
                         </div>
                     </div>
+                    <!-- ═══════════════════════════════════════════════════
+                         TABLA HEATMAP — conteo exacto por miembro y etapa
+                    ════════════════════════════════════════════════════ -->
+                    <div class="card mb-4">
+                        <div class="card-header fw-semibold">Detalle por miembro</div>
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Miembro</th>
+                                        <t t-foreach="participacion['etapas']" t-as="etapa">
+                                            <th class="text-center">
+                                                <small>
+                                                    <t t-esc="etapa" />
+                                                </small>
+                                            </th>
+                                        </t>
+                                        <th class="text-center fw-bold">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="participacion['miembros']" t-as="m">
+                                        <tr>
+                                            <td>
+                                                <small>
+                                                    <t t-esc="m['nombre']" />
+                                                </small>
+                                            </td>
+                                            <t t-foreach="participacion['etapas']" t-as="etapa">
+                                                <t t-set="cnt" t-value="m['por_etapa'].get(etapa, 0)" />
+                                                <td class="text-center">
+                                                    <t t-if="cnt == 0">
+                                                        <span class="text-muted">—</span>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <!-- Color según intensidad relativa al total del miembro -->
+                                                        <t t-set="pct" t-value="(cnt / m['total'] * 100) if m['total'] else 0" />
+                                                        <span t-attf-style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:500;background:{{ '#E6F1FB' if pct < 25 else ('#85B7EB' if pct < 50 else '#185FA5') }};color:{{ '#0C447C' if pct < 25 else ('#042C53' if pct < 50 else '#E6F1FB') }};">
+                                                            <t t-esc="cnt" />
+                                                        </span>
+                                                    </t>
+                                                </td>
+                                            </t>
+                                            <td class="text-center fw-bold">
+                                                <t t-esc="m['total']" />
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </t>
+                <!-- Sin datos aún -->
+                <t t-if="not participacion or not participacion.get('miembros')">
+                    <div class="alert alert-info mb-4">
+                        <i class="fa fa-info-circle me-1" />
+                        Aún no hay registros de trabajo para este proyecto.
+                        El gráfico aparecerá cuando el Líder registre la primera jornada.
+                    </div>
+                </t>
+                <!-- ═══════════════════════════════════════════════════
+                     LISTA DE MIEMBROS (SOLO LECTURA)
+                ════════════════════════════════════════════════════ -->
+                <div class="card">
+                    <div class="card-header fw-semibold">
+                        Miembros del equipo
+                        <small class="text-muted ms-2">Solo lectura — el administrador gestiona el equipo</small>
+                    </div>
+                    <t t-if="miembros">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Integración</th>
+                                        <th>Estado</th>
+                                        <th class="text-center">Rol</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="miembros" t-as="m">
+                                        <tr>
+                                            <td>
+                                                <span class="fw-semibold">
+                                                    <t t-esc="m.partner_id.name" />
+                                                </span>
+                                            </td>
+                                            <td class="text-muted">
+                                                <t t-esc="m.fecha_integracion" />
+                                            </td>
+                                            <td>
+                                                <t t-if="m.fecha_salida">
+                                                    <span class="badge bg-secondary">
+                                                        Salida:
+                                                        <t t-esc="m.fecha_salida" />
+                                                    </span>
+                                                </t>
+                                                <t t-elif="m.active">
+                                                    <span class="badge bg-success">Activo</span>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="badge bg-warning text-dark">Inactivo</span>
+                                                </t>
+                                            </td>
+                                            <td class="text-center">
+                                                <t t-if="m.es_lider">
+                                                    <span class="badge bg-primary">
+                                                        <i class="fa fa-star me-1" />
+                                                        Líder
+                                                    </span>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="text-muted small">Digitalizador</span>
+                                                </t>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                    </t>
+                    <t t-else="">
+                        <div class="card-body text-center text-muted py-4">
+                            <i class="fa fa-users fa-2x mb-2 d-block" />
+                            No hay miembros activos en este proyecto.
+                        </div>
+                    </t>
                 </div>
             </div>
-            <script type="text/javascript">
-                <![CDATA[
-                (function() {
-                "use strict";
-
-                const proyectoId = <t t-esc="proyecto.id" />;
-                const csrfToken  = "]]><t t-esc="request.csrf_token()" /><![CDATA[";
-
-                const inputBuscar   = document.getElementById("inputBuscarMiembro");
-                const divResultados = document.getElementById("resultadosMiembros");
-                const btnConfirmar  = document.getElementById("btnConfirmarMiembro");
-                const divNuevo      = document.getElementById("divNuevoMiembro");
-                const msgExito      = document.getElementById("msg-miembro-exito");
-                const msgError      = document.getElementById("msg-miembro-error");
-
-                let partnerId   = null;
-                let nombreNuevo = null;
-                let debounceTimer;
-
-                /**
-                 * Maneja la búsqueda de contactos para el equipo.
-                 * 
-                 * @private
-                 */
-                inputBuscar.addEventListener("input", function() {
-                    clearTimeout(debounceTimer);
-                    const term = this.value.trim();
-                    partnerId = null; 
-                    nombreNuevo = null;
-                    btnConfirmar.disabled = true;
-                    divResultados.innerHTML = "";
-                    divNuevo.classList.add("d-none");
-
-                    if (term.length < 2) {
-                        return;
-                    }
-
-                    debounceTimer = setTimeout(function() {
-                        fetch("/digitalizacion/api/v1/partners/search", {
-                            method: "POST",
-                            headers: { 
-                                "Content-Type": "application/json",
-                                "X-CSRF-Token": csrfToken
-                            },
-                            body: JSON.stringify({
-                                "jsonrpc": "2.0", 
-                                "method": "call", 
-                                "id": 1,
-                                "params": { 
-                                    "term": term, 
-                                    "proyecto_id": proyectoId 
-                                }
-                            })
-                        })
-                        .then(function(r) { return r.json(); })
-                        .then(function(response) {
-                            const data = response.result || {};
-                            const partners = data.data || [];
-                            divResultados.innerHTML = "";
-
-                            if (partners.length === 0) {
-                                nombreNuevo = term;
-                                divNuevo.classList.remove("d-none");
-                                btnConfirmar.disabled = false;
-                            } else {
-                                partners.forEach(function(p) {
-                                    const btn = document.createElement("button");
-                                    btn.className = "o_digitalizacion_result_item";
-                                    let label = p.name;
-                                    if (p.email) {
-                                        label += " (" + p.email + ")";
-                                    }
-                                    btn.textContent = label;
-                                    btn.addEventListener("click", function() {
-                                        partnerId = p.id; 
-                                        nombreNuevo = null;
-                                        inputBuscar.value = p.name;
-                                        divResultados.innerHTML = "";
-                                        divNuevo.classList.add("d-none");
-                                        btnConfirmar.disabled = false;
-                                        btn.classList.add("selected");
-                                    });
-                                    divResultados.appendChild(btn);
-                                });
-                            }
-                        })
-                        .catch(function() {
-                            divResultados.textContent = "Error al buscar contactos.";
-                        });
-                    }, 350);
-                });
-
-                /**
-                 * Confirma y agrega el miembro seleccionado al proyecto.
-                 * 
-                 * @private
-                 */
-                btnConfirmar.addEventListener("click", function() {
-                    btnConfirmar.disabled = true;
-                    fetch("/digitalizacion/api/v1/proyectos/" + proyectoId + "/miembros", {
-                        method: "POST",
-                        headers: { 
-                            "Content-Type": "application/json",
-                            "X-CSRF-Token": csrfToken
-                        },
-                        body: JSON.stringify({
-                            "jsonrpc": "2.0", 
-                            "method": "call", 
-                            "id": 1,
-                            "params": {
-                                "proyecto_id": proyectoId,
-                                "partner_id":  partnerId   || null,
-                                "nombre_nuevo": nombreNuevo || null
-                            }
-                        })
-                    })
-                    .then(function(r) { return r.json(); })
-                    .then(function(data) {
-                        const result = data.result || {};
-                        try {
-                            if (window.bootstrap) {
-                                const modal = window.bootstrap.Modal.getInstance(document.getElementById("modalAgregarMiembro"));
-                                if (modal) {
-                                    modal.hide();
-                                }
-                            } else {
-                                const m = document.getElementById("modalAgregarMiembro");
-                                m.classList.remove("show");
-                                m.style.display = "none";
-                                document.body.classList.remove("modal-open");
-                                const backdrop = document.querySelector(".modal-backdrop");
-                                if (backdrop) {
-                                    backdrop.remove();
-                                }
-                            }
-                        } catch(e) {
-                            console.warn(e);
-                        }
-                        if (result.success) {
-                            msgExito.classList.remove("d-none");
-                            msgError.classList.add("d-none");
-                            setTimeout(function() { 
-                                location.reload(); 
-                            }, 800);
-                        } else {
-                            const errObj = result.error || {};
-                            const errMsg = errObj.message || "Error al agregar miembro.";
-                            msgError.textContent = errMsg;
-                            msgError.classList.remove("d-none");
-                            msgExito.classList.add("d-none");
-                            btnConfirmar.disabled = false;
-                        }
-                    })
-                    .catch(function(err) {
-                        msgError.textContent = "Error de conexión / JS: " + (err ? err.message : "Desconocido");
-                        msgError.classList.remove("d-none");
-                        btnConfirmar.disabled = false;
-                    });
-                });
-
-                /**
-                 * Limpia el modal al cerrarse.
-                 * 
-                 * @private
-                 */
-                document.getElementById("modalAgregarMiembro")
-                    .addEventListener("hidden.bs.modal", function() {
-                        inputBuscar.value = "";
-                        divResultados.innerHTML = "";
-                        divNuevo.classList.add("d-none");
-                        btnConfirmar.disabled = true;
-                        partnerId = null; 
-                        nombreNuevo = null;
-                    });
-                })();
-                ]]>
-            </script>
         </t>
     </template>
 </odoo>
