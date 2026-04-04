@@ -1,0 +1,282 @@
+// ============================================================
+// MÓDULO DE GESTIÓN DE DIGITALIZACIÓN — Diagrama ER
+// Jimena Castro · Práctica Profesional · OTEC GLOBAL 2026
+// Versión: 17.0.1.0.0  |  Odoo 17 Community
+//
+// Tablas del módulo:
+//   T-01  digitalizacion_etapa
+//   T-02  digitalizacion_tipo_escaner
+//   T-03  digitalizacion_proyecto
+//   T-04  digitalizacion_asignacion
+//   T-05  digitalizacion_miembro_proyecto
+//   T-06  digitalizacion_registro
+//   T-06b digitalizacion_registro_tipo_escaner_rel  (Many2many)
+//
+// Tablas nativas Odoo referenciadas (no modificadas):
+//   res_users   — usuarios del sistema (administrador + líderes portal)
+//   res_partner — contactos / personas físicas (digitalizadores)
+// ============================================================
+
+
+// ------------------------------------------------------------
+// NATIVAS ODOO (referencia)
+// ------------------------------------------------------------
+
+Table res_users {
+  id            int          [pk, increment]
+  login         varchar      [unique, not null]
+  name          varchar      [not null, note: 'Viene de res_partner via partner_id']
+  active        boolean      [default: true]
+  share         boolean      [default: false, note: 'true = usuario portal/externo']
+  partner_id    int          [not null, ref: > res_partner.id]
+
+  Note: 'Tabla nativa Odoo. share=true identifica al Líder de equipo (portal).'
+}
+
+Table res_partner {
+  id            int          [pk, increment]
+  name          varchar      [not null]
+  email         varchar
+  active        boolean      [default: true]
+
+  Note: 'Tabla nativa Odoo. Representa a los contactos / digitalizadores del equipo.'
+}
+
+
+// ------------------------------------------------------------
+// T-01 · digitalizacion_etapa
+// Catálogo de etapas del proceso de digitalización
+// ------------------------------------------------------------
+
+Table digitalizacion_etapa {
+  id              int       [pk, increment]
+  name            varchar   [not null, note: 'Único. No puede ser solo números ni solo símbolos.']
+  sequence        int       [not null, default: 10, note: 'Orden de visualización. Valor >= 0.']
+  active          boolean   [default: true, note: 'Soft delete']
+  create_date     timestamp
+  write_date      timestamp
+  create_uid      int       [ref: > res_users.id]
+  write_uid       int       [ref: > res_users.id]
+
+  Indexes {
+    name [unique, name: 'unique_etapa_name']
+    sequence
+  }
+
+  Note: '''T-01 - Catálogo de etapas.
+Datos iniciales (noupdate=1):
+  seq=10 Limpieza | seq=20 Digitalizado | seq=30 Editado
+  seq=40 Indexado | seq=50 Ordenado'''
+}
+
+
+// ------------------------------------------------------------
+// T-02 · digitalizacion_tipo_escaner
+// Catálogo global de tipos de escáneres
+// ------------------------------------------------------------
+
+Table digitalizacion_tipo_escaner {
+  id              int       [pk, increment]
+  name            varchar   [not null, note: 'Único. Ej: Fujitsu fi-7300NX, Epson GT-S85.']
+  description     text      [note: 'Velocidad, formato, ubicación, etc.']
+  active          boolean   [default: true, note: 'Soft delete']
+  create_date     timestamp
+  write_date      timestamp
+  create_uid      int       [ref: > res_users.id]
+  write_uid       int       [ref: > res_users.id]
+
+  Indexes {
+    name [unique, name: 'unique_tipo_escaner_name']
+  }
+
+  Note: 'T-02 - Catálogo de escáneres disponibles.'
+}
+
+
+// ------------------------------------------------------------
+// T-03 · digitalizacion_proyecto
+// Registro central de proyectos
+// ------------------------------------------------------------
+
+Table digitalizacion_proyecto {
+  id                    int       [pk, increment]
+  name                  varchar   [not null, note: 'Único. No puede ser solo números.']
+  description           text      [note: 'Máx. 5 000 caracteres.']
+  fecha_inicio          date      [not null]
+  fecha_fin_estimada    date      [note: 'Debe ser >= fecha_inicio']
+  duracion_estimada     int       [note: 'COMPUTE: días entre inicio y fin']
+  state                 varchar   [not null, default: 'activo', note: 'activo | inactivo']
+  active                boolean   [default: true, note: 'Soft delete']
+  color                 int       [note: 'Índice de color para vista Kanban']
+  meta_escaneos         int       [default: 0, note: 'Objetivo en escaneos. Rango: 0 – 100 000 000.']
+  progreso              float     [note: 'COMPUTE: % avance respecto a meta_escaneos']
+  create_date           timestamp
+  write_date            timestamp
+  create_uid            int       [ref: > res_users.id]
+  write_uid             int       [ref: > res_users.id]
+
+  Indexes {
+    name [unique, name: 'unique_proyecto_name']
+    state
+    fecha_inicio
+  }
+
+  Note: 'T-03 - Proyectos de digitalización. Gestionados por el Administrador.'
+}
+
+
+// ------------------------------------------------------------
+// T-04 · digitalizacion_asignacion
+// Asignación Líder ↔ Proyecto (acceso al portal)
+// ------------------------------------------------------------
+
+Table digitalizacion_asignacion {
+  id                int       [pk, increment]
+  lider_id          int       [not null, ref: > res_users.id, note: 'Usuario portal con rol Líder (share=true)']
+  proyecto_id       int       [not null, ref: > digitalizacion_proyecto.id]
+  fecha_asignacion  date      [note: 'No puede ser futura']
+  active            boolean   [default: true, note: 'Soft delete. False = se pierde acceso al portal.']
+  create_date       timestamp
+  write_date        timestamp
+  create_uid        int       [ref: > res_users.id]
+  write_uid         int       [ref: > res_users.id]
+
+  Indexes {
+    (lider_id, proyecto_id) [unique, name: 'unique_asignacion_lider', note: 'Un líder no puede asignarse dos veces al mismo proyecto']
+    proyecto_id
+  }
+
+  Note: '''T-04 - Controla el acceso del Líder al portal web.
+Se crea automáticamente al marcar es_lider=True en el miembro_proyecto.
+active=False = el líder pierde acceso inmediatamente.'''
+}
+
+
+// ------------------------------------------------------------
+// T-05 · digitalizacion_miembro_proyecto
+// Equipo de digitalizadores por proyecto
+// ------------------------------------------------------------
+
+Table digitalizacion_miembro_proyecto {
+  id                int       [pk, increment]
+  proyecto_id       int       [not null, ref: > digitalizacion_proyecto.id]
+  partner_id        int       [not null, ref: > res_partner.id, note: 'Persona física del digitalizador']
+  fecha_integracion date      [note: 'Fecha de incorporación al proyecto']
+  fecha_salida      date      [note: 'Si está informada: excluye al miembro del selector del formulario']
+  active            boolean   [default: true, note: 'Soft delete']
+  es_lider          boolean   [default: false, note: 'Solo 1 líder activo por proyecto. Sincroniza con T-04.']
+  partner_name      varchar   [note: 'RELATED (stored): partner_id.name. Para búsquedas.']
+  proyecto_name     varchar   [note: 'RELATED (stored): proyecto_id.name. Para búsquedas.']
+  create_date       timestamp
+  write_date        timestamp
+  create_uid        int       [ref: > res_users.id]
+  write_uid         int       [ref: > res_users.id]
+
+  Indexes {
+    (proyecto_id, partner_id) [unique, name: 'unique_miembro_proyecto', note: 'Un contacto no puede aparecer dos veces en el mismo proyecto']
+    proyecto_id
+    partner_id
+    es_lider
+  }
+
+  Note: '''T-05 - Equipo por proyecto.
+es_lider=True → crea/reactiva automáticamente T-04 (asignacion).
+fecha_salida informada → active=False automáticamente.
+Un mismo contacto puede ser miembro de múltiples proyectos.'''
+}
+
+
+// ------------------------------------------------------------
+// T-06 · digitalizacion_registro
+// Registro diario de producción (granularidad: 1 miembro + 1 etapa + 1 día)
+// ------------------------------------------------------------
+
+Table digitalizacion_registro {
+  id                      int       [pk, increment]
+
+  // --- Auditoría ---
+  lider_id                int       [not null, ref: > res_users.id, note: 'FORZADO en create() al usuario en sesión. No modificable con write().']
+  hora                    timestamp [note: 'Timestamp de envío. Asignado automáticamente en create().']
+
+  // --- Relaciones principales ---
+  miembro_id              int       [not null, ref: > digitalizacion_miembro_proyecto.id, note: 'Digitalizador. Debe pertenecer al mismo proyecto y no tener fecha_salida.']
+  proyecto_id             int       [not null, ref: > digitalizacion_proyecto.id]
+  etapa_id                int       [not null, ref: > digitalizacion_etapa.id, note: 'Determina qué campos de producción son obligatorios.']
+
+  // --- Temporal ---
+  fecha                   date      [not null, note: 'Fecha de la jornada. No puede ser futura.']
+
+  // --- Campos comunes ---
+  referencia_cajas        varchar   [note: 'Texto libre. Ej: BF202, BF199. Máx. 200 chars. Requiere al menos 1 alfanumérico.']
+  observacion             text      [note: 'Notas libres. Máx. 2 000 caracteres.']
+
+  // --- Limpieza / Ordenado ---
+  no_expedientes          int       [default: 0, note: 'Expedientes procesados. Rango: 0 – 999 999.']
+  total_folios            int       [default: 0, note: 'Folios físicos. Rango: 0 – 999 999.']
+
+  // --- Digitalizado ---
+  total_escaneos          int       [default: 0, note: 'Imágenes digitales escaneadas. Rango: 0 – 999 999.']
+  // tipo_escaner_ids → ver tabla de relación Many2many T-06b
+
+  // --- Editado ---
+  expedientes_editados    int       [default: 0, note: 'Expedientes editados. Rango: 0 – 999 999.']
+  folios_editados         int       [default: 0, note: 'Folios editados. Rango: 0 – 999 999.']
+
+  // --- Indexado ---
+  expedientes_indexados   int       [default: 0, note: 'Expedientes indexados. Rango: 0 – 999 999.']
+  folios_indexados        int       [default: 0, note: 'Folios indexados. Rango: 0 – 999 999.']
+
+  // --- Computados (no almacenados) ---
+  produccion_principal    int       [note: 'COMPUTE: métrica principal según etapa']
+  unidad_produccion       varchar   [note: 'COMPUTE: expedientes | folios | escaneos | exp. editados | exp. indexados']
+
+  // --- Auditoría Odoo ---
+  create_date             timestamp
+  write_date              timestamp
+  create_uid              int       [ref: > res_users.id]
+  write_uid               int       [ref: > res_users.id]
+
+  Indexes {
+    fecha                             [name: 'idx_registro_fecha']
+    proyecto_id                       [name: 'idx_registro_proyecto']
+    miembro_id                        [name: 'idx_registro_miembro']
+    lider_id                          [name: 'idx_registro_lider']
+    etapa_id                          [name: 'idx_registro_etapa']
+    (miembro_id, proyecto_id, etapa_id, fecha) [name: 'idx_registro_diario', note: 'Permite N registros del mismo miembro/etapa/día']
+  }
+
+  Note: '''T-06 - Registro diario de producción.
+Campos activos por etapa:
+  Limpieza / Ordenado → referencia_cajas, no_expedientes, total_folios
+  Digitalizado        → lo anterior + total_escaneos + tipo_escaner_ids
+  Editado             → expedientes_editados, folios_editados
+  Indexado            → expedientes_indexados, folios_indexados'''
+}
+
+
+// ------------------------------------------------------------
+// T-06b · Tabla de relación Many2many
+// digitalizacion_registro ↔ digitalizacion_tipo_escaner
+// Generada automáticamente por Odoo para el campo tipo_escaner_ids
+// ------------------------------------------------------------
+
+Table digitalizacion_registro_tipo_escaner_rel {
+  registro_id     int   [not null, ref: > digitalizacion_registro.id]
+  tipo_escaner_id int   [not null, ref: > digitalizacion_tipo_escaner.id]
+
+  Indexes {
+    (registro_id, tipo_escaner_id) [pk, name: 'pk_registro_escaner']
+  }
+
+  Note: 'T-06b - Tabla Many2many generada por Odoo para tipo_escaner_ids en digitalizacion_registro.'
+}
+
+
+// ------------------------------------------------------------
+// ENUMs
+// ------------------------------------------------------------
+
+Enum estado_proyecto {
+  activo   [note: 'Proyecto en curso — visible en portal']
+  inactivo [note: 'Proyecto pausado o finalizado — oculto en portal']
+}
