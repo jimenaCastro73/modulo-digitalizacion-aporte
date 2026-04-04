@@ -1,431 +1,573 @@
-# Módulo de Gestión de Digitalización
+# Gestión de Digitalización — Módulo Odoo 17
 
-### `digitalizacion` — Módulo custom para Odoo 17 | OTEC GLOBAL
-
-> Desarrollado como práctica profesional supervisada.
-> Gestiona proyectos de digitalización de documentos físicos: equipos, producción diaria, etapas y métricas.
+> **Módulo desarrollado como Práctica Profesional en OTEC GLOBAL**  
+> Autor: Jimena Castro · Versión `17.0.1.0.0` · Licencia LGPL-3
 
 ---
 
-## Tabla de contenido
+## Descripción general
 
-1. [Descripción general](#1-descripción-general)
-2. [Roles del sistema](#2-roles-del-sistema)
-3. [Arquitectura](#3-arquitectura)
-4. [Modelos de datos](#4-modelos-de-datos)
-5. [Estructura del módulo](#5-estructura-del-módulo)
-6. [Vistas del Admin](#6-vistas-del-admin)
-7. [Portal del Líder](#7-portal-del-líder)
-8. [Seguridad y acceso](#8-seguridad-y-acceso)
-9. [Flujo funcional](#9-flujo-funcional)
-10. [Instalación](#10-instalación)
-11. [Autora](#11-autora)
+Módulo personalizado para Odoo 17 que permite gestionar proyectos de digitalización de documentos físicos. Proporciona un **backoffice administrativo** para la gerencia/administrador y un **portal web** para que los líderes de equipo registren la producción diaria de sus digitalizadores.
 
----
-
-## 1. Descripción general
-
-El módulo `digitalizacion` permite gestionar integralmente proyectos de digitalización de documentos físicos sobre **Odoo 17 Community**.
-
-El modelo operativo es el siguiente: los digitalizadores trabajan en grupos, pero **solo el líder del equipo tiene acceso al sistema**. El líder accede al **portal web de Odoo** y registra la producción diaria del equipo completo al final de cada jornada. El administrador gestiona todo desde el backoffice y monitorea el avance mediante dashboards.
-
-**Capacidades del sistema:**
-
-- Crear y administrar proyectos con fechas, meta de escaneos y estado de progreso.
-- Asignar líderes responsables por proyecto y gestionar el equipo de digitalizadores.
-- Registrar producción diaria por miembro, etapa y caja procesada.
-- Visualizar métricas de avance, tendencia diaria y comparativa por digitalizador.
-
----
-
-## 2. Roles del sistema
-
-El sistema define dos roles con accesos completamente separados.
-
-### Administrador — `Gestión de Digitalización / Administrador`
-
-- Accede al **backend de Odoo** (interfaz completa).
-- Crea y administra proyectos, etapas y tipos de escáner.
-- Asigna líderes de equipo y gestiona miembros.
-- Visualiza todos los registros de trabajo y el dashboard global.
-
-### Líder de equipo — `Gestión de Digitalización / Líder de equipo`
-
-- Accede **únicamente al portal web** de Odoo.
-- Solo ve los proyectos donde tiene una asignación activa.
-- Registra la producción diaria del equipo (formulario multi-fila).
-- Gestiona los miembros de su equipo (agregar, consultar).
-- No tiene acceso al backend ni a proyectos de otros líderes.
-
-### Miembros del equipo (digitalizadores)
-
-- **No tienen usuario en Odoo.** Son contactos (`res.partner`) vinculados al proyecto.
-- Su producción es ingresada por el Líder desde el portal.
-
-### Tabla de permisos
-
-| Acción | Admin | Líder |
-|---|---|---|
-| Crear / editar proyectos | ✅ | ❌ |
-| Ver todos los proyectos | ✅ | ❌ |
-| Ver sus proyectos asignados | ✅ | ✅ |
-| Asignar líderes | ✅ | ❌ |
-| Gestionar miembros del equipo | ✅ | ✅ solo su proyecto |
-| Registrar producción diaria | ✅ | ✅ |
-| Ver todos los registros | ✅ | ❌ |
-| Ver registros de su proyecto | ✅ | ✅ |
-| Configurar etapas y escáneres | ✅ | ❌ |
-| Dashboard global | ✅ | ❌ |
-
----
-
-## 3. Arquitectura
+El flujo de trabajo representa el ciclo completo de una caja de documentos:
 
 ```
-┌──────────────────────────────────────────────┐
-│         ADMIN — Odoo Backend                 │
-│     Vistas XML · Odoo Web Client             │
-└───────────────────┬──────────────────────────┘
-                    │
-┌──────────────────────────────────────────────┐
-│         LÍDER — Portal Web                   │
-│     Templates QWeb · Website Odoo            │
-└───────────────────┬──────────────────────────┘
-                    │
-┌──────────────────────────────────────────────┐
-│         CONTROLLERS                          │
-│     /digitalizacion/* · Python HTTP          │
-│  Autenticación · Permisos · Lógica HTTP      │
-└───────────────────┬──────────────────────────┘
-                    │
-┌──────────────────────────────────────────────┐
-│         MODELS — ORM Odoo                    │
-│  digitalizacion.* · Reglas de negocio        │
-│  constrains · onchange · compute             │
-└───────────────────┬──────────────────────────┘
-                    │
-┌──────────────────────────────────────────────┐
-│         PostgreSQL                           │
-└──────────────────────────────────────────────┘
+Limpieza → Ordenado → Digitalizado → Editado → Indexado
 ```
-
-| Capa | Tecnología | Responsabilidad |
-|---|---|---|
-| Vistas Admin | XML — Odoo Views | Backoffice del administrador |
-| Portal Líder | QWeb + HTML/CSS/JS | Interfaz web del líder |
-| Controllers | Python `http.Controller` | Rutas HTTP, validación, puente portal ↔ modelos |
-| Models | Python `models.Model` | Lógica de negocio, validaciones, cálculos |
-| Seguridad | CSV + XML `ir.rule` | RBAC, grupos y reglas de registro |
 
 ---
 
-## 4. Modelos de datos
+## Tabla de contenidos
 
-| Modelo | Tabla SQL | Descripción |
-|---|---|---|
-| `digitalizacion.etapa` | `digitalizacion_etapa` | Catálogo de etapas del proceso (Limpieza, Digitalizado, Editado, Indexado, Ordenado) |
-| `digitalizacion.tipo_escaner` | `digitalizacion_tipo_escaner` | Catálogo global de equipos escáneres |
-| `digitalizacion.proyecto` | `digitalizacion_proyecto` | Registro central de proyectos |
-| `digitalizacion.asignacion` | `digitalizacion_asignacion` | Relación Líder ↔ Proyecto. `UNIQUE(lider_id, proyecto_id)` |
-| `digitalizacion.miembro_proyecto` | `digitalizacion_miembro_proyecto` | Digitalizadores vinculados a un proyecto. `UNIQUE(proyecto_id, partner_id)` |
-| `digitalizacion.registro` | `digitalizacion_registro` | Tabla principal: producción diaria por miembro y etapa |
+- [Requisitos](#requisitos)
+- [Instalación](#instalación)
+- [Arquitectura del módulo](#arquitectura-del-módulo)
+- [Modelos de datos](#modelos-de-datos)
+- [Seguridad y permisos](#seguridad-y-permisos)
+- [Portal web (Líder)](#portal-web-líder)
+- [API REST interna](#api-rest-interna)
+- [Vistas de administración](#vistas-de-administración)
+- [Validaciones implementadas](#validaciones-implementadas)
+- [Pruebas automatizadas](#pruebas-automatizadas)
+- [Estructura de archivos](#estructura-de-archivos)
+- [Entorno Docker](#entorno-docker)
 
-### Relaciones principales
+---
 
-| Origen | Campo | Destino | Tipo |
-|---|---|---|---|
-| `asignacion` | `lider_id` | `res.users` | Many2one |
-| `asignacion` | `proyecto_id` | `digitalizacion.proyecto` | Many2one |
-| `miembro_proyecto` | `partner_id` | `res.partner` | Many2one |
-| `miembro_proyecto` | `proyecto_id` | `digitalizacion.proyecto` | Many2one |
-| `registro` | `lider_id` | `res.users` | Many2one (auditoría) |
-| `registro` | `miembro_id` | `digitalizacion.miembro_proyecto` | Many2one |
-| `registro` | `proyecto_id` | `digitalizacion.proyecto` | Many2one |
-| `registro` | `etapa_id` | `digitalizacion.etapa` | Many2one |
-| `registro` | `tipo_escaner_ids` | `digitalizacion.tipo_escaner` | Many2many |
+## Requisitos
 
-### Granularidad del registro
+| Componente | Versión mínima |
+|-----------|---------------|
+| Odoo | 17.0 Community o Enterprise |
+| Python | 3.10+ |
+| PostgreSQL | 14+ |
+| Módulos Odoo dependientes | `base`, `contacts`, `website` |
 
-> 1 registro = 1 miembro + 1 etapa + cantidades acumuladas del día
+---
 
-El Líder agrega N registros al final de la jornada, uno por cada combinación miembro+etapa trabajada. Un mismo miembro puede tener múltiples registros en el mismo día si trabajó en varias etapas.
+## Instalación
 
-Los campos de producción son opcionales y se muestran/ocultan según la etapa:
+### 1. Copiar el módulo
 
-| Etapa | Campos activos |
-|---|---|
-| Limpieza / Ordenado | `no_caja`, `cantidad_cajas`, `no_expedientes`, `total_folios` |
-| Digitalizado | `total_folios`, `total_escaneos`, `tipo_escaner_ids` |
+```bash
+cp -r addons/digitalizacion /ruta/a/odoo/addons/
+```
+
+### 2. Instalar en Odoo
+
+```bash
+odoo -c /etc/odoo/odoo.conf -d nombre_db -i digitalizacion
+```
+
+### 3. Actualizar módulo existente
+
+```bash
+odoo -c /etc/odoo/odoo.conf -d nombre_db -u digitalizacion --stop-after-init
+```
+
+### Con Docker (entorno del proyecto)
+
+```bash
+# Actualizar módulo
+docker exec odoo.17.otecglobal odoo -c /etc/odoo/odoo.conf \
+  -d digitalizacion_dev -u digitalizacion --stop-after-init
+
+# Reiniciar el servidor
+docker restart odoo.17.otecglobal
+```
+
+> El portal está disponible en `http://localhost:8001` tras el reinicio.
+
+---
+
+## Arquitectura del módulo
+
+```
+digitalizacion/
+├── __manifest__.py              # Metadatos y lista de archivos a cargar
+├── __init__.py
+│
+├── models/                      # Capa ORM — 6 modelos
+│   ├── etapa.py                 # T-01 Catálogo de etapas
+│   ├── tipo_escaner.py          # T-02 Catálogo de escáneres
+│   ├── proyecto.py              # T-03 Proyectos de digitalización
+│   ├── asignacion.py            # T-04 Asignación líder↔proyecto
+│   ├── miembro_proyecto.py      # T-05 Equipo por proyecto
+│   └── registro.py              # T-06 Registro diario de producción
+│
+├── controllers/
+│   └── portal.py                # Rutas HTTP GET/POST del portal
+│
+├── security/
+│   ├── digitalizacion_groups.xml          # Grupos: Admin, Líder
+│   ├── digitalizacion_proyecto_security.xml  # Reglas de acceso a proyectos
+│   ├── digitalizacion_registro_security.xml  # Reglas de acceso a registros
+│   └── ir.model.access.csv               # ACLs por modelo y grupo
+│
+├── data/
+│   └── etapa_data.xml           # Datos iniciales de las 5 etapas
+│
+├── views/
+│   ├── admin/                   # Backend (solo Admin)
+│   │   ├── proyectos/
+│   │   ├── operaciones/
+│   │   ├── configuracion/
+│   │   ├── dashboard_views.xml
+│   │   └── digitalizacion_menus.xml
+│   └── portal/                  # Frontend (Líder)
+│       ├── portal_home_templates.xml
+│       ├── portal_proyecto_templates.xml
+│       ├── portal_registro_form_templates.xml
+│       └── portal_miembros_templates.xml
+│
+└── tests/                       # Suite de pruebas
+    ├── test_registro_unitario.py
+    ├── test_registro_regresion.py
+    ├── test_proyecto_unitario.py
+    └── test_miembro_unitario.py
+```
+
+---
+
+## Modelos de datos
+
+### T-01 · `digitalizacion.etapa` — Catálogo de etapas
+
+Catálogo configurable del proceso. Se instalan 5 etapas por defecto con `noupdate="1"` (no se sobreescriben en actualizaciones).
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `name` | Char | Nombre de la etapa (único, no puede ser solo números) |
+| `sequence` | Integer | Orden de visualización (≥ 0) |
+| `active` | Boolean | Soft delete |
+| `registro_count` | Integer (compute) | Registros asociados |
+
+**Etapas instaladas por defecto:**
+
+| Secuencia | Nombre |
+|-----------|--------|
+| 10 | Limpieza |
+| 20 | Digitalizado |
+| 30 | Editado |
+| 40 | Indexado |
+| 50 | Ordenado |
+
+---
+
+### T-02 · `digitalizacion.tipo_escaner` — Catálogo de escáneres
+
+Catálogo global de equipos usados en la etapa Digitalizado.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `name` | Char | Nombre/modelo del equipo (único, no puede ser solo números) |
+| `description` | Text | Especificaciones adicionales |
+| `active` | Boolean | Soft delete |
+| `registro_count` | Integer (compute) | Veces usado en registros |
+
+---
+
+### T-03 · `digitalizacion.proyecto` — Proyectos
+
+Registro central de cada proyecto de digitalización.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `name` | Char | Nombre único del proyecto |
+| `description` | Text | Descripción (máx. 5 000 caracteres) |
+| `fecha_inicio` | Date | Fecha de inicio (requerida) |
+| `fecha_fin_estimada` | Date | Fecha estimada de fin (debe ser ≥ inicio) |
+| `duracion_estimada` | Integer (compute) | Días entre inicio y fin |
+| `state` | Selection | `activo` / `inactivo` |
+| `active` | Boolean | Soft delete |
+| `meta_escaneos` | Integer | Objetivo en número de escaneos (0 a 100 000 000) |
+| `progreso` | Float (compute) | Porcentaje de avance respecto a la meta |
+| `asignacion_ids` | One2many | Líderes asignados |
+| `miembro_ids` | One2many | Equipo del proyecto |
+| `registro_ids` | One2many | Registros de trabajo |
+
+**Constraint SQL:** nombre único por base de datos.
+
+---
+
+### T-04 · `digitalizacion.asignacion` — Asignación Líder ↔ Proyecto
+
+Tabla puente entre un usuario portal (Líder) y un proyecto. **Se crea automáticamente** al marcar `es_lider=True` en el miembro correspondiente.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `lider_id` | Many2one (res.users) | Usuario portal con rol Líder |
+| `proyecto_id` | Many2one | Proyecto asignado |
+| `fecha_asignacion` | Date | Fecha de asignación (no puede ser futura) |
+| `active` | Boolean | Soft delete — controla acceso al portal |
+
+**Constraint SQL:** `UNIQUE(lider_id, proyecto_id)`.
+
+> Al crear una asignación, el sistema crea automáticamente el `miembro_proyecto` correspondiente si no existe.
+
+---
+
+### T-05 · `digitalizacion.miembro_proyecto` — Equipo por proyecto
+
+Integrantes del equipo de digitalización. Un mismo contacto puede pertenecer a múltiples proyectos.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `proyecto_id` | Many2one | Proyecto al que pertenece |
+| `partner_id` | Many2one (res.partner) | Contacto del integrante |
+| `fecha_integracion` | Date | Fecha de incorporación |
+| `fecha_salida` | Date | Si está informada, excluye al miembro del formulario de registro |
+| `es_lider` | Boolean | Marca como líder — sincroniza con T-04 automáticamente |
+| `active` | Boolean | Soft delete |
+| `total_registros` | Integer (compute) | Registros de trabajo emitidos |
+
+**Constraint SQL:** `UNIQUE(proyecto_id, partner_id)`.  
+**Regla de negocio:** Solo puede haber **un líder activo** por proyecto.
+
+---
+
+### T-06 · `digitalizacion.registro` — Registro diario de producción
+
+Granularidad: 1 registro = 1 miembro + 1 etapa + cantidades del día.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `lider_id` | Many2one (res.users) | Usuario que registró (auto, no modificable) |
+| `miembro_id` | Many2one | Digitalizador |
+| `proyecto_id` | Many2one | Proyecto |
+| `etapa_id` | Many2one | Etapa del proceso |
+| `fecha` | Date | Fecha de la jornada (no futura) |
+| `hora` | Datetime | Timestamp de envío (readonly) |
+| `referencia_cajas` | Char | Códigos o descripción de cajas (máx. 200 chars) |
+| `no_expedientes` | Integer | Expedientes procesados (0 – 999 999) |
+| `total_folios` | Integer | Folios físicos (0 – 999 999) |
+| `total_escaneos` | Integer | Imágenes digitales escaneadas (0 – 999 999) |
+| `tipo_escaner_ids` | Many2many | Equipos usados (solo etapa Digitalizado) |
+| `expedientes_editados` | Integer | Expedientes editados (0 – 999 999) |
+| `folios_editados` | Integer | Folios editados (0 – 999 999) |
+| `expedientes_indexados` | Integer | Expedientes indexados (0 – 999 999) |
+| `folios_indexados` | Integer | Folios indexados (0 – 999 999) |
+| `observacion` | Text | Notas libres (máx. 2 000 caracteres) |
+| `produccion_principal` | Integer (compute) | Métrica principal según etapa |
+| `unidad_produccion` | Char (compute) | Unidad de la métrica principal |
+
+**Campos activos por etapa:**
+
+| Etapa | Campos visibles |
+|-------|----------------|
+| Limpieza / Ordenado | `referencia_cajas`, `no_expedientes`, `total_folios` |
+| Digitalizado | Lo anterior + `total_escaneos`, `tipo_escaner_ids` |
 | Editado | `expedientes_editados`, `folios_editados` |
 | Indexado | `expedientes_indexados`, `folios_indexados` |
 
 ---
 
-## 5. Estructura del módulo
-
-```
-digitalizacion/
-├── __init__.py
-├── __manifest__.py
-│
-├── models/
-│   ├── __init__.py
-│   ├── etapa.py
-│   ├── tipo_escaner.py
-│   ├── proyecto.py
-│   ├── asignacion.py
-│   ├── miembro_proyecto.py
-│   └── registro.py
-│
-├── controllers/
-│   ├── __init__.py
-│   └── portal.py
-│
-├── views/
-│   ├── admin/                          ← Todo el backoffice del Admin
-│   │   ├── proyectos/
-│   │   │   ├── proyecto_views.xml
-│   │   │   └── asignacion_views.xml
-│   │   ├── operaciones/
-│   │   │   ├── miembro_views.xml
-│   │   │   └── registro_views.xml
-│   │   ├── configuracion/
-│   │   │   ├── etapa_views.xml
-│   │   │   └── tipo_escaner_views.xml
-│   │   ├── dashboard/
-│   │   │   └── dashboard_admin.xml
-│   │   └── menus.xml                   ← Árbol de menús consolidado
-│   │
-│   └── portal/                         ← Portal web del Líder (QWeb)
-│       ├── portal_home.xml
-│       ├── portal_proyecto.xml
-│       ├── portal_registro_form.xml
-│       └── portal_miembros.xml
-│
-├── security/
-│   ├── security.xml                    ← Categoría, grupos y reglas ir.rule
-│   └── ir.model.access.csv             ← Permisos CRUD por modelo y grupo
-│
-└── data/
-    └── etapas_default.xml              ← Etapas iniciales del proceso
-```
-
-### Orden de carga en `__manifest__.py`
-
-El orden es estricto en Odoo — un `menuitem` no puede referenciar una acción que aún no existe en la BD:
-
-```
-1. security/          → grupos y ACLs primero
-2. data/              → datos maestros
-3. views/admin/*_views.xml  → vistas y acciones
-4. views/admin/menus.xml    → menús (siempre al final)
-5. views/portal/      → templates QWeb
-```
-
----
-
-## 6. Vistas del Admin
-
-### Menú de navegación
-
-```
-Digitalización
-├── Dashboard
-├── Proyectos
-│   ├── Proyectos
-│   └── Asignar Líderes
-├── Operaciones
-│   ├── Miembros del Equipo
-│   └── Registros de Trabajo
-└── Configuración
-    ├── Etapas
-    └── Tipos de Escáner
-```
-
-### Archivos de vistas
-
-| Archivo | Vistas incluidas |
-|---|---|
-| `proyectos/proyecto_views.xml` | Lista, Kanban, Formulario con pestañas de Líderes y Miembros, búsqueda |
-| `proyectos/asignacion_views.xml` | Lista, Formulario, búsqueda |
-| `operaciones/miembro_views.xml` | Lista, Formulario con stat buttons, búsqueda |
-| `operaciones/registro_views.xml` | Lista con totales, Formulario con campos dinámicos por etapa, Pivot, Graph, búsqueda |
-| `configuracion/etapa_views.xml` | Lista editable inline, Formulario |
-| `configuracion/tipo_escaner_views.xml` | Lista editable inline, Formulario |
-| `dashboard/dashboard_admin.xml` | Graph por digitalizador (barras), Graph tendencia diaria (línea), Pivot, filtros de período |
-
----
-
-## 7. Portal del Líder
-
-### Rutas HTTP
-
-| Método | Ruta | Template | Descripción |
-|---|---|---|---|
-| `GET` | `/digitalizacion` | `wf02_dashboard` | Dashboard del líder con KPIs y registros recientes |
-| `GET` | `/digitalizacion/registro/<proyecto_id>` | `wf03_formulario` | Formulario multi-fila de registro de producción |
-| `GET` | `/digitalizacion/proyecto/<proyecto_id>` | `wf04_proyecto_detalle` | Detalle del proyecto |
-| `GET` | `/digitalizacion/proyecto/<proyecto_id>/miembros` | `wf05_miembros_equipo` | Gestión del equipo |
-| `POST` | `/digitalizacion/api/guardar_registros` | — | Guardado masivo de registros (JSON-RPC) |
-| `POST` | `/digitalizacion/api/buscar_partner` | — | Búsqueda de contactos por nombre |
-| `POST` | `/digitalizacion/api/agregar_miembro` | — | Vincula un contacto al proyecto |
-
-### Templates QWeb
-
-| Archivo | Template | Descripción |
-|---|---|---|
-| `portal_home.xml` | `wf02_dashboard` | KPIs del período, producción por etapa, registros recientes |
-| `portal_proyecto.xml` | `wf04_proyecto_detalle` | Datos del proyecto, progreso, accesos rápidos |
-| `portal_registro_form.xml` | `wf03_formulario` | Tabla dinámica con filas por miembro+etapa, campos visibles según etapa seleccionada |
-| `portal_miembros.xml` | `wf05_miembros_equipo` | Lista del equipo, modal para agregar miembros con búsqueda en vivo |
-
-### Notas de implementación del portal
-
-- El JS del formulario usa `fetch` nativo (no `odoo.define` / `web.rpc`, deprecados en Odoo 17 para el portal).
-- La visibilidad de columnas por etapa se controla via JavaScript con el mapa `reglasEtapa`.
-- El modal de miembros implementa búsqueda con debounce a `/api/buscar_partner` y crea contactos nuevos si no existen.
-
----
-
-## 8. Seguridad y acceso
+## Seguridad y permisos
 
 ### Grupos
 
-Definidos bajo la categoría **Gestión de Digitalización** (visible en Ajustes → Usuarios):
+| Grupo | Hereda de | Acceso |
+|-------|-----------|--------|
+| **Administrador** | `base.group_user` | Backoffice completo: proyectos, registros, catálogos, dashboard |
+| **Líder de equipo** | `base.group_portal` | Solo portal web: registrar producción diaria |
 
-| XML ID | Nombre visible | Acceso |
-|---|---|---|
-| `group_digitalizacion_admin` | Administrador | Backend completo |
-| `group_digitalizacion_lider` | Líder de equipo | Solo portal web |
-
-### Reglas de registro (`ir.rule`)
-
-| Regla | Modelo | Efecto |
-|---|---|---|
-| `rule_lider_solo_sus_proyectos` | `digitalizacion.proyecto` | El líder solo ve proyectos donde tiene asignación activa |
-| `rule_lider_solo_sus_registros` | `digitalizacion.registro` | El líder solo ve registros de sus proyectos |
-
-### Permisos CRUD por modelo
+### Permisos por modelo (ACL)
 
 | Modelo | Admin | Líder |
-|---|---|---|
-| `digitalizacion.etapa` | CRUD | R |
-| `digitalizacion.tipo_escaner` | CRUD | R |
-| `digitalizacion.proyecto` | CRUD | R |
-| `digitalizacion.asignacion` | CRUD | R |
-| `digitalizacion.miembro_proyecto` | CRUD | RWC |
-| `digitalizacion.registro` | CRUD | RWC |
-| `res.partner` | — | R |
+|--------|-------|-------|
+| `digitalizacion.etapa` | CRUD | Solo lectura |
+| `digitalizacion.tipo_escaner` | CRUD | Solo lectura |
+| `digitalizacion.proyecto` | CRUD | Solo lectura |
+| `digitalizacion.asignacion` | CRUD | Solo lectura |
+| `digitalizacion.miembro_proyecto` | CRUD | Solo lectura |
+| `digitalizacion.registro` | CRUD | Crear/Leer/Editar (no eliminar) |
 
-### Cómo crear un usuario Líder
+### Reglas de acceso fila a fila (record rules)
 
-> ⚠️ Los usuarios Portal **no se crean desde Ajustes → Usuarios** — quedarían como Internos.
-
-1. Ir a **Contactos** → crear contacto con nombre y correo.
-2. En la ficha: **Acción ⚙️ → Otorgar acceso al portal** → tildar "En el Portal" → Aplicar.
-3. Ir a **Ajustes → Usuarios → Grupos** → buscar **Gestión de Digitalización / Líder de equipo** → agregar el usuario.
+- **Líder → Proyectos:** Solo ve proyectos donde tiene asignación activa con estado `activo`.
+- **Líder → Registros:** Solo ve/edita los registros creados por él mismo (`lider_id = uid`).
 
 ---
 
-## 9. Flujo funcional
+## Portal web (Líder)
 
-```
-ADMIN
- ├─ 1. Crea el proyecto (nombre, fechas, meta de escaneos)
- ├─ 2. Asigna un Líder → el sistema lo agrega automáticamente como miembro
- └─ 3. Agrega digitalizadores al equipo desde la pestaña Miembros
+El portal está disponible en `/digitalizacion/v1/` y requiere autenticación con rol **Líder de equipo**.
 
-LÍDER (portal web)
- ├─ 4. Inicia sesión → ve sus proyectos activos en el dashboard
- ├─ 5. Entra al formulario de registro del proyecto
- ├─ 6. Agrega una fila por cada miembro+etapa trabajada
- │       ├─ Selecciona digitalizador y etapa
- │       ├─ Los campos se habilitan según la etapa elegida
- │       └─ Ingresa cantidades (escaneos, folios, expedientes)
- └─ 7. Envía → los registros se crean en Odoo vía JSON-RPC
+### Rutas GET
 
-SISTEMA (automático)
- ├─ 8. Calcula progreso del proyecto: (escaneos / meta) × 100
- └─ 9. Actualiza produccion_principal y unidad_produccion por registro
+| Ruta | Vista | Descripción |
+|------|-------|-------------|
+| `/digitalizacion/v1/dashboard` | `portal_home_templates.xml` | Dashboard principal con KPIs, resumen por etapa y últimos registros |
+| `/digitalizacion/v1/proyectos/<id>` | `portal_proyecto_templates.xml` | Detalle del proyecto: progreso, meta y accesos rápidos |
+| `/digitalizacion/v1/proyectos/<id>/form` | `portal_registro_form_templates.xml` | Formulario multi-fila para registrar producción |
+| `/digitalizacion/v1/proyectos/<id>/miembros` | `portal_miembros_templates.xml` | Equipo del proyecto con gráfico de participación |
 
-ADMIN (dashboard)
- └─ 10. Visualiza:
-         ├─ Progreso por proyecto (barras de avance)
-         ├─ Producción por digitalizador (gráfico de barras)
-         ├─ Tendencia diaria de escaneos (gráfico de línea)
-         └─ Pivot cruzado por proyecto / miembro / etapa
-```
+### Dashboard — Filtros disponibles
+
+| Parámetro URL | Valores |
+|---------------|---------|
+| `periodo` | `hoy`, `semana`, `mes` (default), `custom` |
+| `fecha_desde` | `YYYY-MM-DD` (con `periodo=custom`) |
+| `fecha_hasta` | `YYYY-MM-DD` (con `periodo=custom`) |
+| `proyecto_id` | ID del proyecto (si el líder tiene varios asignados) |
+| `page` | Número de página para la tabla de últimos registros |
+
+### Formulario de registro
+
+- **Multi-fila:** el líder agrega N filas, una por cada combinación digitalizador + etapa.
+- **Visibilidad dinámica:** los campos se muestran/ocultan con JavaScript según la etapa seleccionada.
+- **Bloqueo de fecha futura:** el datepicker tiene `max = fecha_hoy` — no permite seleccionar fechas futuras.
+- **Límites HTML:** `min="0"` y `max="999999"` en todos los campos numéricos; `maxlength` en campos de texto.
 
 ---
 
-## 10. Instalación
+## API REST interna
 
-### Requisitos
+**Ruta:** `POST /digitalizacion/api/v1/proyectos/<id>/registros`  
+**Autenticación:** `auth=user` + CSRF token de Odoo  
+**Content-Type:** `application/json`
 
-- Odoo 17 Community
-- Python 3.10+
-- PostgreSQL 14+
-- Docker y Docker Compose
+### Estructura del payload
 
-### Primera instalación (BD limpia)
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "call",
+  "params": {
+    "fecha": "2026-04-03",
+    "filas": [
+      {
+        "miembro_id": 42,
+        "etapa_id": 1,
+        "no_expedientes": 15,
+        "total_folios": 120,
+        "total_escaneos": 0,
+        "tipo_escaner_ids": [],
+        "expedientes_editados": 0,
+        "folios_editados": 0,
+        "expedientes_indexados": 0,
+        "folios_indexados": 0,
+        "referencia_cajas": "BF202, BF199",
+        "observacion": "Sin incidencias"
+      }
+    ]
+  }
+}
+```
+
+### Respuestas
+
+```json
+{ "result": { "success": true } }
+
+{ "result": { "success": false, "error": { "message": "Descripción del error" } } }
+```
+
+### Validaciones del controller (antes de llegar al ORM)
+
+| Validación | Descripción |
+|-----------|-------------|
+| Formato de fecha | Debe ser `YYYY-MM-DD`, no futura |
+| Tipo de `filas` | Debe ser un array, mínimo 1 elemento |
+| Límite de filas | Máximo **50 filas** por request |
+| `miembro_id` / `etapa_id` | Entero positivo obligatorio |
+| Campos numéricos | Entero, entre 0 y 999 999 |
+| `referencia_cajas` | String, máx. 200 chars, debe contener al menos 1 alfanumérico |
+| `observacion` | String, máx. 2 000 chars |
+| Acceso al proyecto | El líder debe tener asignación activa |
+
+---
+
+## Vistas de administración
+
+Accesibles desde el menú principal **Digitalización** (solo rol Administrador).
+
+| Menú | Vista | Descripción |
+|------|-------|-------------|
+| Proyectos | Lista + Kanban + Formulario | Gestión completa de proyectos |
+| Asignaciones | Lista + Formulario | Control de líderes por proyecto |
+| Miembros | Lista + Formulario | Gestión del equipo por proyecto |
+| Registros | Lista + Formulario + Pivot + Gráfico | Análisis de producción diaria |
+| Configuración → Etapas | Lista + Formulario | Catálogo de etapas del proceso |
+| Configuración → Escáneres | Lista + Formulario | Catálogo de equipos |
+| Dashboard | Vista especial | KPIs globales de producción |
+
+---
+
+## Validaciones implementadas
+
+### Nivel Python (`@api.constrains`)
+
+| Modelo | Constraint | Regla |
+|--------|-----------|-------|
+| `etapa` | `_check_name` | Nombre no vacío, no solo dígitos, no solo símbolos |
+| `etapa` | `_check_sequence` | Secuencia ≥ 0 |
+| `tipo_escaner` | `_check_name` | Nombre no vacío, no solo dígitos |
+| `asignacion` | `_check_lider_tiene_grupo` | El usuario debe pertenecer al grupo Líder |
+| `asignacion` | `_check_fecha_asignacion` | Fecha de asignación no futura |
+| `proyecto` | `_check_fechas` | `fecha_fin ≥ fecha_inicio` |
+| `proyecto` | `_check_meta_escaneos` | `0 ≤ meta_escaneos ≤ 100 000 000` |
+| `proyecto` | `_check_name` | Nombre no vacío, no solo dígitos |
+| `proyecto` | `_check_description_longitud` | Descripción ≤ 5 000 caracteres |
+| `miembro_proyecto` | `_check_fechas` | `fecha_salida ≥ fecha_integracion` |
+| `miembro_proyecto` | `_check_lider_unico` | Solo 1 líder activo por proyecto |
+| `registro` | `_check_fecha_no_futura` | `fecha ≤ hoy` |
+| `registro` | `_check_valores_positivos` | Todos los campos numéricos: `0 ≤ valor ≤ 999 999` |
+| `registro` | `_check_campos_minimos_por_etapa` | Cada etapa exige al menos un campo de producción > 0 |
+| `registro` | `_check_miembro_activo` | El digitalizador no debe tener fecha de salida |
+| `registro` | `_check_miembro_pertenece_proyecto` | El digitalizador debe pertenecer al proyecto |
+| `registro` | `_check_referencia_cajas` | No vacía, contiene al menos 1 carácter alfanumérico |
+| `registro` | `_check_observacion_longitud` | Observación ≤ 2 000 caracteres |
+
+### Nivel SQL (`_sql_constraints`)
+
+| Modelo | Constraint |
+|--------|-----------|
+| `etapa` | `UNIQUE(name)` |
+| `tipo_escaner` | `UNIQUE(name)` |
+| `proyecto` | `UNIQUE(name)` |
+| `asignacion` | `UNIQUE(lider_id, proyecto_id)` |
+| `miembro_proyecto` | `UNIQUE(proyecto_id, partner_id)` |
+
+### Nivel HTML (Portal)
+
+- `<input type="number">` con `min="0"` y `max="999999"`
+- `<input type="text">` con `maxlength` correspondiente
+- `<input type="date">` con `max` = fecha actual (vía JavaScript)
+
+---
+
+## Pruebas automatizadas
+
+### Ejecutar toda la suite
 
 ```bash
-# 1. Clonar el repositorio en la carpeta de addons
-git clone <repo-url> ./addons/digitalizacion
-
-# 2. Levantar el entorno
-docker compose up -d
-
-# 3. Abrir http://localhost:<WEB_PORT>/web/database/manager
-#    Crear una BD nueva (demo data: desactivado)
-
-# 4. Instalar desde Aplicaciones → buscar "Digitalización" → Instalar
-#    (activar modo desarrollador primero si no aparece)
+docker exec odoo.17.otecglobal odoo \
+  -c /etc/odoo/odoo.conf \
+  -d digitalizacion_dev \
+  --test-enable \
+  --stop-after-init \
+  --test-tags "/digitalizacion"
 ```
 
-### Actualizar tras cambios en el código
+### Suite de pruebas — 70 casos en total
+
+| Archivo | Clase | Tests | Tipo | Cobertura |
+|---------|-------|-------|------|-----------|
+| `test_registro_unitario.py` | `TestRegistroUnitario` | 28 | Caja blanca | CB-01 a CB-10: validaciones, cómputos, overrides |
+| `test_registro_regresion.py` | `TestRegistroRegresion` | 12 | Caja negra | CN-01 a CN-10: flujos completos CRUD, regresión |
+| `test_proyecto_unitario.py` | `TestProyectoUnitario` | 14 | Caja blanca | PY-01 a PY-07: fechas, progreso, constraints |
+| `test_miembro_unitario.py` | `TestMiembroUnitario` | 13 | Caja blanca | MP-01 a MP-07: liderazgo, salida, unicidad |
+
+**Resultado esperado:**
+
+```
+0 failed, 0 error(s) of 70 tests
+```
+
+---
+
+## Estructura de archivos
+
+```
+modulo-digitalizacion-aporte/
+├── addons/
+│   └── digitalizacion/
+│       ├── __manifest__.py
+│       ├── __init__.py
+│       ├── controllers/
+│       │   ├── __init__.py
+│       │   └── portal.py
+│       ├── data/
+│       │   └── etapa_data.xml
+│       ├── models/
+│       │   ├── __init__.py
+│       │   ├── asignacion.py
+│       │   ├── etapa.py
+│       │   ├── miembro_proyecto.py
+│       │   ├── proyecto.py
+│       │   ├── registro.py
+│       │   └── tipo_escaner.py
+│       ├── security/
+│       │   ├── digitalizacion_groups.xml
+│       │   ├── digitalizacion_proyecto_security.xml
+│       │   ├── digitalizacion_registro_security.xml
+│       │   └── ir.model.access.csv
+│       ├── tests/
+│       │   ├── __init__.py
+│       │   ├── test_miembro_unitario.py
+│       │   ├── test_proyecto_unitario.py
+│       │   ├── test_registro_regresion.py
+│       │   └── test_registro_unitario.py
+│       └── views/
+│           ├── admin/
+│           │   ├── configuracion/
+│           │   │   ├── etapa_views.xml
+│           │   │   └── tipo_escaner_views.xml
+│           │   ├── operaciones/
+│           │   │   ├── miembro_views.xml
+│           │   │   └── registro_views.xml
+│           │   ├── proyectos/
+│           │   │   ├── asignacion_views.xml
+│           │   │   └── proyecto_views.xml
+│           │   ├── dashboard_views.xml
+│           │   └── digitalizacion_menus.xml
+│           └── portal/
+│               ├── portal_home_templates.xml
+│               ├── portal_miembros_templates.xml
+│               ├── portal_proyecto_templates.xml
+│               ├── portal_registro_form_templates.xml
+│               └── website_menu.xml
+├── docker-compose.yaml
+├── odoo.conf
+└── README.md
+```
+
+---
+
+## Entorno Docker
+
+El proyecto incluye un entorno Docker con dos contenedores:
+
+| Contenedor | Imagen | Puerto |
+|-----------|--------|--------|
+| `odoo.17.otecglobal` | Odoo 17 | `8001` (HTTP), `8002` (longpolling) |
+| `postgres.db.otec` | PostgreSQL | `5432` |
+
+### Comandos útiles
 
 ```bash
-# Opción A — actualización sin borrar datos (cambios en vistas o lógica)
-docker compose down
-docker compose run --rm web odoo \
-    -c /etc/odoo/odoo.conf \
-    -u digitalizacion_dev \
-    --stop-after-init
-docker compose up -d
+# Estado de los contenedores
+docker ps
 
-# Opción B — BD limpia (cambios en modelos: campos renombrados, tipos cambiados)
-docker compose down
-docker volume rm $(docker volume ls -q | grep odoo)
-docker compose up -d
+# Logs de Odoo en tiempo real
+docker logs -f odoo.17.otecglobal
+
+# Actualizar módulo
+docker exec odoo.17.otecglobal odoo \
+  -c /etc/odoo/odoo.conf \
+  -d digitalizacion_dev \
+  -u digitalizacion \
+  --stop-after-init
+
+# Acceder a la shell de Odoo
+docker exec -it odoo.17.otecglobal odoo shell \
+  -c /etc/odoo/odoo.conf \
+  -d digitalizacion_dev
+
+# Reiniciar servidor
+docker restart odoo.17.otecglobal
 ```
 
-> **Cuándo usar la Opción B:** siempre que se renombre un campo, cambie su tipo (ej. Many2one → Many2many) o se elimine un campo que ya tiene datos. Odoo no migra estos cambios automáticamente sin un script de migración.
+---
 
-### Configuración inicial post-instalación
+## Notas de desarrollo
 
-1. **Digitalización → Configuración → Etapas** — verificar las etapas cargadas por defecto.
-2. **Digitalización → Configuración → Tipos de Escáner** — agregar los equipos disponibles.
-3. Crear los contactos de los digitalizadores en **Contactos**.
-4. Crear usuarios Líderes siguiendo el proceso de usuario Portal (ver [Sección 8](#8-seguridad-y-acceso)).
-5. Crear el primer proyecto en **Digitalización → Proyectos → Proyectos**.
-6. Asignar el Líder al proyecto en **Digitalización → Proyectos → Asignar Líderes**.
+- **Odoo 17 — sintaxis de vistas:** Se usan expresiones Python directas en `invisible=""` en lugar del objeto `attrs={}` deprecado.
+- **QWeb — operadores en XML:** Los operadores `>`, `>=`, `<`, `<=` dentro de atributos `t-if` o bloques `<script>` **deben escaparse** (`&gt;`, `&lt;`).
+- **Portal — fetch nativo:** El formulario de registro usa `fetch()` nativo con CSRF token de Odoo, sin `odoo.define` ni `web.rpc` (deprecados en portal Odoo 17).
+- **lider_id en registros:** El campo `lider_id` se asigna automáticamente en `create()` al usuario en sesión y no puede modificarse mediante `write()`.
 
 ---
 
-## 11. Autora
-
-| Campo | Detalle |
-|---|---|
-| **Desarrolladora** | Jimena Castro |
-| **Empresa** | OTEC GLOBAL — Oficinas Tecnológicas |
-| **Contexto** | Práctica Profesional Supervisada (PPS) |
-| **Universidad** | Universidad Católica de Honduras (UNICAH) |
-| **Carrera** | Ingeniería en Ciencias de la Computación |
-| **Período** | Febrero – Abril 2026 |
-
----
-
-*Última actualización: Día 32 — Sábado 14 de Marzo, 2026*
-
-docker exec odoo.17.otecglobal odoo -u digitalizacion -d postgres --stop-after-init
+*Desarrollado en el marco de Práctica Profesional · OTEC GLOBAL · 2026*
