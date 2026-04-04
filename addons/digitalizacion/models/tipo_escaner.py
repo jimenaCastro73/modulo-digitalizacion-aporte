@@ -63,3 +63,14 @@ class DigitalizacionTipoEscaner(models.Model):
         conteos = {escaner.id: count for escaner, count in datos}
         for record in self:
             record.registro_count = conteos.get(record.id, 0)
+
+    def action_view_registros(self):
+        self.ensure_one()
+        return {
+            "name": "Registros de producción (Escáner: %s)" % self.name,
+            "type": "ir.actions.act_window",
+            "res_model": "digitalizacion.registro",
+            "view_mode": "tree,form",
+            "domain": [("tipo_escaner_ids", "in", self.id)],
+            "context": {"default_tipo_escaner_ids": [(4, self.id)]},
+        }

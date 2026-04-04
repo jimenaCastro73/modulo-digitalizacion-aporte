@@ -319,14 +319,14 @@
 
                         const data = await resp.json();
 
-                        if (data.result && data.result.success) {
+                        if (data.result &amp;&amp; data.result.success) {
                             mostrarAlerta('success', `✓ ${payload.length} registro(s) guardado(s) correctamente.`);
                             // Limpiar tabla
                             document.getElementById('tbody-registros').innerHTML = '';
                             document.getElementById('tbody-registros').appendChild(crearFila());
                         } else {
-                            const msg = (data.result && data.result.error && data.result.error.message)
-                                || (data.error && data.error.message)
+                            const msg = (data.result &amp;&amp; data.result.error &amp;&amp; data.result.error.message)
+                                || (data.error &amp;&amp; data.error.message)
                                 || 'Error desconocido al guardar.';
                             mostrarAlerta('danger', msg);
                         }

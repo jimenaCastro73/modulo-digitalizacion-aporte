@@ -25,7 +25,7 @@
         <field name="arch" type="xml">
             <form string="Tipo de Escáner">
                 <div name="button_box" class="oe_button_box">
-                    <button type="object" class="oe_stat_button" icon="fa-file-image-o" invisible="registro_count == 0">
+                    <button name="action_view_registros" type="object" class="oe_stat_button" icon="fa-file-image-o" invisible="registro_count == 0">
                         <field name="registro_count" string="Usos" widget="statinfo" />
                     </button>
                 </div>

@@ -134,7 +134,7 @@
                                                     <t t-else="">
                                                         <!-- Color según intensidad relativa al total del miembro -->
                                                         <t t-set="pct" t-value="(cnt / m['total'] * 100) if m['total'] else 0" />
-                                                        <span t-attf-style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:500;background:{{ '#E6F1FB' if pct < 25 else ('#85B7EB' if pct < 50 else '#185FA5') }};color:{{ '#0C447C' if pct < 25 else ('#042C53' if pct < 50 else '#E6F1FB') }};">
+                                                        <span t-attf-style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:500;background:{{ '#E6F1FB' if pct &lt; 25 else ('#85B7EB' if pct &lt; 50 else '#185FA5') }};color:{{ '#0C447C' if pct &lt; 25 else ('#042C53' if pct &lt; 50 else '#E6F1FB') }};">
                                                             <t t-esc="cnt" />
                                                         </span>
                                                     </t>

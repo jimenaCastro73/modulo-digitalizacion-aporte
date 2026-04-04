@@ -16,12 +16,7 @@
             <field name="perm_write" eval="False" />
             <field name="perm_create" eval="False" />
             <field name="perm_unlink" eval="False" />
-            <field name="domain_force">[
-                ('id', 'in', env['digitalizacion.asignacion'].sudo()._search([
-                    ('lider_id', '=', user.id),
-                    ('active', '=', True),
-                ]))
-            ]</field>
+            <field name="domain_force">[('asignacion_ids.lider_id', '=', user.id)]</field>
         </record>
     </data>
 </odoo>

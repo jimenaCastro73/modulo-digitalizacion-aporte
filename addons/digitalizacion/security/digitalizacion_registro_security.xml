@@ -14,12 +14,7 @@
             <field name="perm_write" eval="True" />
             <field name="perm_create" eval="True" />
             <field name="perm_unlink" eval="False" />
-            <field name="domain_force">[
-                ('proyecto_id', 'in', env['digitalizacion.proyecto'].sudo()._search([
-                    ('asignacion_ids.lider_id', '=', user.id),
-                    ('asignacion_ids.active', '=', True),
-                ]))
-            ]</field>
+            <field name="domain_force">[('proyecto_id.asignacion_ids.lider_id', '=', user.id)]</field>
         </record>
         <!--
             El líder solo ve miembros de proyectos donde tiene asignación activa.
@@ -34,12 +29,7 @@
             <field name="perm_write" eval="False" />
             <field name="perm_create" eval="False" />
             <field name="perm_unlink" eval="False" />
-            <field name="domain_force">[
-                ('proyecto_id', 'in', env['digitalizacion.proyecto'].sudo()._search([
-                    ('asignacion_ids.lider_id', '=', user.id),
-                    ('asignacion_ids.active', '=', True),
-                ]))
-            ]</field>
+            <field name="domain_force">[('proyecto_id.asignacion_ids.lider_id', '=', user.id)]</field>
         </record>
     </data>
 </odoo>
