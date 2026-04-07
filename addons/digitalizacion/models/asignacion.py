@@ -79,16 +79,25 @@ class Asignacion(models.Model):
 
     @api.constrains("lider_id", "proyecto_id")
     def _check_lider_tiene_grupo(self):
-        """Verifica que el usuario asignado pertenezca al grupo de Líder."""
+        """
+        Verifica que el usuario asignado pertenezca al grupo de Líder.
+
+        Regla de negocio: solo un usuario con el grupo correcto puede
+        acceder al portal de digitalización. Asignar un usuario sin ese
+        grupo resultaría en un portal vacío o errores de acceso.
+        """
         grupo_lider = self.env.ref(
             "digitalizacion.group_digitalizacion_lider",
             raise_if_not_found=False,
         )
+
+        # Si el grupo no existe (ej: módulo parcialmente instalado), no validar
         if not grupo_lider:
             return
 
         for record in self:
-            if grupo_lider not in record.lider_id.groups_id:
+            lider_tiene_grupo = grupo_lider in record.lider_id.groups_id
+            if not lider_tiene_grupo:
                 raise ValidationError(
                     _(
                         "El usuario '%s' no pertenece al grupo "
@@ -99,10 +108,15 @@ class Asignacion(models.Model):
 
     @api.constrains("fecha_asignacion")
     def _check_fecha_asignacion(self):
-        """La fecha de asignación no puede ser futura."""
+        """
+        La fecha de asignación no puede ser futura.
+
+        Regla de negocio: las asignaciones son hechos ya ocurridos.
+        """
         hoy = fields.Date.today()
         for record in self:
-            if record.fecha_asignacion and record.fecha_asignacion > hoy:
+            fecha_es_futura = record.fecha_asignacion and record.fecha_asignacion > hoy
+            if fecha_es_futura:
                 raise ValidationError(
                     _(
                         "La fecha de asignación (%s) no puede ser futura.",
@@ -124,15 +138,21 @@ class Asignacion(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         """
-        Al crear una asignación:
-        - Si existe una archivada para el mismo líder+proyecto, la reactiva.
-        - Crea automáticamente el miembro_proyecto del líder.
+        Crea asignaciones con patrón reactivar-si-existe, crear-si-no-existe.
+
+        Antes de crear un nuevo registro, verifica si ya existe uno archivado
+        (active=False) para el mismo líder + proyecto. Si existe, lo reactiva
+        en lugar de crear un duplicado (respetando la constraint UNIQUE).
+
+        Efecto secundario: tras crear/reactivar la asignación, llama a
+        _crear_miembro_para_lider() para que el líder también aparezca
+        como digitalizador en el selector del formulario.
         """
-        records_to_create = []
-        created = self.env["digitalizacion.asignacion"]
+        registros_a_crear = []
+        registros_procesados = self.env["digitalizacion.asignacion"]
 
         for vals in vals_list:
-            existente = self.with_context(active_test=False).search(
+            asignacion_archivada = self.with_context(active_test=False).search(
                 [
                     ("lider_id", "=", vals.get("lider_id")),
                     ("proyecto_id", "=", vals.get("proyecto_id")),
@@ -141,8 +161,9 @@ class Asignacion(models.Model):
                 limit=1,
             )
 
-            if existente:
-                existente.write(
+            if asignacion_archivada:
+                # Reactivar en lugar de crear un duplicado
+                asignacion_archivada.write(
                     {
                         "active": True,
                         "fecha_asignacion": vals.get(
@@ -150,25 +171,31 @@ class Asignacion(models.Model):
                         ),
                     }
                 )
-                created |= existente
+                registros_procesados |= asignacion_archivada
             else:
-                records_to_create.append(vals)
+                registros_a_crear.append(vals)
 
-        if records_to_create:
-            created |= super().create(records_to_create)
+        if registros_a_crear:
+            registros_procesados |= super().create(registros_a_crear)
 
-        for asig in created:
+        for asig in registros_procesados:
             self._crear_miembro_para_lider(asig)
 
-        return created
+        return registros_procesados
 
     def write(self, vals):
-        """Si se reactiva una asignación, verifica que el miembro_proyecto también esté activo."""
-        result = super().write(vals)
-        if vals.get("active") is True:
+        """
+        Al reactivar una asignación (active=True), verifica que el
+        miembro_proyecto del líder también esté activo en ese proyecto.
+        """
+        resultado = super().write(vals)
+
+        reactivando_asignacion = vals.get("active") is True
+        if reactivando_asignacion:
             for asig in self:
                 self._crear_miembro_para_lider(asig)
-        return result
+
+        return resultado
 
     # ── Métodos internos ──────────────────────────────────────────────────────
 

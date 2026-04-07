@@ -51,13 +51,22 @@ class DigitalizacionTipoEscaner(models.Model):
 
     @api.constrains("name")
     def _check_name(self):
+        """
+        El nombre del tipo de escáner debe identificar claramente el equipo.
+
+        No se aceptan nombres vacíos ni solo numéricos porque
+        impedirían identificar visualmente el equipo en los reportes.
+        """
         for record in self:
             nombre = (record.name or "").strip()
+
             if not nombre:
                 raise ValidationError(
                     _("El nombre del tipo de escáner no puede estar vacío.")
                 )
-            if nombre.isdigit():
+
+            solo_numeros = nombre.isdigit()
+            if solo_numeros:
                 raise ValidationError(
                     _(
                         "El nombre del escáner no puede ser solo números: '%s'. "
@@ -70,27 +79,36 @@ class DigitalizacionTipoEscaner(models.Model):
 
     @api.depends("name")
     def _compute_registro_count(self):
-        """Cuenta usos en registros via _read_group."""
+        """
+        Cuenta los registros en los que se usó este tipo de escáner.
+
+        Usa _read_group para evitar N queries — una sola consulta
+        agrupa todos los registros del recordset en una sola ida a la BD.
+        """
         if not self.ids:
             for record in self:
                 record.registro_count = 0
             return
+
         datos = self.env["digitalizacion.registro"]._read_group(
             domain=[("tipo_escaner_ids", "in", self.ids)],
             groupby=["tipo_escaner_ids"],
             aggregates=["__count"],
         )
         conteos = {escaner.id: count for escaner, count in datos}
+
         for record in self:
             record.registro_count = conteos.get(record.id, 0)
 
-    def action_view_registros(self):
+    def action_ver_registros(self):
+        """Abre los registros donde se usó este tipo de escáner."""
         self.ensure_one()
         return {
-            "name": "Registros de producción (Escáner: %s)" % self.name,
             "type": "ir.actions.act_window",
+            "name": _("Registros de producción — %s", self.name),
             "res_model": "digitalizacion.registro",
             "view_mode": "tree,form",
             "domain": [("tipo_escaner_ids", "in", self.id)],
             "context": {"default_tipo_escaner_ids": [(4, self.id)]},
         }
+

@@ -216,10 +216,13 @@ class Proyecto(models.Model):
     @api.depends("miembro_ids", "registro_ids", "registro_ids.total_escaneos")
     def _compute_totales(self):
         for proyecto in self:
-            proyecto.total_miembros = len(proyecto.miembro_ids.filtered("active"))
+            # Contamos solo miembros activos (con fecha_salida o dados de baja no cuentan)
+            miembros_activos = proyecto.miembro_ids.filtered(lambda miembro: miembro.active)
+            proyecto.total_miembros = len(miembros_activos)
             proyecto.total_registros = len(proyecto.registro_ids)
             proyecto.total_escaneos = sum(
-                record.total_escaneos or 0 for record in proyecto.registro_ids
+                registro.total_escaneos or 0
+                for registro in proyecto.registro_ids
             )
 
     @api.depends("total_escaneos", "meta_escaneos")

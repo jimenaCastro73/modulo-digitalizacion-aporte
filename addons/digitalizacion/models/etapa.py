@@ -69,8 +69,10 @@ class DigitalizacionEtapa(models.Model):
 
     @api.constrains("sequence")
     def _check_sequence(self):
+        """La secuencia debe ser un número positivo o cero (no negativo)."""
         for record in self:
-            if record.sequence < 0:
+            tiene_secuencia_negativa = record.sequence < 0
+            if tiene_secuencia_negativa:
                 raise ValidationError(
                     _("La secuencia no puede ser negativa (valor actual: %d).", record.sequence)
                 )
@@ -80,18 +82,23 @@ class DigitalizacionEtapa(models.Model):
     @api.depends("name")
     def _compute_registro_count(self):
         """
-        Cuenta registros por etapa. Optimizado con _read_group.
+        Cuenta los registros asociados a cada etapa usando una sola query SQL.
+
+        Usa _read_group para evitar N queries — una sola consulta agrupada
+        es suficiente para todo el recordset.
         """
         if not self.ids:
             for etapa in self:
                 etapa.registro_count = 0
             return
+
         datos = self.env["digitalizacion.registro"]._read_group(
             domain=[("etapa_id", "in", self.ids)],
             groupby=["etapa_id"],
             aggregates=["__count"],
         )
         conteos = {etapa.id: count for etapa, count in datos}
+
         for etapa in self:
             etapa.registro_count = conteos.get(etapa.id, 0)
 

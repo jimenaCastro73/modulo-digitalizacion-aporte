@@ -1,23 +1,20 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- ================================================================
          portal_miembros_templates.xml
-         Vista de miembros del equipo para el Líder (SOLO LECTURA).
-         Incluye:
-           1. Gráfico de barras apiladas por etapa (CSS puro, sin librerías)
-           2. Tabla heatmap con conteo exacto por miembro/etapa
-           3. Lista de miembros activos con estado
-         El Administrador gestiona el equipo desde el backoffice.
+         Análisis de rendimiento y equipo para el Líder de Proyecto.
+         Características Senior:
+         - Gráfico de barras apiladas reactivo (CSS flexbox puro).
+         - Heatmap de productividad membre-etapa.
+         - Dashboard de gestión de equipo (Solo lectura).
          ================================================================ -->
-    <!-- Colores por etapa — alineados con colores del controller -->
-    <!-- Limpieza:#378ADD Ordenado:#639922 Digitalizado:#1D9E75 Editado:#EF9F27 Indexado:#7F77DD -->
     <template id="digitalizacion_portal_miembros_equipo" name="Portal: equipo del proyecto">
         <t t-call="portal.portal_layout">
-            <!-- Notificaciones flash -->
+            <!-- Notificaciones Flash -->
             <t t-if="notifications">
                 <div class="container mt-3">
                     <t t-foreach="notifications" t-as="notif">
-                        <div t-attf-class="alert alert-{{ notif['type'] }} alert-dismissible" role="alert">
+                        <div t-attf-class="alert alert-{{ notif['type'] }} alert-dismissible fade show border-0 shadow-sm" role="alert">
                             <t t-esc="notif['message']" />
                             <button type="button" class="btn-close" data-bs-dismiss="alert" />
                         </div>
@@ -25,122 +22,127 @@
                 </div>
             </t>
             <div class="container py-4">
-                <!-- Cabecera -->
-                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <!-- CABECERA DE SECCIÓN -->
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 p-3 bg-white shadow-sm rounded-3 border-start border-success border-4">
                     <div>
-                        <h3 class="mb-0">Equipo</h3>
-                        <p class="text-muted mb-0">
+                        <h3 class="mb-0 fw-bold text-dark">Análisis de Equipo</h3>
+                        <p class="text-muted mb-0 d-flex align-items-center gap-2 small">
+                            <i class="fa fa-users text-success" />
                             <t t-esc="proyecto.name" />
                             ·
-                            <t t-esc="len(miembros)" />
-                            miembro(s) activo(s)
+                            <strong>
+                                <t t-esc="len(miembros)" />
+                                integrantes activos
+                            </strong>
                         </p>
                     </div>
-                    <a t-attf-href="/digitalizacion/v1/proyectos/{{ proyecto.id }}" class="btn btn-outline-secondary btn-sm">
+                    <a t-attf-href="/digitalizacion/v1/proyectos/{{ proyecto.id }}" class="btn btn-outline-secondary btn-sm px-3 shadow-sm">
                         <i class="fa fa-arrow-left me-1" />
-                        Volver al proyecto
+                        Volver al Proyecto
                     </a>
                 </div>
                 <!-- ═══════════════════════════════════════════════════
-                     GRÁFICO: BARRAS APILADAS POR ETAPA
-                     Datos pasados desde el controller como 'participacion'
-                     CSS puro, sin librerías externas
+                     GRÁFICO: PARTICIPACIÓN ESTRATÉGICA POR ETAPA
+                     Implementación CSS Flexbox pura (sin JS pesado).
                 ════════════════════════════════════════════════════ -->
                 <t t-if="participacion and participacion.get('miembros')">
-                    <div class="card mb-4">
-                        <div class="card-header fw-semibold">Participación por etapa</div>
-                        <div class="card-body">
-                            <!-- Leyenda de colores -->
-                            <div class="d-flex flex-wrap gap-3 mb-3">
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold text-muted text-uppercase tracking-wider">Carga de Trabajo por Etapa</h6>
+                            <i class="fa fa-bar-chart text-muted" />
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- Leyenda de Colores Corporativa -->
+                            <div class="d-flex flex-wrap gap-4 mb-4 pb-3 border-bottom border-light">
                                 <t t-foreach="etapas_con_color" t-as="ec">
-                                    <div class="d-flex align-items-center gap-1">
-                                        <div t-attf-style="width:12px;height:12px;border-radius:2px;background:{{ ec['color'] }};" style="width:12px;height:12px;border-radius:2px;" />
-                                        <small class="text-muted">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div t-attf-style="width:14px; height:14px; border-radius:50%; background:{{ ec['color'] }};" class="shadow-sm" />
+                                        <span class="text-muted small fw-semibold">
                                             <t t-esc="ec['nombre']" />
-                                        </small>
+                                        </span>
                                     </div>
                                 </t>
                             </div>
-                            <!-- Barras apiladas -->
+                            <!-- Listado de Barras Apiladas -->
                             <t t-foreach="participacion['miembros']" t-as="m">
-                                <div class="d-flex align-items-center gap-2 mb-2">
-                                    <!-- Nombre del miembro -->
-                                    <div style="width:110px;flex-shrink:0;text-align:right;">
-                                        <small class="text-muted text-truncate d-block">
+                                <div class="row align-items-center g-0 mb-3">
+                                    <!-- Identificador del Miembro -->
+                                    <div class="col-3 col-lg-2 text-end pe-3">
+                                        <span class="text-dark small fw-bold text-truncate d-block">
                                             <t t-esc="m['nombre'].split()[0] if m['nombre'] else '—'" />
-                                        </small>
+                                        </span>
                                     </div>
-                                    <!-- Barra apilada -->
-                                    <div class="flex-grow-1" style="height:24px;border-radius:4px;overflow:hidden;display:flex;background:#f0f0f0;">
-                                        <t t-foreach="m['segmentos']" t-as="seg">
-                                            <t t-if="seg['count'] &gt; 0">
-                                                <!-- Buscar color del segmento -->
-                                                <t t-foreach="etapas_con_color" t-as="ec">
-                                                    <t t-if="ec['nombre'] == seg['etapa']">
-                                                        <div t-attf-style="width:{{ seg['pct'] }}%;background:{{ ec['color'] }};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#fff;min-width:0;" t-attf-title="{{ seg['etapa'] }}: {{ seg['count'] }} registros">
-                                                            <t t-if="seg['pct'] &gt;= 12">
-                                                                <t t-esc="seg['count']" />
-                                                            </t>
-                                                        </div>
+                                    <!-- Contenedor del Gráfico -->
+                                    <div class="col-8 col-lg-9">
+                                        <div class="progress shadow-sm overflow-hidden d-flex" style="height:26px; border-radius:13px; background:#f8f9fa;">
+                                            <t t-foreach="m['segmentos']" t-as="seg">
+                                                <t t-if="seg['count'] > 0">
+                                                    <t t-foreach="etapas_con_color" t-as="ec">
+                                                        <t t-if="ec['nombre'] == seg['etapa']">
+                                                            <div t-attf-style="width:{{ seg['pct'] }}%; background:{{ ec['color'] }};" t-attf-title="{{ seg['etapa'] }}: {{ seg['count'] }} registros" class="progress-bar progress-bar-animated h-100 d-flex align-items-center justify-content-center border-end border-white border-opacity-10 shadow-sm">
+                                                                <t t-if="seg['pct'] >= 8">
+                                                                    <span class="text-white fw-bold" style="font-size:10px;">
+                                                                        <t t-esc="seg['count']" />
+                                                                    </span>
+                                                                </t>
+                                                            </div>
+                                                        </t>
                                                     </t>
                                                 </t>
                                             </t>
-                                        </t>
+                                        </div>
                                     </div>
-                                    <!-- Total -->
-                                    <div style="width:32px;flex-shrink:0;">
-                                        <small class="text-muted">
+                                    <!-- Indicador de Total -->
+                                    <div class="col-1 text-center">
+                                        <span class="badge bg-light text-muted rounded-pill small fw-bold">
                                             <t t-esc="m['total']" />
-                                        </small>
+                                        </span>
                                     </div>
                                 </div>
                             </t>
                         </div>
                     </div>
                     <!-- ═══════════════════════════════════════════════════
-                         TABLA HEATMAP — conteo exacto por miembro y etapa
+                         TABLA HEATMAP: CONTEO EXACTO OPERATIVO
                     ════════════════════════════════════════════════════ -->
-                    <div class="card mb-4">
-                        <div class="card-header fw-semibold">Detalle por miembro</div>
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white border-bottom py-3 px-4">
+                            <h6 class="mb-0 fw-bold text-muted text-uppercase tracking-wider">Matriz de Productividad</h6>
+                        </div>
                         <div class="table-responsive">
-                            <table class="table table-sm mb-0">
-                                <thead class="table-light">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light">
                                     <tr>
-                                        <th>Miembro</th>
+                                        <th class="ps-4 border-0 text-muted small fw-bold">MIEMBRO</th>
                                         <t t-foreach="participacion['etapas']" t-as="etapa">
-                                            <th class="text-center">
-                                                <small>
-                                                    <t t-esc="etapa" />
-                                                </small>
+                                            <th class="text-center border-0 text-muted small fw-bold">
+                                                <t t-esc="etapa" />
                                             </th>
                                         </t>
-                                        <th class="text-center fw-bold">Total</th>
+                                        <th class="text-center border-0 fw-bold text-primary small fw-bold">TOTAL</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody class="border-top-0">
                                     <t t-foreach="participacion['miembros']" t-as="m">
-                                        <tr>
-                                            <td>
-                                                <small>
-                                                    <t t-esc="m['nombre']" />
-                                                </small>
+                                        <tr class="transition-all hover-bg-light position-relative">
+                                            <td class="ps-4 fw-semibold text-dark small" data-label="Miembro">
+                                                <t t-esc="m['nombre']" />
                                             </td>
                                             <t t-foreach="participacion['etapas']" t-as="etapa">
                                                 <t t-set="cnt" t-value="m['por_etapa'].get(etapa, 0)" />
-                                                <td class="text-center">
+                                                <td t-attf-data-label="#{ etapa }" class="text-center py-2">
                                                     <t t-if="cnt == 0">
-                                                        <span class="text-muted">—</span>
+                                                        <span class="text-muted opacity-25 fw-light">—</span>
                                                     </t>
                                                     <t t-else="">
-                                                        <!-- Color según intensidad relativa al total del miembro -->
                                                         <t t-set="pct" t-value="(cnt / m['total'] * 100) if m['total'] else 0" />
-                                                        <span t-attf-style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:500;background:{{ '#E6F1FB' if pct &lt; 25 else ('#85B7EB' if pct &lt; 50 else '#185FA5') }};color:{{ '#0C447C' if pct &lt; 25 else ('#042C53' if pct &lt; 50 else '#E6F1FB') }};">
+                                                        <span t-attf-style="display:inline-block; min-width:40px; padding:2px 8px; border-radius:6px; font-size:12px; font-weight:700; background:#{ '#E6F1FB' if pct &lt; 25 else ('#85B7EB' if pct &lt; 50 else '#185FA5') }; color:#{ '#185FA5' if pct &lt; 25 else ('#042C53' if pct &lt; 50 else '#E6F1FB') }; border:1px solid rgba(0,0,0,0.05);">
                                                             <t t-esc="cnt" />
                                                         </span>
                                                     </t>
                                                 </td>
                                             </t>
-                                            <td class="text-center fw-bold">
+                                            <td class="text-center fw-bold text-dark h6 mb-0" data-label="Total">
                                                 <t t-esc="m['total']" />
                                             </td>
                                         </tr>
@@ -150,67 +152,74 @@
                         </div>
                     </div>
                 </t>
-                <!-- Sin datos aún -->
+                <!-- ESTADO VACÍO (Empty State) -->
                 <t t-if="not participacion or not participacion.get('miembros')">
-                    <div class="alert alert-info mb-4">
-                        <i class="fa fa-info-circle me-1" />
-                        Aún no hay registros de trabajo para este proyecto.
-                        El gráfico aparecerá cuando el Líder registre la primera jornada.
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body text-center py-5">
+                            <i class="fa fa-info-circle fa-4x text-light mb-3" />
+                            <h5 class="text-muted">Sin datos de participación aún</h5>
+                            <p class="text-muted small px-5">Los gráficos y la matriz de productividad se generarán automáticamente en cuanto se registren las primeras producciones de trabajo.</p>
+                        </div>
                     </div>
                 </t>
                 <!-- ═══════════════════════════════════════════════════
-                     LISTA DE MIEMBROS (SOLO LECTURA)
+                     GESTIÓN DE EQUIPO: LISTADO ESTRUCTURAL
                 ════════════════════════════════════════════════════ -->
-                <div class="card">
-                    <div class="card-header fw-semibold">
-                        Miembros del equipo
-                        <small class="text-muted ms-2">Solo lectura — el administrador gestiona el equipo</small>
+                <div class="card border-0 shadow-sm overflow-hidden">
+                    <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold text-dark">Miembros del Proyecto</h6>
+                        <span class="badge bg-light text-muted border fw-normal">Solo Lectura</span>
                     </div>
                     <t t-if="miembros">
                         <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light">
                                     <tr>
-                                        <th>Nombre</th>
-                                        <th>Integración</th>
-                                        <th>Estado</th>
-                                        <th class="text-center">Rol</th>
+                                        <th class="ps-4 text-muted small fw-bold border-0">NOMBRE COMPLETO</th>
+                                        <th class="text-muted small fw-bold border-0">INTEGRACIÓN</th>
+                                        <th class="text-muted small fw-bold border-0 text-center">ROL</th>
+                                        <th class="text-muted small fw-bold border-0 text-end pe-4">ESTADO</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <t t-foreach="miembros" t-as="m">
-                                        <tr>
-                                            <td>
-                                                <span class="fw-semibold">
-                                                    <t t-esc="m.partner_id.name" />
-                                                </span>
+                                        <tr class="transition-all hover-bg-light position-relative">
+                                            <td class="ps-4" data-label="Nombre">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width:32px; height:32px;">
+                                                        <t t-esc="m.partner_id.name[0].upper()" />
+                                                    </div>
+                                                    <span class="fw-semibold text-dark">
+                                                        <t t-esc="m.partner_id.name" />
+                                                    </span>
+                                                </div>
                                             </td>
-                                            <td class="text-muted">
+                                            <td class="text-muted font-monospace small" data-label="Integración">
                                                 <t t-esc="m.fecha_integracion" />
                                             </td>
-                                            <td>
+                                            <td class="text-center" data-label="Rol">
+                                                <t t-if="m.es_lider">
+                                                    <span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-25 px-2 py-1">
+                                                        <i class="fa fa-star me-1 small" />
+                                                        LÍDER
+                                                    </span>
+                                                </t>
+                                                <t t-else="">
+                                                    <span class="text-muted small fw-medium">Digitalizador</span>
+                                                </t>
+                                            </td>
+                                            <td class="text-end pe-4" data-label="Estado">
                                                 <t t-if="m.fecha_salida">
-                                                    <span class="badge bg-secondary">
+                                                    <span class="badge bg-secondary opacity-75 small px-2 py-1">
                                                         Salida:
                                                         <t t-esc="m.fecha_salida" />
                                                     </span>
                                                 </t>
                                                 <t t-elif="m.active">
-                                                    <span class="badge bg-success">Activo</span>
+                                                    <span class="badge bg-success small px-2 py-1 shadow-sm">Activo</span>
                                                 </t>
                                                 <t t-else="">
-                                                    <span class="badge bg-warning text-dark">Inactivo</span>
-                                                </t>
-                                            </td>
-                                            <td class="text-center">
-                                                <t t-if="m.es_lider">
-                                                    <span class="badge bg-primary">
-                                                        <i class="fa fa-star me-1" />
-                                                        Líder
-                                                    </span>
-                                                </t>
-                                                <t t-else="">
-                                                    <span class="text-muted small">Digitalizador</span>
+                                                    <span class="badge bg-warning text-dark small px-2 py-1">Inactivo</span>
                                                 </t>
                                             </td>
                                         </tr>
@@ -220,9 +229,9 @@
                         </div>
                     </t>
                     <t t-else="">
-                        <div class="card-body text-center text-muted py-4">
-                            <i class="fa fa-users fa-2x mb-2 d-block" />
-                            No hay miembros activos en este proyecto.
+                        <div class="card-body text-center text-muted py-5">
+                            <i class="fa fa-users-slash fa-3x mb-3 opacity-25" />
+                            <h6 class="fw-bold">No se encontraron integrantes</h6>
                         </div>
                     </t>
                 </div>

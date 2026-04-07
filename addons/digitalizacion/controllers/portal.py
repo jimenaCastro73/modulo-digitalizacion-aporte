@@ -22,7 +22,7 @@ Permisos:
 import json
 import logging
 import re
-from datetime import date, timedelta
+from datetime import timedelta
 from markupsafe import Markup
 
 from odoo import _, fields, http
@@ -125,7 +125,8 @@ def _build_date_domain(periodo, fecha_desde, fecha_hasta):
     Construye dominio de fechas según el período seleccionado.
     Retorna (domain, periodo_actual_str).
     """
-    hoy = date.today()
+    # Obtener 'hoy' respetando la zona horaria del usuario en el portal
+    hoy = fields.Date.context_today(request.env.user)
 
     if periodo == "hoy":
         return (
@@ -329,7 +330,7 @@ def _get_resumen_etapas(proyecto_id, domain):
             "cantidad": total or 0,
             "porcentaje": round(((total or 0) / max_val) * 100),
         }
-        for etapa, total in sorted(datos, key=lambda x: x[0].sequence)
+        for etapa, total in sorted(datos, key=lambda fila: fila[0].sequence)
     ]
 
 
@@ -381,7 +382,10 @@ class DigitalizacionPortal(http.Controller):
         periodo = kwargs.get("periodo", "mes")
         fecha_desde = kwargs.get("fecha_desde", "")
         fecha_hasta = kwargs.get("fecha_hasta", "")
-        page = max(1, int(kwargs.get("page", 1) or 1))
+
+        # Evitar que page sea 0 o None (el or 1 protege si viene vacío del formulario)
+        numero_pagina_raw = kwargs.get("page", 1) or 1
+        numero_pagina = max(1, int(numero_pagina_raw))
         limit = 10
 
         date_domain, periodo_actual = _build_date_domain(
@@ -396,7 +400,7 @@ class DigitalizacionPortal(http.Controller):
         ultimos_registros = Registro.search(
             [("lider_id", "=", lider_id)] + domain_final,
             order="fecha desc, id desc",
-            offset=(page - 1) * limit,
+            offset=(numero_pagina - 1) * limit,
             limit=limit,
         )
 
@@ -412,9 +416,9 @@ class DigitalizacionPortal(http.Controller):
                 "periodo": periodo,
                 "fecha_desde": fecha_desde,
                 "fecha_hasta": fecha_hasta,
-                "page": page,
+                "page": numero_pagina,
                 "has_next": len(ultimos_registros) == limit,
-                "has_prev": page > 1,
+                "has_prev": numero_pagina > 1,
                 "notifications": request.session.pop("notifications", []),
                 "page_name": "digitalizacion_dashboard",
             },
@@ -624,7 +628,8 @@ class DigitalizacionPortal(http.Controller):
                 "success": False,
                 "error": {"message": _("Formato de fecha inválido. Use YYYY-MM-DD.")},
             }
-        if fecha_date > date.today():
+        hoy = fields.Date.context_today(request.env.user)
+        if fecha_date > hoy:
             return {
                 "success": False,
                 "error": {"message": _("La fecha no puede ser futura (%s).", fecha)},

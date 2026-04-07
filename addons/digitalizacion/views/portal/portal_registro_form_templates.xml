@@ -2,24 +2,17 @@
 <odoo>
     <!-- ================================================================
          portal_registro_form_templates.xml
-         Formulario multi-fila de registro de producción diaria.
-
-         Flujo:
-           1. El líder selecciona la fecha de la jornada
-           2. Agrega filas: digitalizador + etapa + cantidades
-           3. Los campos se muestran/ocultan según la etapa elegida
-              (controlado por JS con el mapa reglasEtapa)
-           4. Al enviar → POST JSON a /digitalizacion/api/v1/proyectos/<id>/registros
-
-         Usa fetch nativo (no odoo.define / web.rpc, deprecados en portal Odoo 17)
-         CSRF token obtenido de la cookie csrftoken de Odoo.
+         Punto de montaje para la Aplicación Owl de Registro de Producción.
+         Mantiene el contexto del proyecto y carga los datos maestros
+         necesarios para la reactividad del formulario.
          ================================================================ -->
     <template id="digitalizacion_portal_registro_form" name="Portal: formulario de registro">
         <t t-call="portal.portal_layout">
+            <!-- Capa de Notificaciones Flash -->
             <t t-if="notifications">
                 <div class="container mt-3">
                     <t t-foreach="notifications" t-as="notif">
-                        <div t-attf-class="alert alert-{{ notif['type'] }} alert-dismissible" role="alert">
+                        <div t-attf-class="alert alert-{{ notif['type'] }} alert-dismissible fade show border-0 shadow-sm" role="alert">
                             <t t-esc="notif['message']" />
                             <button type="button" class="btn-close" data-bs-dismiss="alert" />
                         </div>
@@ -27,375 +20,34 @@
                 </div>
             </t>
             <div class="container py-4">
-                <!-- Cabecera -->
-                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-                    <div>
-                        <h3 class="mb-0">Registrar producción</h3>
-                        <p class="text-muted mb-0">
-                            <t t-esc="proyecto.name" />
-                        </p>
+                <!-- CABECERA DE OPERACIÓN -->
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 p-3 bg-white shadow-sm rounded-3 border-start border-primary border-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width:48px; height:48px;">
+                            <i class="fa fa-pencil-square-o fa-lg text-primary" />
+                        </div>
+                        <div>
+                            <h3 class="mb-0 fw-bold text-dark">Registrar Producción</h3>
+                            <p class="text-muted mb-0 small fw-semibold">
+                                <i class="fa fa-folder-open-o me-1" />
+                                <t t-esc="proyecto.name" />
+                            </p>
+                        </div>
                     </div>
-                    <a t-attf-href="/digitalizacion/v1/proyectos/{{ proyecto.id }}" class="btn btn-outline-secondary btn-sm">
+                    <a t-attf-href="/digitalizacion/v1/proyectos/#{ proyecto.id }" class="btn btn-outline-secondary btn-sm px-3 shadow-sm">
                         <i class="fa fa-arrow-left me-1" />
-                        Volver al proyecto
+                        Volver al Proyecto
                     </a>
                 </div>
-                <!-- Alerta de resultado -->
-                <div id="alerta-resultado" class="d-none mb-3" />
-                <!-- Formulario principal -->
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span class="fw-semibold">Datos de la jornada</span>
-                        <div class="d-flex align-items-center gap-2">
-                            <label class="text-muted small mb-0" for="campo-fecha">Fecha:</label>
-                            <input id="campo-fecha" type="date" class="form-control form-control-sm" style="width:150px" />
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <!-- Tabla de filas -->
-                        <div class="table-responsive">
-                            <table id="tabla-registros" class="table table-bordered mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th style="min-width:150px">Digitalizador</th>
-                                        <th style="min-width:130px">Etapa</th>
-                                        <!-- Limpieza / Ordenado / Digitalizado -->
-                                        <th class="col-caja" style="min-width:140px">Ref. cajas</th>
-                                        <th class="col-expedientes" style="min-width:90px">Expedientes</th>
-                                        <th class="col-folios" style="min-width:80px">Folios</th>
-                                        <!-- Digitalizado -->
-                                        <th class="col-escaneos" style="min-width:90px">Escaneos</th>
-                                        <th class="col-escaner" style="min-width:140px">Escáner(es)</th>
-                                        <!-- Editado -->
-                                        <th class="col-exp-editados" style="min-width:100px">Exp. editados</th>
-                                        <th class="col-folios-editados" style="min-width:100px">Folios edit.</th>
-                                        <!-- Indexado -->
-                                        <th class="col-exp-indexados" style="min-width:100px">Exp. indexados</th>
-                                        <th class="col-folios-indexados" style="min-width:100px">Folios index.</th>
-                                        <!-- Común -->
-                                        <th style="min-width:120px">Observaciones</th>
-                                        <th style="width:44px" />
-                                    </tr>
-                                </thead>
-                                <tbody id="tbody-registros" />
-                            </table>
-                        </div>
-                    </div>
-                    <div class="card-footer d-flex justify-content-between align-items-center">
-                        <button id="btn-agregar-fila" type="button" class="btn btn-outline-secondary btn-sm">
-                            <i class="fa fa-plus me-1" />
-                            Agregar fila
-                        </button>
-                        <button id="btn-guardar" type="button" class="btn btn-primary">
-                            <i class="fa fa-save me-1" />
-                            Guardar registros
-                        </button>
-                    </div>
+                <!-- CONTENEDOR RAIZ: MONTAJE COMPONENTE OWL -->
+                <!-- Los atributos data-* se inyectan como props al Componente en portal_registro_form.js -->
+                <div class="o_digitalizacion_registro_mount"
+                     t-att-data-proyecto-id="proyecto.id"
+                     t-att-data-miembros="miembros_json"
+                     t-att-data-etapas="etapas_json"
+                     t-att-data-escaneres="escaneres_json">
                 </div>
             </div>
-            <!-- ══════════════════════════════════════════════════════════
-                 JAVASCRIPT — fetch nativo, sin odoo.define
-            ══════════════════════════════════════════════════════════ -->
-            <script type="text/javascript">
-                // Datos inyectados desde el controller
-                const PROYECTO_ID =
-                <t t-esc="proyecto.id" />
-                ;
-                const MIEMBROS =
-                <t t-out="miembros_json" />
-                ;
-                const ETAPAS   =
-                <t t-out="etapas_json" />
-                ;
-                const ESCANERES =
-                <t t-out="escaneres_json" />
-                ;
-
-                // Reglas de visibilidad de columnas por etapa (nombre en minúsculas)
-                const REGLAS_ETAPA = {
-                    'limpieza':     { caja: true,  expedientes: true,  folios: true,  escaneos: false, escaner: false, expEditados: false, foliosEditados: false, expIndexados: false, foliosIndexados: false },
-                    'ordenado':     { caja: true,  expedientes: true,  folios: true,  escaneos: false, escaner: false, expEditados: false, foliosEditados: false, expIndexados: false, foliosIndexados: false },
-                    'digitalizado': { caja: true,  expedientes: true,  folios: true,  escaneos: true,  escaner: true,  expEditados: false, foliosEditados: false, expIndexados: false, foliosIndexados: false },
-                    'editado':      { caja: false, expedientes: false, folios: false, escaneos: false, escaner: false, expEditados: true,  foliosEditados: true,  expIndexados: false, foliosIndexados: false },
-                    'indexado':     { caja: false, expedientes: false, folios: false, escaneos: false, escaner: false, expEditados: false, foliosEditados: false, expIndexados: true,  foliosIndexados: true  },
-                };
-                const REGLA_DEFAULT = { caja: true, expedientes: true, folios: true, escaneos: false, escaner: false, expEditados: false, foliosEditados: false, expIndexados: false, foliosIndexados: false };
-
-                // Inicializar fecha al día de hoy y bloquear fechas futuras
-                (function() {
-                    var campofecha = document.getElementById('campo-fecha');
-                    var hoy = new Date();
-                    var yyyy = hoy.getFullYear();
-                    var mm   = String(hoy.getMonth() + 1).padStart(2, '0');
-                    var dd   = String(hoy.getDate()).padStart(2, '0');
-                    var hoyStr = yyyy + '-' + mm + '-' + dd;
-                    campofecha.value = hoyStr;
-                    campofecha.max   = hoyStr;  // bloquea futuras en el picker nativo
-                })();
-
-
-                // ── Construir opciones de select ──
-                function opcionesSelect(lista) {
-                    return lista.map(function(i) {
-                        return `
-                <option value="${i.id}">${i.name}</option>
-                `;
-                    }).join('');
-                }
-
-                // ── Crear una nueva fila ──
-                let contadorFila = 0;
-                function crearFila() {
-                    contadorFila++;
-                    const id = `fila-${contadorFila}`;
-                    const tr = document.createElement('tr');
-                    tr.id = id;
-                    tr.innerHTML = `
-                <td>
-                    <select class="form-select form-select-sm sel-miembro" required="required">
-                        <option value="">— Seleccionar —</option>
-                        ${opcionesSelect(MIEMBROS)}
-                    </select>
-                </td>
-                <td>
-                    <select class="form-select form-select-sm sel-etapa" required="required">
-                        <option value="" data-nombre="">— Seleccionar —</option>
-                        ${ETAPAS.map(function(e) {
-                            return `
-                        <option value="${e.id}" data-nombre="${e.name}">${e.name}</option>
-                        `;
-                        }).join('')}
-                    </select>
-                </td>
-                <td class="col-caja">
-                    <input type="text" class="form-control form-control-sm inp-caja" placeholder="BF202, BF199..." maxlength="200" />
-                </td>
-                <td class="col-expedientes">
-                    <input type="number" class="form-control form-control-sm inp-expedientes" min="0" max="999999" value="0" />
-                </td>
-                <td class="col-folios">
-                    <input type="number" class="form-control form-control-sm inp-folios" min="0" max="999999" value="0" />
-                </td>
-                <td class="col-escaneos">
-                    <input type="number" class="form-control form-control-sm inp-escaneos" min="0" max="999999" value="0" />
-                </td>
-                <td class="col-escaner">
-                    <select class="form-select form-select-sm sel-escaner" multiple="multiple" style="min-height:32px">${opcionesSelect(ESCANERES)}</select>
-                </td>
-                <td class="col-exp-editados">
-                    <input type="number" class="form-control form-control-sm inp-exp-editados" min="0" max="999999" value="0" />
-                </td>
-                <td class="col-folios-editados">
-                    <input type="number" class="form-control form-control-sm inp-folios-editados" min="0" max="999999" value="0" />
-                </td>
-                <td class="col-exp-indexados">
-                    <input type="number" class="form-control form-control-sm inp-exp-indexados" min="0" max="999999" value="0" />
-                </td>
-                <td class="col-folios-indexados">
-                    <input type="number" class="form-control form-control-sm inp-folios-indexados" min="0" max="999999" value="0" />
-                </td>
-                <td>
-                    <input type="text" class="form-control form-control-sm inp-observacion" placeholder="Observaciones..." maxlength="2000" />
-                </td>
-                <td class="text-center">
-                    <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar-fila" title="Eliminar fila">
-                        <i class="fa fa-trash" />
-                    </button>
-                </td>
-                `;
-
-                    // Escuchar cambio de etapa para actualizar visibilidad de columnas
-                    tr.querySelector('.sel-etapa').addEventListener('change', function() {
-                        actualizarColumnasFila(tr, this);
-                    });
-
-                    // Eliminar fila
-                    tr.querySelector('.btn-eliminar-fila').addEventListener('click', function() {
-                        tr.remove();
-                    });
-
-                    // Aplicar reglas por defecto (ocultar todo excepto básicos)
-                    actualizarColumnasFila(tr, tr.querySelector('.sel-etapa'));
-
-                    return tr;
-                }
-
-                // ── Actualizar visibilidad de celdas según etapa ──
-                function actualizarColumnasFila(tr, selectEtapa) {
-                    const option = selectEtapa.selectedOptions[0];
-                    const nombre = (option ? option.dataset.nombre || '' : '').toLowerCase();
-                    const regla = REGLAS_ETAPA[nombre] || REGLA_DEFAULT;
-
-                    const mapa = {
-                        'col-caja':              regla.caja,
-                        'col-expedientes':       regla.expedientes,
-                        'col-folios':            regla.folios,
-                        'col-escaneos':          regla.escaneos,
-                        'col-escaner':           regla.escaner,
-                        'col-exp-editados':      regla.expEditados,
-                        'col-folios-editados':   regla.foliosEditados,
-                        'col-exp-indexados':     regla.expIndexados,
-                        'col-folios-indexados':  regla.foliosIndexados,
-                    };
-
-                    for (const [cls, visible] of Object.entries(mapa)) {
-                        const td = tr.querySelector(`.${cls}`);
-                        if (td) {
-                            const inp = td.querySelector('input, select');
-                            if (inp) {
-                                inp.disabled = !visible;
-                                inp.style.visibility = visible ? 'visible' : 'hidden';
-                                // Resetear valor si se deshabilita
-                                if (!visible) {
-                                    if (inp.type === 'number') inp.value = 0;
-                                    else if (inp.tagName === 'SELECT') Array.from(inp.options).forEach(function(o) { o.selected = false; });
-                                    else inp.value = '';
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // ── Agregar primera fila automáticamente ──
-                document.getElementById('tbody-registros').appendChild(crearFila());
-
-                // ── Botón agregar fila ──
-                document.getElementById('btn-agregar-fila').addEventListener('click', function() {
-                    document.getElementById('tbody-registros').appendChild(crearFila());
-                });
-
-                // ── Guardar registros ──
-                document.getElementById('btn-guardar').addEventListener('click', async function() {
-                    const fecha = document.getElementById('campo-fecha').value;
-                    if (!fecha) {
-                        mostrarAlerta('warning', 'Por favor selecciona la fecha de la jornada.');
-                        return;
-                    }
-
-                    const filas = Array.from(document.querySelectorAll('#tbody-registros tr'));
-                    if (filas.length === 0) {
-                        mostrarAlerta('warning', 'Agrega al menos una fila antes de guardar.');
-                        return;
-                    }
-
-                    const payload = [];
-                    for (const tr of filas) {
-                        const miembroId = parseInt(tr.querySelector('.sel-miembro').value);
-                        const etapaId   = parseInt(tr.querySelector('.sel-etapa').value);
-                        if (!miembroId || !etapaId) {
-                            mostrarAlerta('warning', 'Por favor, selecciona un Integrante y una Etapa en todas las filas agregadas.');
-                            return;
-                        }
-
-                        const escaner = Array.from(tr.querySelector('.sel-escaner').selectedOptions)
-                                             .map(function(o) { return parseInt(o.value); });
-
-                        const payload_row = {
-                            miembro_id:          miembroId,
-                            etapa_id:            etapaId,
-                            referencia_cajas:    tr.querySelector('.inp-caja').value || null,
-                            no_expedientes:      parseInt(tr.querySelector('.inp-expedientes').value) || 0,
-                            total_folios:        parseInt(tr.querySelector('.inp-folios').value) || 0,
-                            total_escaneos:      parseInt(tr.querySelector('.inp-escaneos').value) || 0,
-                            tipo_escaner_ids:    escaner,
-                            expedientes_editados:  parseInt(tr.querySelector('.inp-exp-editados').value) || 0,
-                            folios_editados:       parseInt(tr.querySelector('.inp-folios-editados').value) || 0,
-                            expedientes_indexados: parseInt(tr.querySelector('.inp-exp-indexados').value) || 0,
-                            folios_indexados:      parseInt(tr.querySelector('.inp-folios-indexados').value) || 0,
-                            observacion:           tr.querySelector('.inp-observacion').value || null,
-                        };
-
-                        if (
-                            payload_row.no_expedientes &lt; 0 || payload_row.total_folios &lt; 0 ||
-                            payload_row.total_escaneos &lt; 0 || payload_row.expedientes_editados &lt; 0 ||
-                            payload_row.folios_editados &lt; 0 || payload_row.expedientes_indexados &lt; 0 ||
-                            payload_row.folios_indexados &lt; 0
-                        ) {
-                            mostrarAlerta('warning', 'Validación fallida: No se permiten cantidades negativas.');
-                            return;
-                        }
-
-                        payload.push(payload_row);
-                    }
-
-                    const btn = document.getElementById('btn-guardar');
-                    btn.disabled = true;
-                    btn.innerHTML = `
-                <i class="fa fa-spinner fa-spin me-1" />
-                Guardando...`;
-
-                    try {
-                        // CSRF token de la cookie de Odoo
-                        const csrf = getCookie('csrf_token') || '';
-
-                        const resp = await fetch(
-                            `/digitalizacion/api/v1/proyectos/${PROYECTO_ID}/registros`,
-                            {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRFToken': csrf,
-                                },
-                                body: JSON.stringify({
-                                    jsonrpc: '2.0',
-                                    method: 'call',
-                                    params: { fecha: fecha, filas: payload },
-                                }),
-                            }
-                        );
-
-                        const data = await resp.json();
-
-                        if (data.result) {
-                            if (data.result.success) {
-                                mostrarAlerta('success', `✓ ${payload.length} registro(s) guardado(s) correctamente.`);
-                                // Limpiar tabla
-                                document.getElementById('tbody-registros').innerHTML = '';
-                                document.getElementById('tbody-registros').appendChild(crearFila());
-                            } else {
-                                let msg = 'Error desconocido al guardar.';
-                                if (data.result.error) {
-                                    if (data.result.error.message) {
-                                        msg = data.result.error.message;
-                                    }
-                                }
-                                mostrarAlerta('danger', msg);
-                            }
-                        } else if (data.error) {
-                            if (data.error.message) {
-                                mostrarAlerta('danger', data.error.message);
-                            } else {
-                                mostrarAlerta('danger', 'Error desconocido al guardar.');
-                            }
-                        } else {
-                            mostrarAlerta('danger', 'Error desconocido al guardar.');
-                        }
-                    } catch(err) {
-                        mostrarAlerta('danger', 'Error de conexión. Verifica tu acceso a internet.');
-                        console.error(err);
-                    } finally {
-                        btn.disabled = false;
-                        btn.innerHTML = `
-                <i class="fa fa-save me-1" />
-                Guardar registros`;
-                    }
-                });
-
-                // ── Helpers ──
-                function mostrarAlerta(tipo, mensaje) {
-                    const el = document.getElementById('alerta-resultado');
-                    el.className = `alert alert-${tipo} alert-dismissible`;
-                    el.innerHTML = `${mensaje}
-                <button type="button" class="btn-close" onclick="this.parentElement.classList.add('d-none')" />
-                `;
-                    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
-
-                function getCookie(name) {
-                    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-                    return match ? decodeURIComponent(match[2]) : null;
-                }
-            </script>
         </t>
     </template>
 </odoo>

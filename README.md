@@ -40,7 +40,7 @@ Limpieza → Ordenado → Digitalizado → Editado → Indexado
 |-----------|---------------|
 | Odoo | 17.0 Community o Enterprise |
 | Python | 3.10+ |
-| PostgreSQL | 14+ |
+| PostgreSQL | 15 |
 | Módulos Odoo dependientes | `base`, `contacts`, `website` |
 
 ---
@@ -570,4 +570,4 @@ docker restart odoo.17.otecglobal
 
 ---
 
-*Desarrollado en el marco de Práctica Profesional · OTEC GLOBAL · 2026*
+*Desarrollado como aporte de la Práctica Profesional · OTEC GLOBAL · 2026*

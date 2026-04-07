@@ -1,19 +1,17 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- ================================================================
          portal_proyecto_templates.xml
-         Detalle del proyecto para el Líder:
-         - Progreso hacia la meta
-         - Datos generales del proyecto
-         - Accesos rápidos: registrar producción y ver equipo
+         Vista detallada del proyecto para el Líder de Equipo.
+         Enfoque: Seguimiento de metas globales y accesos operativos.
          ================================================================ -->
     <template id="digitalizacion_portal_proyecto_detalle" name="Portal: detalle del proyecto">
         <t t-call="portal.portal_layout">
-            <!-- Notificaciones flash -->
+            <!-- Capa de Notificaciones -->
             <t t-if="notifications">
                 <div class="container mt-3">
                     <t t-foreach="notifications" t-as="notif">
-                        <div t-attf-class="alert alert-{{ notif['type'] }} alert-dismissible" role="alert">
+                        <div t-attf-class="alert alert-{{ notif['type'] }} alert-dismissible fade show border-0 shadow-sm" role="alert">
                             <t t-esc="notif['message']" />
                             <button type="button" class="btn-close" data-bs-dismiss="alert" />
                         </div>
@@ -21,128 +19,162 @@
                 </div>
             </t>
             <div class="container py-4">
-                <!-- Cabecera -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-                            <div>
-                                <h2 class="mb-1">
-                                    <t t-esc="proyecto.name" />
-                                </h2>
-                                <span t-attf-class="badge #{'bg-success' if proyecto.state == 'activo' else 'bg-secondary'}">
-                                    <t t-esc="'Activo' if proyecto.state == 'activo' else 'Inactivo'" />
-                                </span>
+                <!-- CABECERA DEL PROYECTO -->
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-primary bg-opacity-10 rounded-3 p-3">
+                                    <i class="fa fa-folder-open fa-2x text-primary" />
+                                </div>
+                                <div>
+                                    <h2 class="mb-1 fw-bold text-dark">
+                                        <t t-esc="proyecto.name" />
+                                    </h2>
+                                    <span t-attf-class="badge rounded-pill px-3 py-2 #{'bg-success' if proyecto.state == 'activo' else 'bg-secondary'}">
+                                        <i t-attf-class="fa #{'fa-check-circle' if proyecto.state == 'activo' else 'fa-pause-circle'} me-1" />
+                                        <t t-esc="'Estado: Activo' if proyecto.state == 'activo' else 'Estado: Inactivo'" />
+                                    </span>
+                                </div>
                             </div>
                             <!-- Acciones rápidas -->
-                            <div class="d-flex gap-2 flex-wrap">
-                                <a t-attf-href="/digitalizacion/v1/proyectos/{{ proyecto.id }}/form" class="btn btn-primary">
-                                    <i class="fa fa-plus me-1" />
-                                    Registrar producción
+                            <div class="d-flex gap-2">
+                                <a t-attf-href="/digitalizacion/v1/proyectos/{{ proyecto.id }}/form" class="btn btn-primary d-flex align-items-center px-3 shadow-sm">
+                                    <i class="fa fa-plus-circle me-1" />
+                                    <strong>Nueva Producción</strong>
                                 </a>
-                                <a t-attf-href="/digitalizacion/v1/proyectos/{{ proyecto.id }}/miembros" class="btn btn-outline-secondary">
-                                    <i class="fa fa-users me-1" />
-                                    Ver equipo
+                                <a t-attf-href="/digitalizacion/v1/proyectos/{{ proyecto.id }}/miembros" class="btn btn-white border d-flex align-items-center px-3 shadow-sm">
+                                    <i class="fa fa-users me-1 text-muted" />
+                                    Equipo
                                 </a>
                             </div>
                         </div>
                     </div>
                 </div>
-                <!-- Barra de progreso -->
-                <t t-if="proyecto.meta_escaneos &gt; 0">
-                    <div class="card mb-4">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-semibold">Progreso del proyecto</span>
-                                <span class="text-muted">
-                                    <t t-esc="proyecto.total_escaneos" />
-                                    /
-                                    <t t-esc="proyecto.meta_escaneos" />
-                                    escaneos
-                                    (
-                                    <t t-esc="'%.1f' % proyecto.progreso" />
-                                    %)
-                                </span>
-                            </div>
-                            <div class="progress" style="height: 20px;">
-                                <div t-attf-style="width: {{ min(proyecto.progreso, 100) }}%" t-attf-aria-valuenow="{{ proyecto.progreso }}" class="progress-bar bg-success" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                                    <t t-if="proyecto.progreso &gt;= 15">
+                <!-- SECCIÓN DE PROGRESO Y METAS -->
+                <t t-if="proyecto.meta_escaneos > 0">
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-end mb-3">
+                                <div>
+                                    <h6 class="text-uppercase text-muted fw-bold small mb-1 tracking-wider">Avance Global del Proyecto</h6>
+                                    <div class="h4 mb-0 fw-bold">
+                                        <t t-esc="proyecto.total_escaneos" />
+                                        <span class="text-muted fw-normal h6">
+                                            de
+                                            <t t-esc="proyecto.meta_escaneos" />
+                                            escaneos
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="h3 mb-0 fw-bold text-primary">
                                         <t t-esc="'%.1f' % proyecto.progreso" />
                                         %
-                                    </t>
+                                    </div>
+                                    <small class="text-muted fw-bold">COMPLETADO</small>
                                 </div>
+                            </div>
+                            <div class="progress shadow-sm" style="height: 12px; border-radius: 6px; background: #eef2f7;">
+                                <div t-attf-style="width: {{ min(proyecto.progreso, 100) }}%" t-att-aria-valuenow="proyecto.progreso" class="progress-bar progress-bar-striped progress-bar-animated bg-success rounded shadow-sm" role="progressbar" aria-valuemin="0" aria-valuemax="100" />
                             </div>
                         </div>
                     </div>
                 </t>
-                <!-- KPIs del proyecto -->
-                <div class="row g-3 mb-4">
+                <!-- MATRIZ DE KPI DETALLADO -->
+                <div class="row g-4 mb-4">
                     <div class="col-6 col-md-3">
-                        <div class="card text-center h-100">
-                            <div class="card-body">
-                                <div class="display-6 fw-bold text-primary">
+                        <div class="card text-center h-100 border-0 shadow-sm">
+                            <div class="card-body py-4">
+                                <div class="h2 fw-bold text-primary mb-1">
                                     <t t-esc="proyecto.total_miembros" />
                                 </div>
-                                <div class="text-muted small">Miembros activos</div>
+                                <div class="text-muted small fw-bold text-uppercase">Integrantes</div>
                             </div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
-                        <div class="card text-center h-100">
-                            <div class="card-body">
-                                <div class="display-6 fw-bold text-success">
+                        <div class="card text-center h-100 border-0 shadow-sm">
+                            <div class="card-body py-4">
+                                <div class="h2 fw-bold text-success mb-1">
                                     <t t-esc="proyecto.total_escaneos" />
                                 </div>
-                                <div class="text-muted small">Escaneos totales</div>
+                                <div class="text-muted small fw-bold text-uppercase">Escaneos</div>
                             </div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
-                        <div class="card text-center h-100">
-                            <div class="card-body">
-                                <div class="display-6 fw-bold text-info">
+                        <div class="card text-center h-100 border-0 shadow-sm text-decoration-none">
+                            <div class="card-body py-4">
+                                <div class="h2 fw-bold text-info mb-1">
                                     <t t-esc="proyecto.total_registros" />
                                 </div>
-                                <div class="text-muted small">Registros</div>
+                                <div class="text-muted small fw-bold text-uppercase">Producciones</div>
                             </div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
-                        <div class="card text-center h-100">
-                            <div class="card-body">
-                                <div class="display-6 fw-bold text-warning">
+                        <div class="card text-center h-100 border-0 shadow-sm">
+                            <div class="card-body py-4">
+                                <div class="h2 fw-bold text-warning mb-1">
                                     <t t-esc="proyecto.duracion_estimada or '—'" />
                                 </div>
-                                <div class="text-muted small">Días estimados</div>
+                                <div class="text-muted small fw-bold text-uppercase">Días Estimados</div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <!-- Datos del proyecto -->
-                <div class="card">
-                    <div class="card-header fw-semibold">Información del proyecto</div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <dl class="row mb-0">
-                                    <dt class="col-sm-5 text-muted">Fecha inicio</dt>
-                                    <dd class="col-sm-7">
-                                        <t t-esc="proyecto.fecha_inicio" />
-                                    </dd>
-                                    <dt class="col-sm-5 text-muted">Fecha fin est.</dt>
-                                    <dd class="col-sm-7">
-                                        <t t-esc="proyecto.fecha_fin_estimada or '—'" />
-                                    </dd>
-                                    <dt class="col-sm-5 text-muted">Meta escaneos</dt>
-                                    <dd class="col-sm-7">
-                                        <t t-esc="proyecto.meta_escaneos or '—'" />
-                                    </dd>
-                                </dl>
+                <!-- DETALLES ESTRUCTURALES -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-bottom py-3 px-4">
+                        <h6 class="mb-0 fw-bold text-dark">
+                            <i class="fa fa-info-circle text-primary me-2" />
+                            Configuración del Proyecto
+                        </h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-4">
+                            <div class="col-md-7 border-end-md">
+                                <div class="row g-3">
+                                    <div class="col-sm-6">
+                                        <div class="p-3 bg-light rounded-3">
+                                            <small class="text-muted d-block mb-1 fw-bold text-uppercase">Fecha de Inicio</small>
+                                            <span class="fw-semibold text-dark">
+                                                <t t-esc="proyecto.fecha_inicio" />
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="p-3 bg-light rounded-3">
+                                            <small class="text-muted d-block mb-1 fw-bold text-uppercase">Cierre Estimado</small>
+                                            <span class="fw-semibold text-dark">
+                                                <t t-esc="proyecto.fecha_fin_estimada or 'No definida'" />
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="p-3 bg-light rounded-3">
+                                            <small class="text-muted d-block mb-1 fw-bold text-uppercase">Meta de Producción</small>
+                                            <span class="fw-bold text-dark h5 mb-0">
+                                                <t t-esc="proyecto.meta_escaneos or 'Sin meta fija'" />
+                                            </span>
+                                            <span class="text-muted ms-1">escaneos totales</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div t-if="proyecto.description" class="col-md-6">
-                                <p class="text-muted small mb-1 fw-semibold">Descripción</p>
-                                <p class="mb-0">
-                                    <t t-esc="proyecto.description" />
-                                </p>
+                            <div class="col-md-5 ps-md-4">
+                                <t t-if="proyecto.description">
+                                    <h6 class="fw-bold text-muted small text-uppercase mb-2">Descripción del Proyecto</h6>
+                                    <div class="text-muted small lh-lg bg-light p-3 rounded-3" style="min-height: 100px;">
+                                        <t t-esc="proyecto.description" />
+                                    </div>
+                                </t>
+                                <t t-else="">
+                                    <div class="d-flex h-100 align-items-center justify-content-center border border-dashed rounded-3 p-4">
+                                        <span class="text-muted small">Sin descripción detallada</span>
+                                    </div>
+                                </t>
                             </div>
                         </div>
                     </div>

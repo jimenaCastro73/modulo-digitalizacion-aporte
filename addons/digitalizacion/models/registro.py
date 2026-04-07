@@ -39,6 +39,64 @@ from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
 
+# Límite superior razonable de producción por jornada (evita datos erróneos)
+_LIMITE_PRODUCCION_DIARIA = 999_999
+
+# ── Configuración por etapa ───────────────────────────────────────────────────
+#
+# Cada entrada del diccionario define:
+#   "palabras_clave" : lista de fragmentos que pueden aparecer en el nombre de etapa
+#   "campos_minimos": lista de campos — al menos uno debe ser > 0
+#   "campo_principal": campo que se usa como métrica de producción principal
+#   "unidad"        : etiqueta de la unidad para mostrar en reportes
+#   "limpiar_al_cambiar": campos que se resetean si la etapa ya no corresponde
+#
+# Esto centraliza la lógica que antes estaba en 3 if/elif distintos.
+# Si se agrega una nueva etapa, solo hay que agregar una entrada aquí.
+_CONFIG_POR_ETAPA = {
+    "digitalizado": {
+        "palabras_clave": ["digitalizado"],
+        "campos_minimos": ["total_escaneos", "total_folios"],
+        "campo_principal": "total_escaneos",
+        "unidad": "escaneos",
+        "limpiar_al_cambiar": ["total_escaneos", "tipo_escaner_ids"],
+        "mensaje_minimo": "Número de escaneos' o 'Cantidad de folios",
+    },
+    "editado": {
+        "palabras_clave": ["editado"],
+        "campos_minimos": ["expedientes_editados", "folios_editados"],
+        "campo_principal": "expedientes_editados",
+        "unidad": "exp. editados",
+        "limpiar_al_cambiar": ["expedientes_editados", "folios_editados"],
+        "mensaje_minimo": "Expedientes editados' o 'Folios editados",
+    },
+    "indexado": {
+        "palabras_clave": ["indexado"],
+        "campos_minimos": ["expedientes_indexados", "folios_indexados"],
+        "campo_principal": "expedientes_indexados",
+        "unidad": "exp. indexados",
+        "limpiar_al_cambiar": ["expedientes_indexados", "folios_indexados"],
+        "mensaje_minimo": "Expedientes indexados' o 'Folios indexados",
+    },
+    "limpieza_ordenado": {
+        "palabras_clave": ["limpieza", "ordenado"],
+        "campos_minimos": ["no_expedientes", "total_folios"],
+        "campo_principal": "no_expedientes",
+        "unidad": "expedientes",
+        "limpiar_al_cambiar": [],  # estos campos son comunes a varias etapas
+        "mensaje_minimo": "Expedientes' o 'Folios",
+    },
+}
+
+# Configuración por defecto cuando el nombre de etapa no encaja en ninguna
+_CONFIG_ETAPA_DEFAULT = {
+    "campo_principal": "total_folios",
+    "unidad": "folios",
+    "campos_minimos": [],
+    "limpiar_al_cambiar": [],
+    "mensaje_minimo": "",
+}
+
 
 class Registro(models.Model):
     _name = "digitalizacion.registro"
@@ -221,21 +279,41 @@ class Registro(models.Model):
 
     @api.constrains("miembro_id", "proyecto_id")
     def _check_miembro_pertenece_proyecto(self):
+        """
+        Verifica que el digitalizador pertenezca al mismo proyecto del registro.
+
+        Regla de negocio: no se puede registrar trabajo de un miembro
+        que pertenece a un proyecto distinto al del registro.
+        """
         for record in self:
-            if record.miembro_id and record.proyecto_id:
-                if record.miembro_id.proyecto_id.id != record.proyecto_id.id:
-                    raise ValidationError(
-                        _(
-                            "El digitalizador '%s' no pertenece al proyecto '%s'.",
-                            record.miembro_id.partner_id.name,
-                            record.proyecto_id.name,
-                        )
+            # Solo validamos si ambos campos tienen valor
+            hay_miembro_y_proyecto = record.miembro_id and record.proyecto_id
+            if not hay_miembro_y_proyecto:
+                continue
+
+            miembro_pertenece_al_proyecto = (
+                record.miembro_id.proyecto_id.id == record.proyecto_id.id
+            )
+            if not miembro_pertenece_al_proyecto:
+                raise ValidationError(
+                    _(
+                        "El digitalizador '%s' no pertenece al proyecto '%s'.",
+                        record.miembro_id.partner_id.name,
+                        record.proyecto_id.name,
                     )
+                )
 
     @api.constrains("miembro_id")
     def _check_miembro_activo(self):
+        """
+        Verifica que el digitalizador no tenga fecha de salida registrada.
+
+        Regla de negocio: un miembro que ya salió del equipo no puede
+        tener nuevos registros de trabajo.
+        """
         for record in self:
-            if record.miembro_id and record.miembro_id.fecha_salida:
+            miembro_ya_salio = record.miembro_id and record.miembro_id.fecha_salida
+            if miembro_ya_salio:
                 raise ValidationError(
                     _(
                         "'%s' tiene fecha de salida (%s). "
@@ -247,9 +325,16 @@ class Registro(models.Model):
 
     @api.constrains("fecha")
     def _check_fecha_no_futura(self):
+        """
+        La fecha del registro no puede ser futura.
+
+        Regla de negocio: los registros son de trabajo ya realizado,
+        no se permite anticipar producción.
+        """
         hoy = fields.Date.today()
         for record in self:
-            if record.fecha and record.fecha > hoy:
+            fecha_es_futura = record.fecha and record.fecha > hoy
+            if fecha_es_futura:
                 raise ValidationError(
                     _(
                         "La fecha (%s) no puede ser futura.",
@@ -267,30 +352,37 @@ class Registro(models.Model):
         "folios_indexados",
     )
     def _check_valores_positivos(self):
-        # Límite superior razonable: 999 999 unidades por jornada
-        _MAX = 999_999
-        campos = [
-            ("no_expedientes",       _("Cantidad de expedientes")),
-            ("total_folios",         _("Cantidad de folios")),
-            ("total_escaneos",       _("Número de escaneos")),
+        """
+        Valida que todos los campos numéricos de producción estén dentro
+        del rango permitido: entre 0 y _LIMITE_PRODUCCION_DIARIA.
+
+        El límite superior existe para detectar errores de tipeo,
+        por ejemplo: 9999999 en vez de 99.
+        """
+        campos_a_validar = [
+            ("no_expedientes", _("Cantidad de expedientes")),
+            ("total_folios", _("Cantidad de folios")),
+            ("total_escaneos", _("Número de escaneos")),
             ("expedientes_editados", _("Expedientes editados")),
-            ("folios_editados",      _("Folios editados")),
-            ("expedientes_indexados",_("Expedientes indexados")),
-            ("folios_indexados",     _("Folios indexados")),
+            ("folios_editados", _("Folios editados")),
+            ("expedientes_indexados", _("Expedientes indexados")),
+            ("folios_indexados", _("Folios indexados")),
         ]
         for record in self:
-            for campo, etiqueta in campos:
-                valor = getattr(record, campo)
+            for nombre_campo, etiqueta in campos_a_validar:
+                valor = getattr(record, nombre_campo)
                 if valor < 0:
                     raise ValidationError(
                         _("%s no puede ser negativo (valor: %d).", etiqueta, valor)
                     )
-                if valor > _MAX:
+                if valor > _LIMITE_PRODUCCION_DIARIA:
                     raise ValidationError(
                         _(
                             "%s supera el límite permitido de %d por jornada (valor: %d). "
                             "Verifica que el dato sea correcto.",
-                            etiqueta, _MAX, valor,
+                            etiqueta,
+                            _LIMITE_PRODUCCION_DIARIA,
+                            valor,
                         )
                     )
 
@@ -307,84 +399,91 @@ class Registro(models.Model):
     def _check_campos_minimos_por_etapa(self):
         """
         Valida que al menos un campo de producción esté informado según la etapa.
-        Usa etapa_id.name en minúsculas para no hardcodear IDs.
+
+        Usa el nombre de la etapa (en minúsculas) para identificar la
+        configuración, en vez de IDs. Esto hace el código más legible y
+        resistente a cambios de base de datos.
+
+        La configuración de cada etapa vive en _CONFIG_POR_ETAPA.
         """
         for record in self:
             if not record.etapa_id:
-                continue
-            nombre = (record.etapa_id.name or "").lower()
+                continue  # etapa vacía — otra constraint se encargará
 
-            if "digitalizado" in nombre:
-                if not (record.total_escaneos or record.total_folios):
-                    raise ValidationError(
-                        _(
-                            "La etapa '%s' requiere 'Número de escaneos' o 'Cantidad de folios'.",
-                            record.etapa_id.name,
-                        )
+            config = self._get_config_etapa(record.etapa_id.name)
+            campos_minimos = config.get("campos_minimos", [])
+
+            if not campos_minimos:
+                continue  # etapa sin requisitos mínimos definidos
+
+            # Verificar que al menos uno de los campos requeridos tenga valor
+            hay_al_menos_un_valor = any(
+                getattr(record, campo) for campo in campos_minimos
+            )
+            if not hay_al_menos_un_valor:
+                raise ValidationError(
+                    _(
+                        "La etapa '%s' requiere '%s'.",
+                        record.etapa_id.name,
+                        config.get("mensaje_minimo", ""),
                     )
-            elif "editado" in nombre:
-                if not (record.expedientes_editados or record.folios_editados):
-                    raise ValidationError(
-                        _(
-                            "La etapa '%s' requiere 'Expedientes editados' o 'Folios editados'.",
-                            record.etapa_id.name,
-                        )
-                    )
-            elif "indexado" in nombre:
-                if not (record.expedientes_indexados or record.folios_indexados):
-                    raise ValidationError(
-                        _(
-                            "La etapa '%s' requiere 'Expedientes indexados' o 'Folios indexados'.",
-                            record.etapa_id.name,
-                        )
-                    )
-            elif "limpieza" in nombre or "ordenado" in nombre:
-                if not (record.no_expedientes or record.total_folios):
-                    raise ValidationError(
-                        _(
-                            "La etapa '%s' requiere 'Expedientes' o 'Folios'.",
-                            record.etapa_id.name,
-                        )
-                    )
+                )
 
     @api.constrains("referencia_cajas")
     def _check_referencia_cajas(self):
         """
-        referencia_cajas es texto libre, pero si se ingresa debe:
-          - No ser solo espacios en blanco.
-          - Contener al menos una letra o un dígito (no solo símbolos).
+        Si se ingresa referencia de cajas, debe tener contenido útil.
+
+        Acepta texto libre ("BF202, BF199", "7 cajas aprox.") pero
+        rechaza strings que solo contengan espacios o símbolos.
         """
         for record in self:
-            ref = record.referencia_cajas
-            if ref is False or ref is None:
+            referencia = record.referencia_cajas
+
+            # Early return: campo vacío es válido (no es obligatorio)
+            if not referencia:
                 continue
-            ref_strip = ref.strip()
-            if not ref_strip:
+
+            referencia_limpia = referencia.strip()
+
+            if not referencia_limpia:
                 raise ValidationError(
-                    _("'Referencia de cajas' no puede contener solo espacios en blanco.")
+                    _(
+                        "'Referencia de cajas' no puede contener solo espacios en blanco."
+                    )
                 )
-            # Debe tener al menos un caracter alfanumérico
-            if not re.search(r'[\w\d]', ref_strip):
+
+            tiene_caracteres_utiles = re.search(r"[\w\d]", referencia_limpia)
+            if not tiene_caracteres_utiles:
                 raise ValidationError(
                     _(
                         "'Referencia de cajas' debe contener al menos una letra o número "
                         "(valor ingresado: '%s').",
-                        ref_strip,
+                        referencia_limpia,
                     )
                 )
 
     @api.constrains("observacion")
     def _check_observacion_longitud(self):
-        """La observación no debe superar los 2000 caracteres."""
-        _MAX_CHARS = 2000
+        """
+        La observación no debe superar los 2000 caracteres.
+
+        Límite definido para evitar entradas excessivamente largas
+        en la columna TEXT de PostgreSQL.
+        """
+        _MAX_CHARS_OBSERVACION = 2000
         for record in self:
-            if record.observacion and len(record.observacion) > _MAX_CHARS:
+            if not record.observacion:
+                continue
+            longitud_actual = len(record.observacion)
+            supera_limite = longitud_actual > _MAX_CHARS_OBSERVACION
+            if supera_limite:
                 raise ValidationError(
                     _(
                         "Las observaciones no pueden superar %d caracteres "
                         "(actual: %d).",
-                        _MAX_CHARS,
-                        len(record.observacion),
+                        _MAX_CHARS_OBSERVACION,
+                        longitud_actual,
                     )
                 )
 
@@ -392,6 +491,10 @@ class Registro(models.Model):
 
     @api.depends("lider_id", "miembro_id", "etapa_id", "fecha")
     def _compute_display_name(self):
+        """
+        Nombre de visualización del registro.
+        Formato: «Nombre Digitalizador · Etapa · Fecha»
+        """
         for record in self:
             miembro = record.miembro_id.partner_id.name or "?"
             etapa = record.etapa_id.name or "?"
@@ -410,89 +513,163 @@ class Registro(models.Model):
         "total_folios",
     )
     def _compute_produccion_principal(self):
+        """
+        Calcula la métrica de producción representativa según la etapa.
+
+        Cada etapa tiene un campo principal diferente:
+          - Digitalizado → total_escaneos
+          - Editado      → expedientes_editados
+          - Indexado     → expedientes_indexados
+          - Limpieza / Ordenado → no_expedientes
+          - Otros        → total_folios (valor genérico)
+
+        Delega la lógica de qué campo corresponde a _get_config_etapa(),
+        así solo hay un lugar donde mantener esas reglas.
+        """
         for record in self:
-            nombre = (record.etapa_id.name or "").lower()
-            if "digitalizado" in nombre:
-                record.produccion_principal = record.total_escaneos or 0
-                record.unidad_produccion = "escaneos"
-            elif "editado" in nombre:
-                record.produccion_principal = record.expedientes_editados or 0
-                record.unidad_produccion = "exp. editados"
-            elif "indexado" in nombre:
-                record.produccion_principal = record.expedientes_indexados or 0
-                record.unidad_produccion = "exp. indexados"
-            elif "limpieza" in nombre or "ordenado" in nombre:
-                record.produccion_principal = record.no_expedientes or 0
-                record.unidad_produccion = "expedientes"
-            else:
-                record.produccion_principal = record.total_folios or 0
-                record.unidad_produccion = "folios"
+            config = self._get_config_etapa(record.etapa_id.name)
+            campo_principal = config["campo_principal"]
+            record.produccion_principal = getattr(record, campo_principal) or 0
+            record.unidad_produccion = config["unidad"]
+
+    # ── Método extensible: configuración de etapa ─────────────────────────────
+
+    def _get_config_etapa(self, nombre_etapa):
+        """
+        Retorna la configuración de campos para una etapa dado su nombre.
+
+        Busca en _CONFIG_POR_ETAPA comparando el nombre (en minúsculas)
+        con las palabras clave de cada configuración.
+
+        Este método está pensado para ser sobreescrito por módulos que
+        necesiten agregar nuevas etapas con sus propias reglas de campos.
+
+        :param nombre_etapa: str, nombre de la etapa (ej: "Digitalizado")
+        :return: dict con las claves: campo_principal, unidad,
+                 campos_minimos, limpiar_al_cambiar, mensaje_minimo
+        """
+        nombre_minuscula = (nombre_etapa or "").lower()
+
+        for config in _CONFIG_POR_ETAPA.values():
+            for palabra_clave in config["palabras_clave"]:
+                if palabra_clave in nombre_minuscula:
+                    return config
+
+        # Si el nombre de etapa no coincide con ninguna configuración conocida
+        return _CONFIG_ETAPA_DEFAULT
 
     # ── Onchange ──────────────────────────────────────────────────────────────
 
     @api.onchange("etapa_id")
     def _onchange_etapa(self):
-        """Limpia campos que no corresponden a la etapa seleccionada."""
-        nombre = (self.etapa_id.name or "").lower() if self.etapa_id else ""
+        """
+        Limpia los campos que NO corresponden a la etapa seleccionada.
 
-        if "digitalizado" not in nombre:
-            self.total_escaneos = 0
-            self.tipo_escaner_ids = [(5, 0, 0)]
-        if "editado" not in nombre:
-            self.expedientes_editados = 0
-            self.folios_editados = 0
-        if "indexado" not in nombre:
-            self.expedientes_indexados = 0
-            self.folios_indexados = 0
-        # Limpiar campos de caja solo si la etapa no los usa
-        if not any(e in nombre for e in ("limpieza", "ordenado", "digitalizado")):
+        Cuando el líder cambia la etapa en el formulario, los campos
+        de otras etapas se resetean para evitar datos inconsistentes
+        (ej: dejar escaneos llenos al cambiar a Editado).
+
+        Usa _get_config_etapa() para saber qué campos limpiar.
+        """
+        if not self.etapa_id:
+            return
+
+        config_actual = self._get_config_etapa(self.etapa_id.name)
+        campos_que_usa_esta_etapa = set(config_actual.get("limpiar_al_cambiar", []))
+
+        # Limpiar campos de cada etapa que no sea la actual
+        for config in _CONFIG_POR_ETAPA.values():
+            for campo in config.get("limpiar_al_cambiar", []):
+                if campo not in campos_que_usa_esta_etapa:
+                    if campo == "tipo_escaner_ids":
+                        setattr(self, campo, [(5, 0, 0)])
+                    else:
+                        setattr(self, campo, 0)
+
+        # Si la etapa no es de tipo caja, limpiar referencia_cajas y no_expedientes
+        etapas_que_usan_cajas = {"limpieza", "ordenado", "digitalizado"}
+        etapa_usa_cajas = any(
+            palabra in (self.etapa_id.name or "").lower()
+            for palabra in etapas_que_usan_cajas
+        )
+        if not etapa_usa_cajas:
             self.referencia_cajas = False
             self.no_expedientes = 0
 
     @api.onchange("proyecto_id")
     def _onchange_proyecto_limpiar_miembro(self):
-        """Al cambiar el proyecto limpia miembro_id y retorna domain actualizado."""
+        """
+        Al cambiar el proyecto, limpia el digitalizador seleccionado.
+
+        También retorna el dominio actualizado para que el selector de
+        miembro solo muestre los que pertenecen al nuevo proyecto y
+        no tienen fecha de salida.
+        """
         self.miembro_id = False
-        if self.proyecto_id:
-            return {
-                "domain": {
-                    "miembro_id": [
-                        ("proyecto_id", "=", self.proyecto_id.id),
-                        ("active", "=", True),
-                        ("fecha_salida", "=", False),
-                    ]
-                }
+
+        if not self.proyecto_id:
+            return
+
+        return {
+            "domain": {
+                "miembro_id": [
+                    ("proyecto_id", "=", self.proyecto_id.id),
+                    ("active", "=", True),
+                    ("fecha_salida", "=", False),
+                ]
             }
+        }
 
     # ── Overrides CRUD ────────────────────────────────────────────────────────
 
     @api.model_create_multi
     def create(self, vals_list):
-        """Fuerza lider_id y hora con valores del servidor."""
-        lider_id = self.env.user.id
-        ahora = fields.Datetime.now()
+        """
+        Fuerza que lider_id y hora sean siempre los del servidor.
+
+        El líder no puede elegir el usuario — siempre se asigna el usuario
+        en sesión. Así se garantiza la auditoría de quién hizo el registro.
+        """
+        usuario_actual = self.env.user.id
+        momento_de_creacion = fields.Datetime.now()
+
         for vals in vals_list:
-            vals["lider_id"] = lider_id
+            vals["lider_id"] = usuario_actual
             if not vals.get("hora"):
-                vals["hora"] = ahora
+                vals["hora"] = momento_de_creacion
+
         return super().create(vals_list)
 
     def write(self, vals):
-        """Impide que lider_id sea modificado después de la creación."""
-        if "lider_id" in vals:
+        """
+        Impide que lider_id sea modificado después de la creación.
+
+        Si se intenta cambiar lider_id (por ejemplo, desde código externo),
+        se ignora silenciosamente y se registra un warning para el admin.
+        """
+        intento_cambiar_lider = "lider_id" in vals
+        if intento_cambiar_lider:
             vals.pop("lider_id")
             _logger.warning(
                 "Intento de modificar lider_id en registro(s) %s. Ignorado.",
                 self.ids,
             )
+
         return super().write(vals)
 
     # ── Métodos de negocio ────────────────────────────────────────────────────
 
     def action_duplicar_para_hoy(self):
-        """Duplica el registro cambiando la fecha a hoy."""
+        """
+        Duplica este registro cambiando la fecha a hoy.
+
+        Útil cuando el líder quiere registrar el mismo equipo
+        y las mismas cantidades que el día anterior.
+
+        :return: action que abre el registro duplicado en modo formulario
+        """
         self.ensure_one()
-        nuevo = self.copy(
+        nuevo_registro = self.copy(
             default={
                 "fecha": fields.Date.today(),
                 "hora": fields.Datetime.now(),
@@ -502,7 +679,7 @@ class Registro(models.Model):
             "type": "ir.actions.act_window",
             "name": _("Registro duplicado"),
             "res_model": "digitalizacion.registro",
-            "res_id": nuevo.id,
+            "res_id": nuevo_registro.id,
             "view_mode": "form",
             "target": "current",
         }
@@ -512,20 +689,20 @@ class Registro(models.Model):
     @api.model
     def get_kpis_lider(self, lider_id, domain_extra=None):
         """
-        KPIs del dashboard para el líder.
-        Usa _read_group para que la suma ocurra en PostgreSQL.
+        Calcula los KPIs del dashboard para el líder usando una sola query SQL.
 
-        Retorna:
-            {
-                "escaneos":        int,
-                "folios_fisicos":  int,
-                "exp_indexados":   int,
-                "total_registros": int,
-            }
+        Usa _read_group con agregaciones para que la suma ocurra
+        en PostgreSQL, no en Python (mucho más eficiente).
+
+        :param lider_id: int, ID del usuario líder
+        :param domain_extra: lista de tuplas de dominio adicional (filtros de fecha, proyecto)
+        :return: dict con claves escaneos, folios_fisicos, exp_indexados, total_registros
         """
-        domain = [("lider_id", "=", lider_id)] + (domain_extra or [])
-        data = self.sudo()._read_group(
-            domain=domain,
+        dominio_base = [("lider_id", "=", lider_id)]
+        dominio_completo = dominio_base + (domain_extra or [])
+
+        resultados = self.sudo()._read_group(
+            domain=dominio_completo,
             groupby=[],
             aggregates=[
                 "total_escaneos:sum",
@@ -534,38 +711,50 @@ class Registro(models.Model):
                 "__count",
             ],
         )
-        if data:
-            escaneos, folios, indexados, total = data[0]
+
+        if resultados:
+            escaneos, folios, indexados, total_registros = resultados[0]
         else:
-            escaneos, folios, indexados, total = 0, 0, 0, 0
+            escaneos, folios, indexados, total_registros = 0, 0, 0, 0
+
         return {
             "escaneos": escaneos or 0,
             "folios_fisicos": folios or 0,
             "exp_indexados": indexados or 0,
-            "total_registros": total,
+            "total_registros": total_registros,
         }
 
     @api.model
     def get_resumen_por_etapa(self, proyecto_id):
         """
-        Resumen de producción agrupado por etapa para un proyecto.
-        Usado en el dashboard del backend.
+        Resumen de producción agrupada por etapa para un proyecto.
 
-        Retorna:
-            [{"etapa": "Digitalizado", "total": 1840, "unidad": "escaneos"}, ...]
+        Utilizado en el dashboard del backend para mostrar cuánto
+        se ha producido en cada etapa del proceso.
+
+        :param proyecto_id: int, ID del proyecto
+        :return: lista de dicts [{"etapa": str, "total": int, "unidad": str}, ...]
         """
-        registros = self.sudo().search([("proyecto_id", "=", proyecto_id)])
-        resumen = {}
-        for record in registros:
-            etapa = record.etapa_id.name or "Sin etapa"
-            if etapa not in resumen:
-                resumen[etapa] = {
-                    "etapa": etapa,
+        registros_del_proyecto = self.sudo().search([("proyecto_id", "=", proyecto_id)])
+        resumen_por_etapa = {}
+
+        for registro in registros_del_proyecto:
+            nombre_etapa = registro.etapa_id.name or "Sin etapa"
+
+            if nombre_etapa not in resumen_por_etapa:
+                resumen_por_etapa[nombre_etapa] = {
+                    "etapa": nombre_etapa,
                     "total": 0,
-                    "unidad": record.unidad_produccion,
+                    "unidad": registro.unidad_produccion,
                 }
-            resumen[etapa]["total"] += record.produccion_principal or 0
-        return sorted(resumen.values(), key=lambda x: x["etapa"])
+            resumen_por_etapa[nombre_etapa]["total"] += (
+                registro.produccion_principal or 0
+            )
+
+        return sorted(
+            resumen_por_etapa.values(),
+            key=lambda resumen_etapa: resumen_etapa["etapa"],
+        )
 
     @api.model
     def get_participacion_equipo(self, proyecto_id):
@@ -592,7 +781,7 @@ class Registro(models.Model):
             ],
         }
         """
-        # Una sola query agrupada por miembro y etapa
+        # Una sola query agrupada por miembro y etapa (evita N+1 queries)
         datos = self.sudo()._read_group(
             domain=[("proyecto_id", "=", proyecto_id)],
             groupby=["miembro_id", "etapa_id"],
@@ -600,46 +789,55 @@ class Registro(models.Model):
         )
 
         # Etapas en orden de sequence (para columnas y leyenda)
-        etapas_orden = (
+        etapas_en_orden = (
             self.env["digitalizacion.etapa"]
             .sudo()
             .search([("active", "=", True)], order="sequence asc")
             .mapped("name")
         )
 
-        # Construir mapa { miembro_id: { etapa_nombre: count } }
-        mapa = {}
-        for miembro, etapa, count in datos:
-            mid = miembro.id
-            if mid not in mapa:
-                mapa[mid] = {
+        # Construir mapa { miembro_id: { etapa_nombre: cantidad } }
+        participacion_por_miembro = {}
+        for miembro, etapa, cantidad in datos:
+            miembro_key = miembro.id
+            if miembro_key not in participacion_por_miembro:
+                participacion_por_miembro[miembro_key] = {
                     "nombre": miembro.partner_id.name or miembro.display_name,
                     "por_etapa": {},
                     "total": 0,
                 }
-            etapa_nombre = etapa.name or "Sin etapa"
-            mapa[mid]["por_etapa"][etapa_nombre] = count
-            mapa[mid]["total"] += count
+            nombre_etapa = etapa.name or "Sin etapa"
+            participacion_por_miembro[miembro_key]["por_etapa"][nombre_etapa] = cantidad
+            participacion_por_miembro[miembro_key]["total"] += cantidad
 
-        # Ordenar por total descendente
+        # Ordenar de mayor a menor participación total
         miembros_ordenados = sorted(
-            mapa.values(), key=lambda m: m["total"], reverse=True
+            participacion_por_miembro.values(),
+            key=lambda datos_miembro: datos_miembro["total"],
+            reverse=True,
         )
 
-        # Agregar segmentos para las barras apiladas CSS en QWeb
-        for m in miembros_ordenados:
-            total = m["total"] or 1
-            m["segmentos"] = [
+        # Agregar segmentos para las barras apiladas en QWeb
+        for datos_miembro in miembros_ordenados:
+            # Evitar división por cero si el total fuera 0
+            total_para_porcentaje = datos_miembro["total"] or 1
+            datos_miembro["segmentos"] = [
                 {
-                    "etapa": etapa,
-                    "count": m["por_etapa"].get(etapa, 0),
-                    "pct": round((m["por_etapa"].get(etapa, 0) / total) * 100),
+                    "etapa": nombre_etapa,
+                    "count": datos_miembro["por_etapa"].get(nombre_etapa, 0),
+                    "pct": round(
+                        (
+                            datos_miembro["por_etapa"].get(nombre_etapa, 0)
+                            / total_para_porcentaje
+                        )
+                        * 100
+                    ),
                 }
-                for etapa in etapas_orden
-                if m["por_etapa"].get(etapa, 0) > 0
+                for nombre_etapa in etapas_en_orden
+                if datos_miembro["por_etapa"].get(nombre_etapa, 0) > 0
             ]
 
         return {
-            "etapas": etapas_orden,
+            "etapas": etapas_en_orden,
             "miembros": miembros_ordenados,
         }
