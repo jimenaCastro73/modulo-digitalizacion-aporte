@@ -226,9 +226,13 @@ Table digitalizacion_registro {
   expedientes_indexados   int       [default: 0, note: 'Expedientes indexados. Rango: 0 – 999 999.']
   folios_indexados        int       [default: 0, note: 'Folios indexados. Rango: 0 – 999 999.']
 
-  // --- Computados (no almacenados) ---
-  produccion_principal    int       [note: 'COMPUTE: métrica principal según etapa']
-  unidad_produccion       varchar   [note: 'COMPUTE: expedientes | folios | escaneos | exp. editados | exp. indexados']
+  // --- Computados y Relacionados (Almacenados en DB) ---
+  produccion_principal    int       [note: 'COMPUTE (stored): métrica principal según etapa']
+  unidad_produccion       varchar   [note: 'COMPUTE (stored): unidades de producción']
+  miembro_nombre          varchar   [note: 'RELATED (stored): partner_id.name']
+  proyecto_nombre         varchar   [note: 'RELATED (stored): proyecto_id.name']
+  etapa_nombre            varchar   [note: 'RELATED (stored): etapa_id.name']
+  lider_nombre            varchar   [note: 'RELATED (stored): lider_id.name']
 
   // --- Auditoría Odoo ---
   create_date             timestamp

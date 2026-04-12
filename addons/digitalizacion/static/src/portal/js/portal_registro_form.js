@@ -27,16 +27,16 @@ export class RegistroForm extends Component {
             <!-- Jumbotron de Producción -->
             <div class="d-flex flex-column flex-md-row align-items-md-end justify-content-between mb-4 gap-3 bg-white p-4 rounded-4 shadow-sm border border-light">
                 <div>
-                   <h2 class="h4 mb-1 fw-bold text-dark text-uppercase tracking-tight">Registro de Producción Diaria</h2>
+                   <h1 class="h4 mb-1 fw-bold text-dark text-uppercase tracking-tight">Registro de Producción Diaria</h1>
                    <p class="text-muted small mb-0 fw-medium">Reporte de avance y métricas de digitalización de documentos.</p>
                 </div>
                 <div class="d-flex align-items-center gap-3">
-                    <label class="small fw-bold text-dark text-uppercase mb-0 opacity-75">Fecha reportada:</label>
-                    <input t-att-max="this._getToday()" t-model="state.fecha" type="date" class="form-control form-control-sm border-light shadow-none bg-light p-2 ps-3 fw-bold rounded-3" style="width: 170px;"/>
+                    <label for="fecha_reporte" class="small fw-bold text-dark text-uppercase mb-0 opacity-75">Fecha reportada:</label>
+                    <input id="fecha_reporte" name="fecha_reporte" t-att-max="this._getToday()" t-model="state.fecha" type="date" class="form-control form-control-sm border-light shadow-none bg-light p-2 ps-3 fw-bold rounded-3" style="width: 170px;"/>
                 </div>
             </div>
 
-            <!-- Listado de Fals por Producción -->
+            <!-- Listado de Filas por Producción -->
             <div class="o_digitalizacion_cards_list">
                 <t t-foreach="state.filas" t-as="fila" t-key="fila.id">
                     <t t-set="reglas" t-value="this.getVisibleColumns(fila.etapa_id)"/>
@@ -44,8 +44,8 @@ export class RegistroForm extends Component {
                         <div class="card-header d-flex justify-content-between align-items-center py-3 border-0 bg-white">
                             <div class="d-flex align-items-center flex-wrap gap-3 flex-grow-1">
                                 <div class="input-group input-group-sm w-auto shadow-sm rounded-3 overflow-hidden border border-light">
-                                    <span class="input-group-text border-0 bg-white text-muted px-3 small fw-bold text-uppercase">Digitalizador</span>
-                                    <select t-model.number="fila.miembro_id" class="form-select border-0 px-2 pe-4 fw-bold text-dark">
+                                    <label t-attf-for="miembro_{{fila.id}}" class="input-group-text border-0 bg-white text-muted px-3 small fw-bold text-uppercase">Digitalizador</label>
+                                    <select t-attf-id="miembro_{{fila.id}}" t-attf-name="miembro_{{fila.id}}" t-model.number="fila.miembro_id" class="form-select border-0 px-2 pe-4 fw-bold text-dark">
                                         <option value="">Seleccionar integrante del equipo...</option>
                                         <t t-foreach="props.miembros" t-as="m" t-key="m.id">
                                             <option t-att-value="m.id" t-esc="m.name"/>
@@ -53,8 +53,8 @@ export class RegistroForm extends Component {
                                     </select>
                                 </div>
                                 <div class="input-group input-group-sm w-auto shadow-sm rounded-3 overflow-hidden border border-light">
-                                    <span t-attf-class="input-group-text border-0 text-white px-3 fw-bold small text-uppercase {{ fila.etapa_id ? 'bg-primary' : 'bg-secondary opacity-50' }}">Etapa</span>
-                                    <select t-model.number="fila.etapa_id" t-on-change="() => this.onEtapaChange(fila)" t-attf-class="form-select border-0 px-2 pe-4 fw-bold {{ fila.etapa_id ? 'text-primary' : 'text-muted' }}">
+                                    <label t-attf-for="etapa_{{fila.id}}" t-attf-class="input-group-text border-0 text-white px-3 fw-bold small text-uppercase {{ fila.etapa_id ? 'bg-primary' : 'bg-secondary opacity-50' }}">Etapa</label>
+                                    <select t-attf-id="etapa_{{fila.id}}" t-attf-name="etapa_{{fila.id}}" t-model.number="fila.etapa_id" t-on-change="() => this.onEtapaChange(fila)" t-attf-class="form-select border-0 px-2 pe-4 fw-bold {{ fila.etapa_id ? 'text-primary' : 'text-muted' }}">
                                         <option value="">— Elegir etapa actual —</option>
                                         <t t-foreach="props.etapas" t-as="e" t-key="e.id">
                                             <option t-att-value="e.id" t-esc="e.name"/>
@@ -62,7 +62,7 @@ export class RegistroForm extends Component {
                                     </select>
                                 </div>
                             </div>
-                            <button t-on-click="() => this.removeRow(fila.id)" type="button" class="btn btn-sm btn-link text-danger border-0 p-2 opacity-50-hover"><i class="fa fa-trash-o fa-lg"/></button>
+                            <button t-on-click="() => this.removeRow(fila.id)" type="button" class="btn btn-sm btn-link text-danger border-0 p-2 opacity-50-hover" t-attf-aria-label="Eliminar fila {{fila.id}}"><i class="fa fa-trash-o fa-lg" aria-hidden="true"/></button>
                         </div>
 
                         <div class="card-body bg-white pt-1">
@@ -75,22 +75,22 @@ export class RegistroForm extends Component {
                                         <div class="row g-3">
                                             <div t-if="reglas.caja" class="col-12">
                                                 <div class="input-group input-group-sm">
-                                                    <span class="input-group-text bg-light border-light text-muted small px-3">REFERENCIA:</span>
-                                                    <input t-model="fila.referencia_cajas" type="text" class="form-control border-light shadow-none bg-light fw-medium" placeholder="Referencia de cajas procesadas…"/>
+                                                    <label t-attf-for="ref_{{fila.id}}" class="input-group-text bg-light border-light text-muted small px-3">REFERENCIA:</label>
+                                                    <input t-attf-id="ref_{{fila.id}}" t-attf-name="ref_{{fila.id}}" t-model="fila.referencia_cajas" type="text" class="form-control border-light shadow-none bg-light fw-medium" placeholder="Referencia de cajas procesadas…"/>
                                                 </div>
                                             </div>
                                             <div t-if="reglas.expedientes" class="col-6">
-                                                <label class="text-muted small fw-bold mb-1 d-block pe-none">Cantidad de expedientes</label>
-                                                <input t-model.number="fila.no_expedientes" type="number" class="form-control border-light shadow-none bg-light p-2 text-center" placeholder="0"/>
+                                                <label t-attf-for="exp_{{fila.id}}" class="text-muted small fw-bold mb-1 d-block">Cantidad de expedientes</label>
+                                                <input t-attf-id="exp_{{fila.id}}" t-attf-name="exp_{{fila.id}}" t-model.number="fila.no_expedientes" type="number" class="form-control border-light shadow-none bg-light p-2 text-center" placeholder="0"/>
                                             </div>
                                             <div t-if="reglas.folios" class="col-6">
-                                                <label class="text-muted small fw-bold mb-1 d-block pe-none">Cantidad de folios</label>
-                                                <input t-model.number="fila.total_folios" type="number" class="form-control border-light shadow-none bg-light p-2 text-center" placeholder="0"/>
+                                                <label t-attf-for="fol_{{fila.id}}" class="text-muted small fw-bold mb-1 d-block">Cantidad de folios</label>
+                                                <input t-attf-id="fol_{{fila.id}}" t-attf-name="fol_{{fila.id}}" t-model.number="fila.total_folios" type="number" class="form-control border-light shadow-none bg-light p-2 text-center" placeholder="0"/>
                                             </div>
                                             <div t-if="reglas.escaneos" class="col-12 mt-2">
                                                 <div class="bg-light p-3 rounded-4 text-center border border-light shadow-sm">
-                                                    <span class="text-primary small fw-bold text-uppercase d-block mb-1">Número de escaneos realizados</span>
-                                                    <input t-model.number="fila.total_escaneos" type="number" class="form-control form-control-lg border-0 bg-transparent text-center text-primary fw-bold shadow-none p-0" placeholder="0"/>
+                                                    <label t-attf-for="esc_{{fila.id}}" class="text-primary small fw-bold text-uppercase d-block mb-1">Número de escaneos realizados</label>
+                                                    <input t-attf-id="esc_{{fila.id}}" t-attf-name="esc_{{fila.id}}" t-model.number="fila.total_escaneos" type="number" class="form-control form-control-lg border-0 bg-transparent text-center text-primary fw-bold shadow-none p-0" placeholder="0"/>
                                                 </div>
                                             </div>
                                         </div>
@@ -103,20 +103,20 @@ export class RegistroForm extends Component {
                                         <div class="o_digitalizacion_section_label text-primary text-opacity-75">Control de Calidad e Indexación</div>
                                         <div class="row g-3">
                                             <div t-if="reglas.expEditados" class="col-6">
-                                                <label class="text-muted small fw-bold mb-1 d-block pe-none">Expedientes editados</label>
-                                                <input t-model.number="fila.expedientes_editados" type="number" class="form-control border-light shadow-none bg-light p-2 text-center" placeholder="0"/>
+                                                <label t-attf-for="edit_exp_{{fila.id}}" class="text-muted small fw-bold mb-1 d-block">Expedientes editados</label>
+                                                <input t-attf-id="edit_exp_{{fila.id}}" t-attf-name="edit_exp_{{fila.id}}" t-model.number="fila.expedientes_editados" type="number" class="form-control border-light shadow-none bg-light p-2 text-center" placeholder="0"/>
                                             </div>
                                             <div t-if="reglas.foliosEditados" class="col-6">
-                                                <label class="text-muted small fw-bold mb-1 d-block pe-none">Folios editados</label>
-                                                <input t-model.number="fila.folios_editados" type="number" class="form-control border-light shadow-none bg-light p-2 text-center" placeholder="0"/>
+                                                <label t-attf-for="edit_fol_{{fila.id}}" class="text-muted small fw-bold mb-1 d-block">Folios editados</label>
+                                                <input t-attf-id="edit_fol_{{fila.id}}" t-attf-name="edit_fol_{{fila.id}}" t-model.number="fila.folios_editados" type="number" class="form-control border-light shadow-none bg-light p-2 text-center" placeholder="0"/>
                                             </div>
                                             <div t-if="reglas.expIndexados" class="col-6">
-                                                <label class="text-primary-emphasis small fw-bold mb-1 d-block pe-none">Expedientes indexados</label>
-                                                <input t-model.number="fila.expedientes_indexados" type="number" class="form-control border-light shadow-none bg-light p-2 text-center" placeholder="0"/>
+                                                <label t-attf-for="ind_exp_{{fila.id}}" class="text-primary-emphasis small fw-bold mb-1 d-block">Expedientes indexados</label>
+                                                <input t-attf-id="ind_exp_{{fila.id}}" t-attf-name="ind_exp_{{fila.id}}" t-model.number="fila.expedientes_indexados" type="number" class="form-control border-light shadow-none bg-light p-2 text-center" placeholder="0"/>
                                             </div>
                                             <div t-if="reglas.foliosIndexados" class="col-6">
-                                                <label class="text-primary-emphasis small fw-bold mb-1 d-block pe-none">Folios indexados</label>
-                                                <input t-model.number="fila.folios_indexados" type="number" class="form-control border-light shadow-none bg-light p-2 text-center" placeholder="0"/>
+                                                <label t-attf-for="ind_fol_{{fila.id}}" class="text-primary-emphasis small fw-bold mb-1 d-block">Folios indexados</label>
+                                                <input t-attf-id="ind_fol_{{fila.id}}" t-attf-name="ind_fol_{{fila.id}}" t-model.number="fila.folios_indexados" type="number" class="form-control border-light shadow-none bg-light p-2 text-center" placeholder="0"/>
                                             </div>
                                         </div>
                                     </div>
@@ -127,8 +127,8 @@ export class RegistroForm extends Component {
                                     <div class="o_digitalizacion_section_label">Equipos de Escaneo Utilizados</div>
                                     <div class="d-flex flex-wrap gap-2 py-1">
                                         <t t-foreach="props.escaneres" t-as="escaner" t-key="escaner.id">
-                                            <label class="o_digitalizacion_escaner_chip mb-0 m-1">
-                                                <input type="checkbox" class="d-none" t-att-checked="(fila.tipo_escaner_ids || []).includes(escaner.id)" t-on-change="(ev) => this.onEscanerToggle(fila, escaner.id, ev.target.checked)"/>
+                                            <label t-attf-for="scanner_{{fila.id}}_{{escaner.id}}" class="o_digitalizacion_escaner_chip mb-0 m-1">
+                                                <input t-attf-id="scanner_{{fila.id}}_{{escaner.id}}" t-attf-name="scanner_{{fila.id}}_{{escaner.id}}" type="checkbox" class="d-none" t-att-checked="(fila.tipo_escaner_ids || []).includes(escaner.id)" t-on-change="(ev) => this.onEscanerToggle(fila, escaner.id, ev.target.checked)"/>
                                                 <span class="fw-bold fs-small"><i t-attf-class="fa fa-hdd-o me-2" /> <t t-esc="escaner.name"/></span>
                                             </label>
                                         </t>
@@ -137,8 +137,8 @@ export class RegistroForm extends Component {
 
                                 <div class="col-12 mt-4">
                                     <div class="rounded-3 bg-light p-1 px-3 d-flex align-items-center border border-light">
-                                       <i class="fa fa-commenting-o text-muted me-2 opacity-75 small"/>
-                                       <input t-model="fila.observacion" type="text" class="form-control form-control-sm border-0 bg-transparent shadow-none small fw-medium text-dark" placeholder="Opcional: Indicar observaciones o incidencias de la producción…"/>
+                                       <label t-attf-for="obs_{{fila.id}}" class="fa fa-commenting-o text-muted me-2 opacity-75 small" aria-hidden="true"></label>
+                                       <input t-attf-id="obs_{{fila.id}}" t-attf-name="obs_{{fila.id}}" t-model="fila.observacion" type="text" class="form-control form-control-sm border-0 bg-transparent shadow-none small fw-medium text-dark" placeholder="Opcional: Indicar observaciones o incidencias de la producción…"/>
                                     </div>
                                 </div>
                             </div>

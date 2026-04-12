@@ -518,6 +518,13 @@ modulo-digitalizacion-aporte/
 │               ├── portal_proyecto_templates.xml
 │               ├── portal_registro_form_templates.xml
 │               └── website_menu.xml
+├── static/
+│   └── src/
+│       └── portal/
+│           ├── js/
+│           │   └── portal_registro_form.js
+│           └── css/
+│               └── portal_digitalizacion.css
 ├── docker-compose.yaml
 ├── odoo.conf
 └── README.md
@@ -565,7 +572,9 @@ docker restart odoo.17.otecglobal
 
 - **Odoo 17 — sintaxis de vistas:** Se usan expresiones Python directas en `invisible=""` en lugar del objeto `attrs={}` deprecado.
 - **QWeb — operadores en XML:** Los operadores `>`, `>=`, `<`, `<=` dentro de atributos `t-if` o bloques `<script>` **deben escaparse** (`&gt;`, `&lt;`).
-- **Portal — fetch nativo:** El formulario de registro usa `fetch()` nativo con CSRF token de Odoo, sin `odoo.define` ni `web.rpc` (deprecados en portal Odoo 17).
+- **Framework OWL (Odoo Web Library):** El formulario de registro ha sido modernizado utilizando OWL, el framework reactivo de Odoo. Esto permite una gestión dinámica de múltiples filas, estados reactivos para la visibilidad de campos por etapa y validaciones en tiempo real sin recargar la página.
+- **Portal — fetch nativo:** El componente OWL utiliza `fetch()` nativo con CSRF token de Odoo para comunicarse con la API, eliminando dependencias de métodos legacy.
+- **Iconos — FontAwesome 6:** En Odoo 17 se deben utilizar las clases `fa-solid` (para FA 6) y etiquetas de cierre explícito `</i>` para garantizar el renderizado correcto en el portal.
 - **lider_id en registros:** El campo `lider_id` se asigna automáticamente en `create()` al usuario en sesión y no puede modificarse mediante `write()`.
 
 ---

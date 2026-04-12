@@ -24,16 +24,14 @@
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                             <div class="d-flex align-items-center gap-3">
-                                <div class="bg-primary bg-opacity-10 rounded-3 p-3">
-                                    <i class="fa fa-folder-open fa-2x text-primary" />
-                                </div>
+                                <i class="fa fa-folder-open fa-3x text-primary me-3"></i>
                                 <div>
                                     <h2 class="mb-1 fw-bold text-dark">
                                         <t t-esc="proyecto.name" />
                                     </h2>
                                     <span t-attf-class="badge rounded-pill px-3 py-2 #{'bg-success' if proyecto.state == 'activo' else 'bg-secondary'}">
-                                        <i t-attf-class="fa #{'fa-check-circle' if proyecto.state == 'activo' else 'fa-pause-circle'} me-1" />
-                                        <t t-esc="'Estado: Activo' if proyecto.state == 'activo' else 'Estado: Inactivo'" />
+                                        <i t-attf-class="fa #{'fa-check-circle' if proyecto.state == 'activo' else 'fa-pause-circle'} me-1"></i>        
+                                        <t t-esc="'Estado: Activo' if proyecto.state == 'activo' else 'Estado: Inactivo'"/>
                                     </span>
                                 </div>
                             </div>
