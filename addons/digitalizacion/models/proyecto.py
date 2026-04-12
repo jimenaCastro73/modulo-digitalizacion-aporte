@@ -8,7 +8,7 @@ from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
 
-class Proyecto(models.Model):
+class DigitalizacionProyecto(models.Model):
     _name = "digitalizacion.proyecto"
     _description = "Proyecto de Digitalización"
     _order = "fecha_inicio desc, name asc"
@@ -45,21 +45,24 @@ class Proyecto(models.Model):
         help="Fecha estimada de finalización.",
     )
 
-    duracion_estimada = fields.Integer(
+    duracion_estimada = fields.Float(
         string="Duración estimada (días)",
         compute="_compute_duracion_estimada",
         store=True,
+        group_operator="sum",
         help="Días entre fecha_inicio y fecha_fin_estimada.",
     )
 
     state = fields.Selection(
         string="Estado",
         selection=[
-            ("activo", "Activo"),
-            ("inactivo", "Inactivo"),
+            ("en_curso", "En curso"),
+            ("pausado", "Pausa / Standby"),
+            ("finalizado", "Finalizado"),
         ],
         required=True,
-        default="activo",
+        default="en_curso",
+        help="Estado del proyecto: En curso (activo), Pausado (standby) o Finalizado.",
     )
 
     active = fields.Boolean(
@@ -70,12 +73,14 @@ class Proyecto(models.Model):
 
     color = fields.Integer(
         string="Color Index",
+        store=False,
         help="Color para la vista Kanban.",
     )
 
     meta_escaneos = fields.Integer(
         string="Meta de escaneos",
         default=0,
+        group_operator="sum",
         help="Cantidad objetivo de escaneos para este proyecto.",
     )
 
@@ -113,27 +118,36 @@ class Proyecto(models.Model):
         string="Total miembros",
         compute="_compute_totales",
         store=True,
+        group_operator="sum",
     )
 
     total_registros = fields.Integer(
         string="Total registros",
         compute="_compute_totales",
         store=True,
+        group_operator="sum",
     )
 
     total_escaneos = fields.Integer(
         string="Total escaneos",
         compute="_compute_totales",
         store=True,
+        group_operator="sum",
         help="Suma acumulada de escaneos en todos los registros del proyecto.",
     )
 
     progreso = fields.Float(
-        string="Progreso (%)",
+        string="Progreso",
         compute="_compute_progreso",
         store=True,
         digits=(5, 1),
-        help="Porcentaje: (escaneos / meta) × 100.",
+        group_operator="sum",
+    )
+
+    etapa_dominante = fields.Char(
+        string="Etapa más avanzada",
+        compute="_compute_etapa_dominante",
+        help="Etapa con mayor producción acumulada.",
     )
 
     # ── Restricciones Python ──────────────────────────────────────────────────
@@ -169,9 +183,7 @@ class Proyecto(models.Model):
         for record in self:
             nombre = (record.name or "").strip()
             if not nombre:
-                raise ValidationError(
-                    _("El nombre del proyecto no puede estar vacío.")
-                )
+                raise ValidationError(_("El nombre del proyecto no puede estar vacío."))
             if nombre.isdigit():
                 raise ValidationError(
                     _(
@@ -190,7 +202,8 @@ class Proyecto(models.Model):
                 raise ValidationError(
                     _(
                         "La descripción no puede superar %d caracteres (actual: %d).",
-                        _MAX, len(record.description),
+                        _MAX,
+                        len(record.description),
                     )
                 )
 
@@ -202,7 +215,9 @@ class Proyecto(models.Model):
         # automáticamente. No se necesita @api.onchange adicional.
         for record in self:
             if record.fecha_inicio and record.fecha_fin_estimada:
-                record.duracion_estimada = (record.fecha_fin_estimada - record.fecha_inicio).days
+                record.duracion_estimada = (
+                    record.fecha_fin_estimada - record.fecha_inicio
+                ).days
             else:
                 record.duracion_estimada = 0
 
@@ -217,66 +232,46 @@ class Proyecto(models.Model):
     def _compute_totales(self):
         for proyecto in self:
             # Contamos solo miembros activos (con fecha_salida o dados de baja no cuentan)
-            miembros_activos = proyecto.miembro_ids.filtered(lambda miembro: miembro.active)
+            miembros_activos = proyecto.miembro_ids.filtered(
+                lambda miembro: miembro.active
+            )
             proyecto.total_miembros = len(miembros_activos)
             proyecto.total_registros = len(proyecto.registro_ids)
             proyecto.total_escaneos = sum(
-                registro.total_escaneos or 0
-                for registro in proyecto.registro_ids
+                registro.total_escaneos or 0 for registro in proyecto.registro_ids
             )
 
-    @api.depends("total_escaneos", "meta_escaneos")
-    def _compute_progreso(self):
+    def _compute_etapa_dominante(self):
         for proyecto in self:
-            if proyecto.meta_escaneos and proyecto.meta_escaneos > 0:
-                proyecto.progreso = min(
-                    (proyecto.total_escaneos / proyecto.meta_escaneos) * 100.00,
-                    100.00,
-                )
+            if not proyecto.registro_ids:
+                proyecto.etapa_dominante = _("Sin registros")
+                continue
+
+            # Agrupar producción por etapa
+            totals = {}
+            for reg in proyecto.registro_ids:
+                nom = reg.etapa_nombre
+                totals[nom] = totals.get(nom, 0) + (reg.produccion_principal or 0)
+
+            if totals:
+                top_etapa = max(totals, key=totals.get)
+                proyecto.etapa_dominante = top_etapa
             else:
-                proyecto.progreso = 0.00
+                proyecto.etapa_dominante = _("N/A")
 
     # ── Métodos de negocio ────────────────────────────────────────────────────
 
-    def action_archivar(self):
-        """Archiva el proyecto y desactiva asignaciones y líderes."""
-        for proyecto in self:
-            lideres = proyecto.miembro_ids.filtered(lambda m: m.es_lider and m.active)
-            if lideres:
-                lideres.write({"es_lider": False})
-            proyecto.asignacion_ids.filtered("active").write({"active": False})
-            proyecto.active = False
+    def action_pausar(self):
+        """Pone el proyecto en pausa (Standby)."""
+        self.write({"state": "pausado"})
 
-    def action_activar(self):
-        """Reactiva un proyecto archivado."""
-        for proyecto in self:
-            proyecto.write({"active": True, "state": "activo"})
+    def action_reactivar(self):
+        """Reactiva un proyecto de cualquier estado a 'En curso'."""
+        self.write({"state": "en_curso"})
 
-            # Reactivar miembros sin fecha_salida (búsqueda fuera del loop)
-        miembros_inactivos = (
-            self.env["digitalizacion.miembro_proyecto"]
-            .with_context(active_test=False)
-            .search(
-                [
-                    ("proyecto_id", "in", self.ids),
-                    ("active", "=", False),
-                    ("fecha_salida", "=", False),
-                ]
-            )
-        )
-        if miembros_inactivos:
-            miembros_inactivos.write({"active": True})
-
-        for proyecto in self:
-            lideres_activos = proyecto.miembro_ids.filtered(
-                lambda m: m.es_lider and m.active
-            )
-            for lider_miembro in lideres_activos:
-                lider_miembro._sincronizar_liderazgo(True)
-
-    def action_inactivar(self):
-        """Cambia el estado a inactivo sin archivar."""
-        self.write({"state": "inactivo"})
+    def action_finalizar(self):
+        """Marca el proyecto como finalizado."""
+        self.write({"state": "finalizado"})
 
     def action_ver_registros(self):
         """Abre la lista de registros filtrada por este proyecto."""
@@ -303,3 +298,41 @@ class Proyecto(models.Model):
             "context": {"default_proyecto_id": self.id},
             "target": "current",
         }
+
+    def action_ver_analisis_grafico(self):
+        """Abre la vista de gráfico filtrada por este proyecto."""
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Análisis de Producción — %s", self.name),
+            "res_model": "digitalizacion.registro",
+            "view_mode": "graph,pivot",
+            "domain": [("proyecto_id", "=", self.id)],
+            "context": {
+                "default_proyecto_id": self.id,
+                "graph_groupbys": ["fecha:day", "etapa_id"],
+                "graph_measure": "produccion_principal",
+                "graph_mode": "line",
+            },
+            "view_id": self.env.ref("digitalizacion.digitalizacion_registro_view_graph_dashboard").id,
+            "target": "current",
+        }
+
+    def get_report_data(self):
+        """Prepara los datos consolidados para el reporte PDF."""
+        self.ensure_one()
+        resumen_etapas = self.env["digitalizacion.registro"].get_resumen_por_etapa(
+            self.id
+        )
+        return {
+            "proyecto": self,
+            "miembros": self.miembro_ids,
+            "resumen_etapas": resumen_etapas,
+            "fecha_reporte": fields.Date.context_today(self),
+        }
+
+    def action_print_report(self):
+        """Llama al reporte PDF desde el objeto."""
+        return self.env.ref(
+            "digitalizacion.action_report_proyecto_general"
+        ).report_action(self)

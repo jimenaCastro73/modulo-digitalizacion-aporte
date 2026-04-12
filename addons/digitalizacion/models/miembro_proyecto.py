@@ -30,7 +30,7 @@ from odoo.exceptions import ValidationError
 _logger = logging.getLogger(__name__)
 
 
-class MiembroProyecto(models.Model):
+class DigitalizacionMiembroProyecto(models.Model):
     _name = "digitalizacion.miembro_proyecto"
     _description = "Miembro del Equipo de Digitalización"
     _order = "proyecto_id asc, partner_id asc"
@@ -176,12 +176,12 @@ class MiembroProyecto(models.Model):
         if vals.get("fecha_salida"):
             activos = self.filtered(lambda r: r.active)
             if activos:
-                super(MiembroProyecto, activos).write({"active": False})
+                super(DigitalizacionMiembroProyecto, activos).write({"active": False})
             lideres = self.filtered(lambda r: r.es_lider)
             if lideres:
                 for record in lideres:
                     record._sincronizar_liderazgo(False)
-                super(MiembroProyecto, lideres).write({"es_lider": False})
+                super(DigitalizacionMiembroProyecto, lideres).write({"es_lider": False})
 
         return res
 
@@ -244,7 +244,7 @@ class MiembroProyecto(models.Model):
         for otro in otros_lideres:
             otro._desactivar_asignacion()
         if otros_lideres:
-            super(MiembroProyecto, otros_lideres).write({"es_lider": False})
+            super(DigitalizacionMiembroProyecto, otros_lideres).write({"es_lider": False})
 
         # Crear o reactivar asignación
         asig = Asignacion.with_context(active_test=False).search(

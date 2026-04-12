@@ -98,7 +98,7 @@ _CONFIG_ETAPA_DEFAULT = {
 }
 
 
-class Registro(models.Model):
+class DigitalizacionRegistro(models.Model):
     _name = "digitalizacion.registro"
     _description = "Registro Diario de Trabajo de Digitalización"
     _order = "fecha desc, id desc"
@@ -143,6 +143,23 @@ class Registro(models.Model):
         help="Etapa del proceso. Determina qué campos son visibles.",
     )
 
+
+    # ── Métrica Principal (Consolidada) ───────────────────────────────────────
+
+    produccion_principal = fields.Integer(
+        string="Producción principal",
+        compute="_compute_produccion_principal",
+        store=True,
+        group_operator="sum",
+        help="Cantidad representativa según etapa.",
+    )
+
+    unidad_produccion = fields.Char(
+        string="Unidad",
+        compute="_compute_produccion_principal",
+        store=True,
+    )
+
     # ── Campos temporales ─────────────────────────────────────────────────────
 
     fecha = fields.Date(
@@ -177,12 +194,14 @@ class Registro(models.Model):
 
     no_expedientes = fields.Integer(
         string="Cantidad de expedientes",
+        group_operator="sum",
         help="Total de expedientes físicos procesados en la jornada. "
         "Aplica a: Limpieza, Ordenado.",
     )
 
     total_folios = fields.Integer(
         string="Cantidad de folios",
+        group_operator="sum",
         help="Total de folios (hojas físicas) procesados. "
         "Aplica a: Limpieza, Ordenado, Digitalizado.",
     )
@@ -191,6 +210,7 @@ class Registro(models.Model):
 
     total_escaneos = fields.Integer(
         string="Número de escaneos",
+        group_operator="sum",
         help="Hojas digitales generadas. Aplica a: Digitalizado.",
     )
 
@@ -204,6 +224,7 @@ class Registro(models.Model):
 
     expedientes_editados = fields.Integer(
         string="Expedientes editados",
+        group_operator="sum",
         help="Expedientes que pasaron por edición digital. Aplica a: Editado.",
     )
 
@@ -216,6 +237,7 @@ class Registro(models.Model):
 
     expedientes_indexados = fields.Integer(
         string="Expedientes indexados",
+        group_operator="sum",
         help="Expedientes con metadatos asignados. Aplica a: Indexado.",
     )
 
@@ -262,18 +284,7 @@ class Registro(models.Model):
         readonly=True,
     )
 
-    produccion_principal = fields.Integer(
-        string="Producción principal",
-        compute="_compute_produccion_principal",
-        store=True,
-        help="Cantidad representativa según etapa.",
-    )
 
-    unidad_produccion = fields.Char(
-        string="Unidad",
-        compute="_compute_produccion_principal",
-        store=True,
-    )
 
     # ── Restricciones Python ──────────────────────────────────────────────────
 

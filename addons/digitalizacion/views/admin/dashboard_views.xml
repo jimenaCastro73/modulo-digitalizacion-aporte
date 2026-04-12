@@ -1,65 +1,88 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- ================================================================
-         dashboard_views.xml — Dashboard de producción para el Administrador
-         Vistas de análisis global: gráfico de barras por digitalizador,
-         tendencia diaria de escaneos, y pivot cruzado.
-         Acceso exclusivo: grupo Administrador (group_digitalizacion_admin)
+         dashboard_views.xml — Dashboard Global de Producción (Admin)
+         Basado en el modelo de Registros para permitir análisis detallado.
          ================================================================ -->
-    <!-- 1. GRAPH — Producción por digitalizador (barras) -->
+
+    <!-- 1. GRAPH — Producción por Digitalizador -->
     <record id="digitalizacion_dashboard_graph_miembro" model="ir.ui.view">
         <field name="name">digitalizacion.registro.graph.miembro</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
-            <graph string="Producción por Digitalizador" type="bar" stacked="0">
-                <field name="miembro_nombre" string="Digitalizador" type="row" />
-                <field name="produccion_principal" string="Producción" type="measure" />
-                <field name="total_escaneos" string="Escaneos" type="measure" />
+            <graph string="Producción por Digitalizador" type="bar" sample="0">
+                <field name="miembro_id" type="row" />
+                <field name="produccion_principal" type="measure" />
+                <field name="total_escaneos" type="measure" />
             </graph>
         </field>
     </record>
-    <!-- 2. GRAPH — Tendencia diaria de escaneos (línea) -->
+
+    <!-- 2. GRAPH — Tendencia diaria de escaneos (Línea) -->
     <record id="digitalizacion_dashboard_graph_tendencia" model="ir.ui.view">
         <field name="name">digitalizacion.registro.graph.tendencia</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
-            <graph string="Tendencia Diaria de Escaneos" type="line">
-                <field name="fecha" string="Fecha" type="row" interval="day" />
-                <field name="total_escaneos" string="Escaneos" type="measure" />
+            <graph string="Tendencia Diaria de Escaneos" type="line" sample="0">
+                <field name="fecha" type="row" interval="day" />
+                <field name="total_escaneos" type="measure" />
             </graph>
         </field>
     </record>
+
     <!-- 3. PIVOT — Análisis cruzado -->
     <record id="digitalizacion_dashboard_pivot" model="ir.ui.view">
         <field name="name">digitalizacion.registro.pivot.dashboard</field>
         <field name="model">digitalizacion.registro</field>
         <field name="arch" type="xml">
-            <pivot string="Análisis Cruzado de Producción" display_quantity="1" default_order="miembro_nombre asc">
-                <field name="proyecto_nombre" string="Proyecto" type="row" />
-                <field name="miembro_nombre" string="Digitalizador" type="row" />
-                <field name="etapa_nombre" string="Etapa" type="col" />
-                <field name="produccion_principal" string="Producción" type="measure" />
-                <field name="total_escaneos" string="Escaneos" type="measure" />
-                <field name="total_folios" string="Folios físicos" type="measure" />
-                <field name="expedientes_indexados" string="Exp. indexados" type="measure" />
-                <field name="fecha" type="col" interval="month" invisible="1" />
+            <pivot string="Análisis Cruzado de Producción" sample="0" display_quantity="1">
+                <field name="proyecto_id" type="row" />
+                <field name="miembro_id" type="row" />
+                <field name="etapa_id" type="col" />
+                <field name="produccion_principal" type="measure" />
+                <field name="total_escaneos" type="measure" />
+                <field name="total_folios" type="measure" />
             </pivot>
         </field>
     </record>
-    <!-- 4. ACCIÓN DASHBOARD — combina las tres vistas -->
+
+    <!-- 4. VISTA BÚSQUEDA (Para que el Dashboard pueda filtrar) -->
+    <record id="digitalizacion_registro_view_search_dashboard" model="ir.ui.view">
+        <field name="name">digitalizacion.registro.search.dashboard</field>
+        <field name="model">digitalizacion.registro</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Registros">
+                <field name="proyecto_id" />
+                <field name="miembro_id" />
+                <field name="etapa_id" />
+                <separator />
+                <filter name="hoy" string="Hoy" domain="[('fecha', '=', context_today().strftime('%%Y-%%m-%%d'))]" />
+                <filter name="mes" string="Este mes" domain="[('fecha', '>=', context_today().strftime('%%Y-%%m-01'))]" />
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_proyecto" string="Proyecto" context="{'group_by': 'proyecto_id'}" />
+                    <filter name="group_etapa" string="Etapa" context="{'group_by': 'etapa_id'}" />
+                    <filter name="group_fecha" string="Fecha" context="{'group_by': 'fecha:day'}" />
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- 5. ACCIÓN DASHBOARD -->
     <record id="digitalizacion_dashboard_action" model="ir.actions.act_window">
-        <field name="name">Dashboard de Producción</field>
+        <field name="name">Carga Progresiva — Análisis</field>
         <field name="res_model">digitalizacion.registro</field>
         <field name="view_mode">graph,pivot,list</field>
-        <field name="view_id" ref="digitalizacion_dashboard_graph_miembro" />
+        <field name="view_id" ref="digitalizacion_dashboard_graph_tendencia" />
+        <field name="search_view_id" ref="digitalizacion_registro_view_search_dashboard" />
         <field name="context">{
-            'search_default_mes': 1,
-            'graph_measure': 'produccion_principal',
+            'graph_measure': 'total_escaneos',
+            'graph_mode': 'line',
+            'graph_groupbys': ['fecha:day'],
+            'search_default_group_proyecto': 1,
         }</field>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">Aún no hay datos de producción</p>
-            <p>El dashboard mostrará la producción del equipo
-                una vez que el Líder comience a registrar jornadas.</p>
+            <p class="o_view_nocontent_smiling_face">Visualiza la tendencia de producción</p>
+            <p>Aquí verás cómo avanza la carga progresiva de escaneos a través del tiempo.</p>
         </field>
     </record>
 </odoo>

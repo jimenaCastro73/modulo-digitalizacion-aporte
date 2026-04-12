@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- 1. ACCIÓN DEL REPORTE -->
+    <record id="action_report_proyecto_general" model="ir.actions.report">
+        <field name="name">Reporte de Proyecto de Digitalización    </field>
+        <field name="model">digitalizacion.proyecto</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">digitalizacion.report_proyecto_template</field>
+        <field name="report_file">digitalizacion.report_proyecto_template</field>
+        <field name="print_report_name">'Reporte_%s' % (object.name)</field>
+        <field name="binding_model_id" ref="model_digitalizacion_proyecto"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- 2. PLANTILLA CON DISEÑO INSPIRADO EN EL PORTAL -->
+    <template id="report_proyecto_template">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-set="data" t-value="o.get_report_data()"/>
+                <t t-call="web.external_layout">
+                    <div class="page" style="font-family: 'Helvetica', 'Arial', sans-serif; color: #000000;">
+                        
+                        <!-- ── ESTILOS EMPOTRADOS (PARA PDF) ── -->
+                        <style>
+                            .dash-card {
+                                border-radius: 8px;
+                                padding: 12px;
+                                background-color: #F8F9FA;
+                                border: 1px solid #E9ECEF;
+                                text-align: center;
+                            }
+                            .dash-kpi-val {
+                                font-size: 20px;
+                                font-weight: bold;
+                                color: #af1714;
+                                margin-bottom: 2px;
+                            }
+                            .dash-kpi-lab {
+                                font-size: 8px;
+                                font-weight: bold;
+                                color: #6C757D;
+                                text-transform: uppercase;
+                                letter-spacing: 1px;
+                            }
+                            .portal-header {
+                                border-left: 5px solid #af1714;
+                                padding: 15px;
+                                background-color: #FFFFFF;
+                                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                                margin-bottom: 25px;
+                                border-radius: 4px;
+                            }
+                            .table-portal {
+                                width: 100%;
+                                margin-top: 15px;
+                                border-collapse: collapse;
+                            }
+                            .table-portal th {
+                                background-color: #F8F9FA;
+                                color: #6C757D;
+                                font-size: 9px;
+                                text-transform: uppercase;
+                                padding: 10px;
+                                border-bottom: 2px solid #E9ECEF;
+                            }
+                            .table-portal td {
+                                padding: 10px;
+                                font-size: 11px;
+                                border-bottom: 1px solid #F1F3F5;
+                            }
+                        </style>
+
+                        <!-- CABECERA DE PROYECTO (ESTILO PORTAL) -->
+                        <div class="portal-header">
+                            <table style="width: 100%;">
+                                <tr>
+                                    <td style="vertical-align: middle;">
+                                        <h2 style="margin: 0; font-weight: 900; color: #000000; font-size: 22px;">
+                                            <t t-esc="o.name"/>
+                                        </h2>
+                                        <div style="margin-top: 5px;">
+                                            <span style="background-color: #E6F4EA; color: #1E7E34; padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: bold; text-transform: uppercase;">
+                                                Estado: <t t-esc="o.state"/>
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td style="text-align: right; vertical-align: middle;">
+                                        <img t-if="res_company.logo" t-att-src="image_data_uri(res_company.logo)" style="max-height: 50px;" alt="Logo"/>
+                                        <div t-else="" style="font-weight: bold; color: #af1714; font-size: 18px;"><t t-esc="res_company.name"/></div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- MATRIZ DE INDICADORES (KPIs ESTILO PORTAL) -->
+                        <table style="width: 100%; border-spacing: 10px 0; border-collapse: separate; margin-bottom: 30px;">
+                            <tr>
+                                <td style="width: 25%;">
+                                    <div class="dash-card">
+                                        <div class="dash-kpi-val"><t t-esc="o.total_miembros"/></div>
+                                        <div class="dash-kpi-lab">Integrantes</div>
+                                    </div>
+                                </td>
+                                <td style="width: 25%;">
+                                    <div class="dash-card" style="border-top: 3px solid #af1714;">
+                                        <div class="dash-kpi-val"><t t-esc="o.total_escaneos"/></div>
+                                        <div class="dash-kpi-lab">Escaneos</div>
+                                    </div>
+                                </td>
+                                <td style="width: 25%;">
+                                    <div class="dash-card">
+                                        <div class="dash-kpi-val"><t t-esc="o.total_registros"/></div>
+                                        <div class="dash-kpi-lab">Producciones</div>
+                                    </div>
+                                </td>
+                                <td style="width: 25%;">
+                                    <div class="dash-card">
+                                        <div class="dash-kpi-val">
+                                            <t t-if="o.duracion_estimada">
+                                                <t t-esc="round(o.duracion_estimada)"/>
+                                            </t>
+                                            <t t-else="">—</t>
+                                        </div>
+                                        <div class="dash-kpi-lab">Días Estim.</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- SECCIÓN: DETALLES ESTRUCTURALES -->
+                        <div style="margin-bottom: 35px;">
+                            <h6 style="font-size: 10px; font-weight: bold; color: #6C757D; text-transform: uppercase; margin-bottom: 10px; border-left: 3px solid #000000; padding-left: 10px;">Configuración del Proyecto</h6>
+                            <table style="width: 100%; font-size: 11px; background-color: #FFFFFF; border: 1px solid #E9ECEF; border-radius: 6px; padding: 15px;">
+                                <tr>
+                                    <td style="padding: 10px; width: 50%; border-right: 1px solid #F1F3F5;">
+                                        <div style="color: #6C757D; font-weight: bold; font-size: 8px; text-transform: uppercase;">Fecha de Inicio</div>
+                                        <div style="font-weight: bold; font-size: 12px;"><span t-field="o.fecha_inicio"/></div>
+                                    </td>
+                                    <td style="padding: 10px; width: 50%;">
+                                        <div style="color: #6C757D; font-weight: bold; font-size: 8px; text-transform: uppercase;">Cierre Estimado</div>
+                                        <div style="font-weight: bold; font-size: 12px;">
+                                            <t t-if="o.fecha_fin_estimada">
+                                                <span t-field="o.fecha_fin_estimada"/>
+                                            </t>
+                                            <t t-else="">Sin definir</t>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" style="padding: 10px; border-top: 1px solid #F1F3F5;">
+                                        <div style="color: #6C757D; font-weight: bold; font-size: 8px; text-transform: uppercase;">Líderes de Operación</div>
+                                        <div style="font-weight: bold; font-size: 12px;">
+                                            <t t-foreach="o.lider_ids" t-as="l">
+                                                <span t-esc="l.name"/><t t-if="not l_last">, </t>
+                                            </t>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- TABLA: DESGLOSE DE PRODUCCIÓN -->
+                        <div style="margin-bottom: 35px;">
+                            <h6 style="font-size: 10px; font-weight: bold; color: #6C757D; text-transform: uppercase; margin-bottom: 10px; border-left: 3px solid #af1714; padding-left: 10px;">Desglose de Producción por Etapa</h6>
+                            <table class="table-portal">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align: left;">Etapa del Proceso</th>
+                                        <th style="text-align: right;">Cantidad Real Acumulada</th>
+                                        <th style="text-align: center;">Unidad de Medida</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="data['resumen_etapas']" t-as="e">
+                                        <tr>
+                                            <td style="font-weight: bold; color: #000000;"><t t-esc="e['etapa']"/></td>
+                                            <td style="text-align: right; font-weight: 800; font-size: 14px; color: #af1714;">
+                                                <t t-esc="e['total']"/>
+                                            </td>
+                                            <td style="text-align: center; color: #6C757D;"><t t-esc="e['unidad']"/></td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- SECCIÓN: EQUIPO DE TRABAJO -->
+                        <div style="margin-top: 30px; page-break-inside: avoid;">
+                            <h6 style="font-size: 10px; font-weight: bold; color: #6C757D; text-transform: uppercase; margin-bottom: 10px; border-left: 3px solid #000000; padding-left: 10px;">Equipo de Trabajo Asignado</h6>
+                            <table class="table-portal">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align: left; width: 50%;">Nombre Completo</th>
+                                        <th style="text-align: center; width: 25%;">Función / Rol</th>
+                                        <th style="text-align: right; width: 25%;">Integración</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="o.miembro_ids" t-as="m">
+                                        <tr>
+                                            <td style="font-weight: bold; color: #000000;">
+                                                <t t-esc="m.partner_id.name"/>
+                                            </td>
+                                            <td style="text-align: center;">
+                                                <t t-if="m.es_lider">
+                                                    <span style="color: #af1714; font-weight: bold; font-size: 9px; text-transform: uppercase;">
+                                                        ★ Líder
+                                                    </span>
+                                                </t>
+                                                <t t-else="">
+                                                    <span style="color: #6C757D; font-size: 9px;">Digitalizador</span>
+                                                </t>
+                                            </td>
+                                            <td style="text-align: right; color: #6C757D;">
+                                                <span t-field="m.fecha_integracion"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style="position: absolute; bottom: 0; width: 100%; border-top: 1px dashed #E9ECEF; padding-top: 10px; font-size: 7px; color: #ADB5BD; text-align: center;">
+                            Documento oficial generado por el Módulo de Digitalización OTEC GLOBAL | 
+                            Fecha: <t t-esc="data['fecha_reporte'].strftime('%d/%m/%Y %H:%M')"/> | 
+                            Proyecto: <t t-esc="o.name"/>
+                        </div>
+
+                        <div class="oe_structure"/>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

@@ -66,7 +66,6 @@ def _get_asignaciones_activas(lider_id):
                 ("lider_id", "=", lider_id),
                 ("active", "=", True),
                 ("proyecto_id.active", "=", True),
-                ("proyecto_id.state", "=", "activo"),
             ]
         )
     )
@@ -86,7 +85,6 @@ def _get_proyecto_del_lider(proyecto_id, lider_id):
                 ("proyecto_id", "=", proyecto_id),
                 ("active", "=", True),
                 ("proyecto_id.active", "=", True),
-                ("proyecto_id.state", "=", "activo"),
             ],
             limit=1,
         )
@@ -439,6 +437,9 @@ class DigitalizacionPortal(http.Controller):
             _verificar_lider_raise()
             lider_id = request.env.user.id
             proyecto = _verificar_acceso_proyecto(proyecto_id, lider_id)
+            if proyecto.state != 'en_curso':
+                _add_notification("warning", _("El proyecto '%s' está en pausa o finalizado. No se puede registrar nueva producción.", proyecto.name))
+                return request.redirect("/digitalizacion/v1/dashboard?proyecto_id=%s" % proyecto.id)
         except AccessError as e:
             _add_notification("danger", str(e))
             return request.redirect("/digitalizacion/v1/dashboard")

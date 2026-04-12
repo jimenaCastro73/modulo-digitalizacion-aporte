@@ -24,7 +24,7 @@ from odoo.exceptions import ValidationError
 _logger = logging.getLogger(__name__)
 
 
-class Asignacion(models.Model):
+class DigitalizacionAsignacion(models.Model):
     _name = "digitalizacion.asignacion"
     _description = "Asignación de Líder a Proyecto"
     _order = "fecha_asignacion desc, proyecto_id asc"

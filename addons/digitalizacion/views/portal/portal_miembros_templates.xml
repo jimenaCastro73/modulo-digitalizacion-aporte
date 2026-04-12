@@ -135,8 +135,7 @@
                                                         <span class="text-muted opacity-25 fw-light">—</span>
                                                     </t>
                                                     <t t-else="">
-                                                        <t t-set="pct" t-value="(cnt / m['total'] * 100) if m['total'] else 0" />
-                                                        <span t-attf-style="display:inline-block; min-width:40px; padding:2px 8px; border-radius:6px; font-size:12px; font-weight:700; background:#{ '#E6F1FB' if pct &lt; 25 else ('#85B7EB' if pct &lt; 50 else '#185FA5') }; color:#{ '#185FA5' if pct &lt; 25 else ('#042C53' if pct &lt; 50 else '#E6F1FB') }; border:1px solid rgba(0,0,0,0.05);">
+                                                        <span t-attf-style="display:inline-block; min-width:40px; padding:2px 8px; border-radius:6px; font-size:12px; font-weight:700; background:#{ '#E6F1FB' if cnt &lt; 50 else ('#85B7EB' if cnt &lt; 200 else '#185FA5') }; color:#{ '#185FA5' if cnt &lt; 50 else ('#042C53' if cnt &lt; 200 else '#E6F1FB') }; border:1px solid rgba(0,0,0,0.05);">
                                                             <t t-esc="cnt" />
                                                         </span>
                                                     </t>

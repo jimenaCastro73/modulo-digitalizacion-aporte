@@ -5,6 +5,7 @@
     "category": "Services",
     "summary": "Gestión de proyectos de digitalización de documentos",
     "author": "Jimena Castro — Práctica Profesional OTEC GLOBAL",
+    "icon_image": "static/description/icon.png",
     "depends": ["base", "contacts", "website"],
     "data": [
         # 1. Seguridad primero: grupos, reglas y ACLs
@@ -14,11 +15,8 @@
         "security/ir.model.access.csv",
         # --- Datos ---
         "data/etapa_data.xml",
-        # --- Vistas Backend (Admin) ---
+        "views/admin/proyectos/proyecto_report_views.xml",
         "views/admin/proyectos/proyecto_views.xml",
-        "views/admin/proyectos/asignacion_views.xml",
-        "views/admin/operaciones/miembro_views.xml",
-        "views/admin/operaciones/registro_views.xml",
         "views/admin/configuracion/etapa_views.xml",
         "views/admin/configuracion/tipo_escaner_views.xml",
         "views/admin/dashboard_views.xml",

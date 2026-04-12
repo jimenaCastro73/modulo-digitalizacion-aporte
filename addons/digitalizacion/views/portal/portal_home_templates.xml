@@ -156,14 +156,10 @@
                                             </span>
                                             <span class="fw-bold text-primary small">
                                                 <t t-esc="etapa['cantidad']" />
-                                                registros (
-                                                <t t-esc="'%.1f' % etapa['porcentaje']" />
-                                                %)
+                                                registros totales
                                             </span>
                                         </div>
-                                        <div class="progress shadow-sm transition-all" style="height: 10px; border-radius: 5px; background: #eef2f7;">
-                                            <div t-attf-style="width:#{ etapa['porcentaje'] }%; background: #378ADD;" t-att-aria-valuenow="etapa['porcentaje']" class="progress-bar progress-bar-animated h-100 rounded" role="progressbar" aria-valuemin="0" aria-valuemax="100" />
-                                        </div>
+                                        <hr class="mt-0 mb-3 opacity-25" />
                                     </div>
                                 </t>
                             </div>
@@ -175,10 +171,12 @@
                             <i class="fa fa-history text-muted me-2" />
                             Actividad Reciente
                         </h5>
-                        <a t-attf-href="/digitalizacion/v1/proyectos/{{ proyecto_actual.id }}/form" class="btn btn-primary d-flex align-items-center shadow-sm">
-                            <i class="fa fa-plus-circle me-1" />
-                            <strong>Registrar Producción</strong>
-                        </a>
+                        <t t-if="proyecto_actual.state == 'en_curso'">
+                            <a t-attf-href="/digitalizacion/v1/proyectos/{{ proyecto_actual.id }}/form" class="btn btn-primary d-flex align-items-center shadow-sm">
+                                <i class="fa fa-plus-circle me-1" />
+                                <strong>Registrar Producción</strong>
+                            </a>
+                        </t>
                     </div>
                     <t t-if="ultimos_registros">
                         <div class="card border-0 shadow-sm mb-4">
