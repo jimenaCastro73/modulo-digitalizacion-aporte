@@ -71,19 +71,6 @@ class DigitalizacionProyecto(models.Model):
         help="Soft delete de Odoo. False = proyecto archivado.",
     )
 
-    color = fields.Integer(
-        string="Color Index",
-        store=False,
-        help="Color para la vista Kanban.",
-    )
-
-    meta_escaneos = fields.Integer(
-        string="Meta de escaneos",
-        default=0,
-        group_operator="sum",
-        help="Cantidad objetivo de escaneos para este proyecto.",
-    )
-
     # ── Relaciones inversas ───────────────────────────────────────────────────
 
     asignacion_ids = fields.One2many(
@@ -136,14 +123,6 @@ class DigitalizacionProyecto(models.Model):
         help="Suma acumulada de escaneos en todos los registros del proyecto.",
     )
 
-    progreso = fields.Float(
-        string="Progreso",
-        compute="_compute_progreso",
-        store=True,
-        digits=(5, 1),
-        group_operator="sum",
-    )
-
     etapa_dominante = fields.Char(
         string="Etapa más avanzada",
         compute="_compute_etapa_dominante",
@@ -163,19 +142,6 @@ class DigitalizacionProyecto(models.Model):
                             "a la fecha de inicio."
                         )
                     )
-
-    @api.constrains("meta_escaneos")
-    def _check_meta_escaneos(self):
-        for record in self:
-            if record.meta_escaneos < 0:
-                raise ValidationError(_("La meta de escaneos no puede ser negativa."))
-            if record.meta_escaneos > 100_000_000:
-                raise ValidationError(
-                    _(
-                        "La meta de escaneos (%d) supera el límite permitido de 100,000,000.",
-                        record.meta_escaneos,
-                    )
-                )
 
     @api.constrains("name")
     def _check_name(self):
@@ -241,6 +207,7 @@ class DigitalizacionProyecto(models.Model):
                 registro.total_escaneos or 0 for registro in proyecto.registro_ids
             )
 
+    @api.depends("registro_ids", "registro_ids.produccion_principal", "registro_ids.etapa_nombre")
     def _compute_etapa_dominante(self):
         for proyecto in self:
             if not proyecto.registro_ids:
@@ -314,7 +281,15 @@ class DigitalizacionProyecto(models.Model):
                 "graph_measure": "produccion_principal",
                 "graph_mode": "line",
             },
-            "view_id": self.env.ref("digitalizacion.digitalizacion_registro_view_graph_dashboard").id,
+            "views": [
+                [
+                    self.env.ref(
+                        "digitalizacion.digitalizacion_registro_view_graph_dashboard"
+                    ).id,
+                    "graph",
+                ],
+                [False, "pivot"],
+            ],
             "target": "current",
         }
 

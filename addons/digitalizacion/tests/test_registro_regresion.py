@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 test_registro_regresion.py — PRUEBAS DE CAJA NEGRA / REGRESIÓN
 ===============================================================
@@ -46,8 +46,7 @@ class TestRegistroRegresion(TransactionCase):
             {
                 "name": "Proyecto Test Regresión",
                 "fecha_inicio": date.today(),
-                "state": "activo",
-                "meta_escaneos": 2000,
+                "state": "en_curso",
             }
         )
 

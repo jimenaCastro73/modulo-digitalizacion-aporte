@@ -3,20 +3,347 @@
 import { Component, useState, xml, mount } from "@odoo/owl";
 import publicWidget from "@web/legacy/js/public/public_widget";
 
+// ============= CONSTANTES =============
 const REGLAS_ETAPA = {
-  limpieza: { caja: true, expedientes: true, folios: true, escaneos: false, escaner: false, expEditados: false, foliosEditados: false, expIndexados: false, foliosIndexados: false },
-  ordenado: { caja: true, expedientes: true, folios: true, escaneos: false, escaner: false, expEditados: false, foliosEditados: false, expIndexados: false, foliosIndexados: false },
-  digitalizado: { caja: true, expedientes: true, folios: true, escaneos: true, escaner: true, expEditados: false, foliosEditados: false, expIndexados: false, foliosIndexados: false },
-  editado: { caja: false, expedientes: false, folios: false, escaneos: false, escaner: false, expEditados: true, foliosEditados: true, expIndexados: false, foliosIndexados: false },
-  indexado: { caja: false, expedientes: false, folios: false, escaneos: false, escaner: false, expEditados: false, foliosEditados: false, expIndexados: true, foliosIndexados: true },
+  limpieza: {
+    caja: true,
+    expedientes: true,
+    folios: true,
+    escaneos: false,
+    escaner: false,
+    expEditados: false,
+    foliosEditados: false,
+    expIndexados: false,
+    foliosIndexados: false,
+  },
+  ordenado: {
+    caja: true,
+    expedientes: true,
+    folios: true,
+    escaneos: false,
+    escaner: false,
+    expEditados: false,
+    foliosEditados: false,
+    expIndexados: false,
+    foliosIndexados: false,
+  },
+  digitalizado: {
+    caja: true,
+    expedientes: true,
+    folios: true,
+    escaneos: true,
+    escaner: true,
+    expEditados: false,
+    foliosEditados: false,
+    expIndexados: false,
+    foliosIndexados: false,
+  },
+  editado: {
+    caja: false,
+    expedientes: false,
+    folios: false,
+    escaneos: false,
+    escaner: false,
+    expEditados: true,
+    foliosEditados: true,
+    expIndexados: false,
+    foliosIndexados: false,
+  },
+  indexado: {
+    caja: false,
+    expedientes: false,
+    folios: false,
+    escaneos: false,
+    escaner: false,
+    expEditados: false,
+    foliosEditados: false,
+    expIndexados: true,
+    foliosIndexados: true,
+  },
 };
 
-const REGLA_DEFAULT = { caja: true, expedientes: true, folios: true, escaneos: false, escaner: false, expEditados: false, foliosEditados: false, expIndexados: false, foliosIndexados: false };
+const REGLA_POR_DEFECTO = {
+  caja: true,
+  expedientes: true,
+  folios: true,
+  escaneos: false,
+  escaner: false,
+  expEditados: false,
+  foliosEditados: false,
+  expIndexados: false,
+  foliosIndexados: false,
+};
 
+const CAMPOS_NUMERICOS = [
+  { clave: "no_expedientes", regla: "expedientes" },
+  { clave: "total_folios", regla: "folios" },
+  { clave: "total_escaneos", regla: "escaneos" },
+  { clave: "expedientes_editados", regla: "expEditados" },
+  { clave: "folios_editados", regla: "foliosEditados" },
+  { clave: "expedientes_indexados", regla: "expIndexados" },
+  { clave: "folios_indexados", regla: "foliosIndexados" },
+];
+
+const LIMITES = {
+  MAX_NUMERO: 999999,
+  MAX_OBSERVACION: 2000,
+};
+
+// ============= UTILIDADES =============
+const UtilidadFecha = {
+  obtenerHoy() {
+    const hoy = new Date();
+    const diferenciaZona = hoy.getTimezoneOffset();
+    const local = new Date(hoy.getTime() - diferenciaZona * 60 * 1000);
+    return local.toISOString().split("T")[0];
+  },
+};
+
+const UtilidadCookie = {
+  obtener(nombre) {
+    const partes = `; ${document.cookie}`.split(`; ${nombre}=`);
+    return partes.length === 2 ? partes.pop().split(";").shift() : "";
+  },
+};
+
+const AnalizadorError = {
+  procesar(datosError) {
+    if (datosError.result?.error) return datosError.result.error.message;
+    if (datosError.error)
+      return datosError.error.message || "Error del servidor";
+    return "Error desconocido.";
+  },
+};
+
+// ============= VALIDADORES =============
+class ValidadorFila {
+  constructor(funcionObtenerReglas) {
+    this.obtenerReglas = funcionObtenerReglas;
+  }
+
+  validar(fila) {
+    const errores = {};
+    let esValido = true;
+
+    // Validar digitalizador
+    if (!fila.miembro_id) {
+      errores.miembro = "Por favor, seleccione un digitalizador.";
+      esValido = false;
+    }
+
+    // Validar etapa
+    if (!fila.etapa_id) {
+      errores.etapa = "Por favor, seleccione la etapa de trabajo.";
+      return { errores, esValido: false };
+    }
+
+    const reglas = this.obtenerReglas(fila.etapa_id);
+
+    // Validar campos específicos
+    esValido =
+      this._validarCamposEspecificos(fila, reglas, errores) && esValido;
+    esValido = this._validarProduccion(fila, reglas, errores) && esValido;
+    esValido = this._validarEscaner(fila, reglas, errores) && esValido;
+    esValido = this._validarObservacion(fila, errores) && esValido;
+
+    return { errores, esValido };
+  }
+
+  _validarCamposEspecificos(fila, reglas, errores) {
+    let esValido = true;
+
+    // Validar referencia de cajas
+    if (reglas.caja && fila.referencia_cajas) {
+      const ref = fila.referencia_cajas.trim();
+      if (!/[a-zA-Z0-9]/.test(ref)) {
+        errores.referencia_cajas =
+          "No puede contener solo caracteres vacíos o símbolos especiales. Debe ingresar texto o números.";
+        esValido = false;
+      }
+    }
+
+    // Validar campos numéricos
+    CAMPOS_NUMERICOS.forEach(({ clave, regla }) => {
+      if (reglas[regla]) {
+        esValido = this._validarNumero(fila, clave, errores) && esValido;
+      }
+    });
+
+    return esValido;
+  }
+
+  _validarNumero(fila, campo, errores) {
+    let valor = fila[campo];
+
+    if (
+      valor === "" ||
+      valor === null ||
+      valor === undefined ||
+      Number.isNaN(Number(valor))
+    ) {
+      fila[campo] = 0;
+      valor = 0;
+    }
+
+    const num = Number(valor);
+
+    if (!Number.isInteger(num)) {
+      errores[campo] =
+        `El valor ingresado no es un número entero. No se permiten decimales.`;
+      return false;
+    }
+
+    if (num < 0) {
+      errores[campo] = `No se permiten cantidades negativas en la producción.`;
+      return false;
+    }
+
+    if (num > LIMITES.MAX_NUMERO) {
+      errores[campo] =
+        `La cantidad excede el límite permitido por registro (Máx. ${LIMITES.MAX_NUMERO.toLocaleString()}).`;
+      return false;
+    }
+
+    return true;
+  }
+
+  _validarProduccion(fila, reglas, errores) {
+    const hayProduccion = CAMPOS_NUMERICOS.some(
+      ({ clave, regla }) => reglas[regla] && fila[clave] > 0,
+    );
+
+    if (!hayProduccion) {
+      errores.produccion =
+        "Alerta de Datos: Ha indicado una etapa válida, pero todos los campos numéricos están en cero. Debe registrar cantidades exactas correspondientes a su reporte de avance.";
+      return false;
+    }
+
+    return true;
+  }
+
+  _validarEscaner(fila, reglas, errores) {
+    if (
+      reglas.escaner &&
+      (!fila.tipo_escaner_ids || fila.tipo_escaner_ids.length === 0)
+    ) {
+      errores.escaner =
+        "Digitalización requiere que especifique al menos 1 escáner usado en la operación.";
+      return false;
+    }
+    return true;
+  }
+
+  _validarObservacion(fila, errores) {
+    if (fila.observacion && fila.observacion.length > LIMITES.MAX_OBSERVACION) {
+      errores.observacion = `La observación actual (${fila.observacion.length} caracteres) excede el máximo para la base de datos (${LIMITES.MAX_OBSERVACION} limitados por Python).`;
+      return false;
+    }
+    return true;
+  }
+}
+
+// ============= GESTOR DE FILAS =============
+class GestorFila {
+  constructor(funcionObtenerId) {
+    this.obtenerSiguienteId = funcionObtenerId;
+  }
+
+  crearVacia() {
+    return {
+      id: this.obtenerSiguienteId(),
+      miembro_id: "",
+      etapa_id: "",
+      referencia_cajas: "",
+      no_expedientes: 0,
+      total_folios: 0,
+      total_escaneos: 0,
+      tipo_escaner_ids: [],
+      expedientes_editados: 0,
+      folios_editados: 0,
+      expedientes_indexados: 0,
+      folios_indexados: 0,
+      observacion: "",
+      errores: {},
+    };
+  }
+
+  limpiarParaGuardar(fila) {
+    const copia = { ...fila };
+    delete copia.errores;
+    return copia;
+  }
+
+  reiniciarCamposPorEtapa(fila, reglas) {
+    const camposPorRegla = {
+      caja: "referencia_cajas",
+      expedientes: "no_expedientes",
+      folios: "total_folios",
+      escaneos: "total_escaneos",
+      escaner: "tipo_escaner_ids",
+      expEditados: "expedientes_editados",
+      foliosEditados: "folios_editados",
+      expIndexados: "expedientes_indexados",
+      foliosIndexados: "folios_indexados",
+    };
+
+    Object.entries(camposPorRegla).forEach(([regla, campo]) => {
+      if (!reglas[regla]) {
+        if (Array.isArray(fila[campo])) {
+          fila[campo] = [];
+        } else {
+          fila[campo] = campo === "referencia_cajas" ? "" : 0;
+        }
+      }
+    });
+  }
+
+  alternarEscaner(fila, escanerId, seleccionado) {
+    if (!Array.isArray(fila.tipo_escaner_ids)) {
+      fila.tipo_escaner_ids = [];
+    }
+
+    const id = Number(escanerId);
+    if (seleccionado) {
+      if (!fila.tipo_escaner_ids.includes(id)) {
+        fila.tipo_escaner_ids = [...fila.tipo_escaner_ids, id];
+      }
+    } else {
+      fila.tipo_escaner_ids = fila.tipo_escaner_ids.filter((v) => v !== id);
+    }
+  }
+}
+
+// ============= SERVICIO API =============
+class ServicioApi {
+  constructor(proyectoId) {
+    this.proyectoId = proyectoId;
+  }
+
+  async guardarRegistros(fecha, filas) {
+    const respuesta = await fetch(
+      `/digitalizacion/api/v1/proyectos/${this.proyectoId}/registros`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": UtilidadCookie.obtener("csrf_token"),
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          params: { fecha, filas },
+        }),
+      },
+    );
+
+    return respuesta.json();
+  }
+}
+
+// ============= COMPONENTE PRINCIPAL =============
 export class RegistroForm extends Component {
   static template = xml`
     <div class="o_digitalizacion_form_wrapper mt-3">
-        <!-- Alertas dinámicas -->
+        <!-- Alertas dinámicas Globales -->
         <div t-if="state.alerta" t-attf-class="alert alert-{{ state.alerta.tipo }} alert-dismissible shadow-sm border-0 fade show mb-4 rounded-3 p-3 d-flex align-items-center" role="alert">
             <i t-attf-class="fa {{ state.alerta.tipo == 'success' ? 'fa-check-circle' : 'fa-exclamation-circle' }} me-3 fa-lg opacity-75"/>
             <div class="flex-grow-1 fw-semibold text-break"><t t-esc="state.alerta.mensaje"/></div>
@@ -28,119 +355,133 @@ export class RegistroForm extends Component {
             <div class="d-flex flex-column flex-md-row align-items-md-end justify-content-between mb-4 gap-3 bg-white p-4 rounded-4 shadow-sm border border-light">
                 <div>
                    <h1 class="h4 mb-1 fw-bold text-dark text-uppercase tracking-tight">Registro de Producción Diaria</h1>
-                   <p class="text-muted small mb-0 fw-medium">Reporte de avance y métricas de digitalización de documentos.</p>
+                   <p class="text-muted small mb-0 fw-medium">Complete los datos solicitados. Los campos obligatorios están marcados con un asterisco (*).</p>
                 </div>
-                <div class="d-flex align-items-center gap-3">
-                    <label for="fecha_reporte" class="small fw-bold text-dark text-uppercase mb-0 opacity-75">Fecha reportada:</label>
-                    <input id="fecha_reporte" name="fecha_reporte" t-att-max="this._getToday()" t-model="state.fecha" type="date" class="form-control form-control-sm border-light shadow-none bg-light p-2 ps-3 fw-bold rounded-3" style="width: 170px;"/>
+                <div class="d-flex flex-column gap-1">
+                    <label for="fecha_reporte" class="small fw-bold text-dark text-uppercase opacity-75">Fecha reportada: *</label>
+                    <input id="fecha_reporte" name="fecha_reporte" t-att-max="this.obtenerHoy()" t-model="state.fecha" type="date" class="form-control border-light shadow-none bg-light p-2 ps-3 fw-bold rounded-3" style="width: 170px; cursor: pointer;"/>
                 </div>
             </div>
 
             <!-- Listado de Filas por Producción -->
             <div class="o_digitalizacion_cards_list">
                 <t t-foreach="state.filas" t-as="fila" t-key="fila.id">
-                    <t t-set="reglas" t-value="this.getVisibleColumns(fila.etapa_id)"/>
+                    <t t-set="reglas" t-value="this.obtenerReglasVisibilidad(fila.etapa_id)"/>
                     <div class="card o_digitalizacion_record_card mb-4" t-attf-style="border-left: 5px solid {{ fila.etapa_id ? 'var(--dig-primary)' : '#e5e7eb' }} !important;">
-                        <div class="card-header d-flex justify-content-between align-items-center py-3 border-0 bg-white">
-                            <div class="d-flex align-items-center flex-wrap gap-3 flex-grow-1">
-                                <div class="input-group input-group-sm w-auto shadow-sm rounded-3 overflow-hidden border border-light">
-                                    <label t-attf-for="miembro_{{fila.id}}" class="input-group-text border-0 bg-white text-muted px-3 small fw-bold text-uppercase">Digitalizador</label>
-                                    <select t-attf-id="miembro_{{fila.id}}" t-attf-name="miembro_{{fila.id}}" t-model.number="fila.miembro_id" class="form-select border-0 px-2 pe-4 fw-bold text-dark">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold text-muted text-uppercase tracking-wider small"><i class="fa fa-list-alt me-2 text-primary opacity-75"/> LÍNEA DE PRODUCCIÓN #<t t-esc="fila.id"/></h6>
+                            <button t-on-click="() => this.eliminarFila(fila.id)" type="button" class="btn btn-sm btn-link text-danger border-0 p-2 opacity-50-hover text-decoration-none" title="Eliminar registro"><i class="fa fa-trash-o fa-lg" aria-hidden="true"/></button>
+                        </div>
+
+                        <div class="card-body bg-white pt-4">
+                            <!-- BLOQUE 1: Identificación -->
+                            <div class="row g-4 mb-4 pb-4 border-bottom border-light">
+                                <div class="col-md-6">
+                                    <label t-attf-for="miembro_{{fila.id}}" class="small fw-bold text-dark text-uppercase mb-2 d-block">1. Digitalizador *</label>
+                                    <select t-attf-id="miembro_{{fila.id}}" t-attf-name="miembro_{{fila.id}}" t-model.number="fila.miembro_id" t-on-change="() => this.validarYActualizar(fila)" t-attf-class="form-select p-2 fw-bold text-dark {{ fila.errores?.miembro ? 'is-invalid-field' : '' }}">
                                         <option value="">Seleccionar integrante del equipo...</option>
                                         <t t-foreach="props.miembros" t-as="m" t-key="m.id">
                                             <option t-att-value="m.id" t-esc="m.name"/>
                                         </t>
                                     </select>
+                                    <div t-if="fila.errores?.miembro" class="text-danger small mt-2 fw-bold slide-in"><i class="fa fa-exclamation-triangle me-1"/> <t t-esc="fila.errores.miembro"/></div>
                                 </div>
-                                <div class="input-group input-group-sm w-auto shadow-sm rounded-3 overflow-hidden border border-light">
-                                    <label t-attf-for="etapa_{{fila.id}}" t-attf-class="input-group-text border-0 text-white px-3 fw-bold small text-uppercase {{ fila.etapa_id ? 'bg-primary' : 'bg-secondary opacity-50' }}">Etapa</label>
-                                    <select t-attf-id="etapa_{{fila.id}}" t-attf-name="etapa_{{fila.id}}" t-model.number="fila.etapa_id" t-on-change="() => this.onEtapaChange(fila)" t-attf-class="form-select border-0 px-2 pe-4 fw-bold {{ fila.etapa_id ? 'text-primary' : 'text-muted' }}">
-                                        <option value="">— Elegir etapa actual —</option>
+                                <div class="col-md-6">
+                                    <label t-attf-for="etapa_{{fila.id}}" class="small fw-bold text-dark text-uppercase mb-2 d-block">2. Etapa de trabajo *</label>
+                                    <select t-attf-id="etapa_{{fila.id}}" t-attf-name="etapa_{{fila.id}}" t-model.number="fila.etapa_id" t-on-change="() => { this.alCambiarEtapa(fila); this.validarYActualizar(fila); }" t-attf-class="form-select p-2 fw-bold {{ fila.etapa_id ? 'bg-primary' : 'text-dark' }} {{ fila.errores?.etapa ? 'is-invalid-field' : '' }}">
+                                        <option value="">— Elegir etapa a reportar —</option>
                                         <t t-foreach="props.etapas" t-as="e" t-key="e.id">
                                             <option t-att-value="e.id" t-esc="e.name"/>
                                         </t>
                                     </select>
+                                    <div t-if="fila.errores?.etapa" class="text-danger small mt-2 fw-bold slide-in"><i class="fa fa-exclamation-triangle me-1"/> <t t-esc="fila.errores.etapa"/></div>
                                 </div>
                             </div>
-                            <button t-on-click="() => this.removeRow(fila.id)" type="button" class="btn btn-sm btn-link text-danger border-0 p-2 opacity-50-hover" t-attf-aria-label="Eliminar fila {{fila.id}}"><i class="fa fa-trash-o fa-lg" aria-hidden="true"/></button>
-                        </div>
 
-                        <div class="card-body bg-white pt-1">
-                            <div class="row g-4 pt-1">
-                                
-                                <!-- Sección: Recolección y Carga de Cajas -->
+                            <!-- BLOQUE 2: Producción -->
+                            <div class="row g-4">
                                 <t t-if="reglas.caja or reglas.expedientes or reglas.folios or reglas.escaneos">
                                     <div class="col-12 col-md-6 border-end-md border-light">
                                         <div class="o_digitalizacion_section_label">Recolección de Archivos</div>
                                         <div class="row g-3">
-                                            <div t-if="reglas.caja" class="col-12">
-                                                <div class="input-group input-group-sm">
-                                                    <label t-attf-for="ref_{{fila.id}}" class="input-group-text bg-light border-light text-muted small px-3">REFERENCIA:</label>
-                                                    <input t-attf-id="ref_{{fila.id}}" t-attf-name="ref_{{fila.id}}" t-model="fila.referencia_cajas" type="text" class="form-control border-light shadow-none bg-light fw-medium" placeholder="Referencia de cajas procesadas…"/>
-                                                </div>
+                                            <div t-if="reglas.caja" class="col-12 mb-2">
+                                                <label t-attf-for="ref_{{fila.id}}" class="small fw-bold text-dark mb-1 d-block">Referencia de Cajas</label>
+                                                <input t-attf-id="ref_{{fila.id}}" t-attf-name="ref_{{fila.id}}" t-model="fila.referencia_cajas" t-on-blur="() => this.validarYActualizar(fila)" t-on-keyup="() => this.validarYActualizar(fila)" type="text" t-attf-class="form-control p-2 bg-light {{ fila.errores?.referencia_cajas ? 'is-invalid-field' : '' }}" placeholder="Ej: BF202, BF199..."/>
+                                                <div t-if="fila.errores?.referencia_cajas" class="text-danger small mt-2 fw-bold slide-in"><i class="fa fa-exclamation-triangle me-1"/> <t t-esc="fila.errores.referencia_cajas"/></div>
                                             </div>
                                             <div t-if="reglas.expedientes" class="col-6">
-                                                <label t-attf-for="exp_{{fila.id}}" class="text-muted small fw-bold mb-1 d-block">Cantidad de expedientes</label>
-                                                <input t-attf-id="exp_{{fila.id}}" t-attf-name="exp_{{fila.id}}" t-model.number="fila.no_expedientes" type="number" class="form-control border-light shadow-none bg-light p-2 text-center" placeholder="0"/>
+                                                <label t-attf-for="exp_{{fila.id}}" class="small fw-bold text-dark mb-1 d-block">Cantidad de expedientes</label>
+                                                <input t-attf-id="exp_{{fila.id}}" t-attf-name="exp_{{fila.id}}" t-model.number="fila.no_expedientes" t-on-blur="() => this.validarYActualizar(fila)" t-on-keyup="() => this.validarYActualizar(fila)" type="number" step="1" min="0" t-attf-class="form-control p-2 text-center bg-light {{ fila.errores?.no_expedientes ? 'is-invalid-field' : '' }}" placeholder="0"/>
+                                                <div t-if="fila.errores?.no_expedientes" class="text-danger small mt-2 fw-bold slide-in"><i class="fa fa-exclamation-triangle me-1"/> <t t-esc="fila.errores.no_expedientes"/></div>
                                             </div>
                                             <div t-if="reglas.folios" class="col-6">
-                                                <label t-attf-for="fol_{{fila.id}}" class="text-muted small fw-bold mb-1 d-block">Cantidad de folios</label>
-                                                <input t-attf-id="fol_{{fila.id}}" t-attf-name="fol_{{fila.id}}" t-model.number="fila.total_folios" type="number" class="form-control border-light shadow-none bg-light p-2 text-center" placeholder="0"/>
+                                                <label t-attf-for="fol_{{fila.id}}" class="small fw-bold text-dark mb-1 d-block">Cantidad de folios</label>
+                                                <input t-attf-id="fol_{{fila.id}}" t-attf-name="fol_{{fila.id}}" t-model.number="fila.total_folios" t-on-blur="() => this.validarYActualizar(fila)" t-on-keyup="() => this.validarYActualizar(fila)" type="number" step="1" min="0" t-attf-class="form-control p-2 text-center bg-light {{ fila.errores?.total_folios ? 'is-invalid-field' : '' }}" placeholder="0"/>
+                                                <div t-if="fila.errores?.total_folios" class="text-danger small mt-2 fw-bold slide-in"><i class="fa fa-exclamation-triangle me-1"/> <t t-esc="fila.errores.total_folios"/></div>
                                             </div>
-                                            <div t-if="reglas.escaneos" class="col-12 mt-2">
-                                                <div class="bg-light p-3 rounded-4 text-center border border-light shadow-sm">
-                                                    <label t-attf-for="esc_{{fila.id}}" class="text-primary small fw-bold text-uppercase d-block mb-1">Número de escaneos realizados</label>
-                                                    <input t-attf-id="esc_{{fila.id}}" t-attf-name="esc_{{fila.id}}" t-model.number="fila.total_escaneos" type="number" class="form-control form-control-lg border-0 bg-transparent text-center text-primary fw-bold shadow-none p-0" placeholder="0"/>
+                                            <div t-if="reglas.escaneos" class="col-12 mt-3">
+                                                <div class="p-3 rounded-3 border border-light bg-light">
+                                                    <label t-attf-for="esc_{{fila.id}}" class="small fw-bold text-primary mb-2 d-block text-uppercase">Número de escaneos</label>
+                                                    <input t-attf-id="esc_{{fila.id}}" t-attf-name="esc_{{fila.id}}" t-model.number="fila.total_escaneos" t-on-blur="() => this.validarYActualizar(fila)" t-on-keyup="() => this.validarYActualizar(fila)" type="number" step="1" min="0" t-attf-class="form-control form-control-lg border-primary border-opacity-25 text-center text-primary fw-bold {{ fila.errores?.total_escaneos ? 'is-invalid-field' : '' }}" placeholder="0"/>
+                                                    <div t-if="fila.errores?.total_escaneos" class="text-danger small mt-2 fw-bold slide-in text-start"><i class="fa fa-exclamation-triangle me-1"/> <t t-esc="fila.errores.total_escaneos"/></div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </t>
 
-                                <!-- Sección: Post-Procesamiento -->
                                 <t t-if="reglas.expEditados or reglas.foliosEditados or reglas.expIndexados or reglas.foliosIndexados">
                                     <div class="col-12 col-md-6">
                                         <div class="o_digitalizacion_section_label text-primary text-opacity-75">Control de Calidad e Indexación</div>
                                         <div class="row g-3">
                                             <div t-if="reglas.expEditados" class="col-6">
-                                                <label t-attf-for="edit_exp_{{fila.id}}" class="text-muted small fw-bold mb-1 d-block">Expedientes editados</label>
-                                                <input t-attf-id="edit_exp_{{fila.id}}" t-attf-name="edit_exp_{{fila.id}}" t-model.number="fila.expedientes_editados" type="number" class="form-control border-light shadow-none bg-light p-2 text-center" placeholder="0"/>
+                                                <label t-attf-for="edit_exp_{{fila.id}}" class="small fw-bold text-dark mb-1 d-block">Expedientes editados</label>
+                                                <input t-attf-id="edit_exp_{{fila.id}}" t-attf-name="edit_exp_{{fila.id}}" t-model.number="fila.expedientes_editados" t-on-blur="() => this.validarYActualizar(fila)" t-on-keyup="() => this.validarYActualizar(fila)" type="number" step="1" min="0" t-attf-class="form-control p-2 text-center bg-light {{ fila.errores?.expedientes_editados ? 'is-invalid-field' : '' }}" placeholder="0"/>
+                                                <div t-if="fila.errores?.expedientes_editados" class="text-danger small mt-2 fw-bold slide-in"><i class="fa fa-exclamation-triangle me-1"/> <t t-esc="fila.errores.expedientes_editados"/></div>
                                             </div>
                                             <div t-if="reglas.foliosEditados" class="col-6">
-                                                <label t-attf-for="edit_fol_{{fila.id}}" class="text-muted small fw-bold mb-1 d-block">Folios editados</label>
-                                                <input t-attf-id="edit_fol_{{fila.id}}" t-attf-name="edit_fol_{{fila.id}}" t-model.number="fila.folios_editados" type="number" class="form-control border-light shadow-none bg-light p-2 text-center" placeholder="0"/>
+                                                <label t-attf-for="edit_fol_{{fila.id}}" class="small fw-bold text-dark mb-1 d-block">Folios editados</label>
+                                                <input t-attf-id="edit_fol_{{fila.id}}" t-attf-name="edit_fol_{{fila.id}}" t-model.number="fila.folios_editados" t-on-blur="() => this.validarYActualizar(fila)" t-on-keyup="() => this.validarYActualizar(fila)" type="number" step="1" min="0" t-attf-class="form-control p-2 text-center bg-light {{ fila.errores?.folios_editados ? 'is-invalid-field' : '' }}" placeholder="0"/>
+                                                <div t-if="fila.errores?.folios_editados" class="text-danger small mt-2 fw-bold slide-in"><i class="fa fa-exclamation-triangle me-1"/> <t t-esc="fila.errores.folios_editados"/></div>
                                             </div>
                                             <div t-if="reglas.expIndexados" class="col-6">
-                                                <label t-attf-for="ind_exp_{{fila.id}}" class="text-primary-emphasis small fw-bold mb-1 d-block">Expedientes indexados</label>
-                                                <input t-attf-id="ind_exp_{{fila.id}}" t-attf-name="ind_exp_{{fila.id}}" t-model.number="fila.expedientes_indexados" type="number" class="form-control border-light shadow-none bg-light p-2 text-center" placeholder="0"/>
+                                                <label t-attf-for="ind_exp_{{fila.id}}" class="small fw-bold text-primary-emphasis mb-1 d-block">Expedientes indexados</label>
+                                                <input t-attf-id="ind_exp_{{fila.id}}" t-attf-name="ind_exp_{{fila.id}}" t-model.number="fila.expedientes_indexados" t-on-blur="() => this.validarYActualizar(fila)" t-on-keyup="() => this.validarYActualizar(fila)" type="number" step="1" min="0" t-attf-class="form-control p-2 text-center bg-light {{ fila.errores?.expedientes_indexados ? 'is-invalid-field' : '' }}" placeholder="0"/>
+                                                <div t-if="fila.errores?.expedientes_indexados" class="text-danger small mt-2 fw-bold slide-in"><i class="fa fa-exclamation-triangle me-1"/> <t t-esc="fila.errores.expedientes_indexados"/></div>
                                             </div>
                                             <div t-if="reglas.foliosIndexados" class="col-6">
-                                                <label t-attf-for="ind_fol_{{fila.id}}" class="text-primary-emphasis small fw-bold mb-1 d-block">Folios indexados</label>
-                                                <input t-attf-id="ind_fol_{{fila.id}}" t-attf-name="ind_fol_{{fila.id}}" t-model.number="fila.folios_indexados" type="number" class="form-control border-light shadow-none bg-light p-2 text-center" placeholder="0"/>
+                                                <label t-attf-for="ind_fol_{{fila.id}}" class="small fw-bold text-primary-emphasis mb-1 d-block">Folios indexados</label>
+                                                <input t-attf-id="ind_fol_{{fila.id}}" t-attf-name="ind_fol_{{fila.id}}" t-model.number="fila.folios_indexados" t-on-blur="() => this.validarYActualizar(fila)" t-on-keyup="() => this.validarYActualizar(fila)" type="number" step="1" min="0" t-attf-class="form-control p-2 text-center bg-light {{ fila.errores?.folios_indexados ? 'is-invalid-field' : '' }}" placeholder="0"/>
+                                                <div t-if="fila.errores?.folios_indexados" class="text-danger small mt-2 fw-bold slide-in"><i class="fa fa-exclamation-triangle me-1"/> <t t-esc="fila.errores.folios_indexados"/></div>
                                             </div>
                                         </div>
                                     </div>
                                 </t>
+                            </div>
 
-                                <!-- Herramientas -->
-                                <div t-if="reglas.escaner" class="col-12 mt-4 pt-3 border-top border-light border-opacity-50">
-                                    <div class="o_digitalizacion_section_label">Equipos de Escaneo Utilizados</div>
-                                    <div class="d-flex flex-wrap gap-2 py-1">
-                                        <t t-foreach="props.escaneres" t-as="escaner" t-key="escaner.id">
-                                            <label t-attf-for="scanner_{{fila.id}}_{{escaner.id}}" class="o_digitalizacion_escaner_chip mb-0 m-1">
-                                                <input t-attf-id="scanner_{{fila.id}}_{{escaner.id}}" t-attf-name="scanner_{{fila.id}}_{{escaner.id}}" type="checkbox" class="d-none" t-att-checked="(fila.tipo_escaner_ids || []).includes(escaner.id)" t-on-change="(ev) => this.onEscanerToggle(fila, escaner.id, ev.target.checked)"/>
-                                                <span class="fw-bold fs-small"><i t-attf-class="fa fa-hdd-o me-2" /> <t t-esc="escaner.name"/></span>
-                                            </label>
-                                        </t>
-                                    </div>
-                                </div>
+                            <!-- Alerta de producción 0 dinámica -->
+                            <div t-if="fila.errores?.produccion" class="alert alert-danger p-3 small mt-3 mb-0 fw-bold d-flex align-items-center slide-in">
+                                <i class="fa fa-exclamation-circle fa-2x me-3"/> <t t-esc="fila.errores.produccion"/>
+                            </div>
 
-                                <div class="col-12 mt-4">
-                                    <div class="rounded-3 bg-light p-1 px-3 d-flex align-items-center border border-light">
-                                       <label t-attf-for="obs_{{fila.id}}" class="fa fa-commenting-o text-muted me-2 opacity-75 small" aria-hidden="true"></label>
-                                       <input t-attf-id="obs_{{fila.id}}" t-attf-name="obs_{{fila.id}}" t-model="fila.observacion" type="text" class="form-control form-control-sm border-0 bg-transparent shadow-none small fw-medium text-dark" placeholder="Opcional: Indicar observaciones o incidencias de la producción…"/>
-                                    </div>
+                            <!-- BLOQUE 3: Herramientas y Observaciones -->
+                            <div t-if="reglas.escaner" class="col-12 mt-4 pt-3 border-top border-light border-opacity-50">
+                                <label class="small fw-bold text-dark text-uppercase d-block mb-3">3. Equipos Utilizados <t t-if="fila.errores?.escaner"><span class="text-danger ms-2"><i class="fa fa-warning"/> Obligatorio</span></t></label>
+                                <div class="d-flex flex-wrap gap-2 py-1">
+                                    <t t-foreach="props.escaneres" t-as="escaner" t-key="escaner.id">
+                                        <label t-attf-for="scanner_{{fila.id}}_{{escaner.id}}" t-attf-class="o_digitalizacion_escaner_chip mb-0 m-1 {{ fila.errores?.escaner ? 'is-invalid-chip' : '' }}">
+                                            <input t-attf-id="scanner_{{fila.id}}_{{escaner.id}}" t-attf-name="scanner_{{fila.id}}_{{escaner.id}}" type="checkbox" class="d-none" t-att-checked="(fila.tipo_escaner_ids || []).includes(escaner.id)" t-on-change="(ev) => { this.alAlternarEscaner(fila, escaner.id, ev.target.checked); this.validarYActualizar(fila); }"/>
+                                            <span class="fw-bold fs-small"><i t-attf-class="fa fa-hdd-o me-2" /> <t t-esc="escaner.name"/></span>
+                                        </label>
+                                    </t>
                                 </div>
+                                <div t-if="fila.errores?.escaner" class="text-danger small mt-2 fw-bold slide-in"><i class="fa fa-exclamation-triangle me-1"/> <t t-esc="fila.errores.escaner"/></div>
+                            </div>
+
+                            <div class="col-12 mt-4 pt-3 border-top border-light border-opacity-50">
+                                <label t-attf-for="obs_{{fila.id}}" class="small fw-bold text-dark text-uppercase mb-2 d-block">Observaciones Operativas</label>
+                                <textarea t-attf-id="obs_{{fila.id}}" t-attf-name="obs_{{fila.id}}" t-model="fila.observacion" t-on-blur="() => this.validarYActualizar(fila)" t-attf-class="form-control bg-light p-3 pb-4 shadow-none {{ fila.errores?.observacion ? 'is-invalid-field' : '' }}" rows="2" placeholder="Opcional: Indique cualquier incidencia relevante durante la producción..."></textarea>
+                                <div t-if="fila.errores?.observacion" class="text-danger small mt-2 fw-bold slide-in"><i class="fa fa-exclamation-triangle me-1"/> <t t-esc="fila.errores.observacion"/></div>
                             </div>
                         </div>
                     </div>
@@ -148,15 +489,14 @@ export class RegistroForm extends Component {
             </div>
 
             <!-- Footer fijo -->
-            <div t-if="state.filas.length > 0" class="d-flex flex-column flex-md-row gap-3 justify-content-between align-items-center mt-4 bg-white p-4 rounded-4 shadow-sm border border-light">
-                <button t-on-click="this.addRow" type="button" class="btn btn-outline-primary px-4 py-2 fw-bold w-100 w-md-auto shadow-none">
+            <div t-if="state.filas.length > 0" class="d-flex flex-column flex-md-row gap-3 justify-content-between align-items-center mt-2 bg-white p-4 rounded-4 shadow-sm border border-light">
+                <button t-on-click="this.agregarFila" type="button" class="btn btn-outline-primary px-4 py-2 fw-bold w-100 w-md-auto shadow-none">
                     <i class="fa fa-plus-circle me-1"/> Agregar otro registro de producción
                 </button>
                 <div class="d-flex align-items-center gap-3 w-100 w-md-auto">
-                    <span class="text-muted small fw-bold text-uppercase d-none d-md-inline" t-if="!state.isSaving">-</span>
-                    <button t-att-disabled="state.isSaving" t-on-click="this.save" type="button" class="btn btn-primary shadow-sm px-5 py-2 btn-lg flex-grow-1 border-0">
-                        <i t-attf-class="fa {{ state.isSaving ? 'fa-spinner fa-spin' : 'fa-check' }} me-2"/>
-                        <t t-esc="state.isSaving ? 'Guardando...' : 'Confirmar y Guardar Producción'"/>
+                    <button t-att-disabled="state.guardando" t-on-click="this.guardar" type="button" class="btn btn-primary shadow-sm px-5 py-3 btn-lg flex-grow-1 border-0 fw-bold shadow-md">
+                        <i t-attf-class="fa {{ state.guardando ? 'fa-spinner fa-spin' : 'fa-save' }} me-2"/>
+                        <t t-esc="state.guardando ? 'Validando y Guardando...' : 'Confirmar y Guardar Producción'"/>
                     </button>
                 </div>
             </div>
@@ -164,105 +504,124 @@ export class RegistroForm extends Component {
     </div>
   `;
 
+  // OWL, se define el estado inicial
   setup() {
-    this.nextId = 1;
-    this.state = useState({ fecha: this._getToday(), filas: [this._createEmptyRow()], alerta: null, isSaving: false });
+    this.siguienteId = 1;
+    this.state = useState({
+      fecha: UtilidadFecha.obtenerHoy(),
+      filas: [],
+      alerta: null,
+      guardando: false,
+    });
+
+    // Inicializar servicios
+    this.gestorFila = new GestorFila(() => this.siguienteId++);
+    this.validador = new ValidadorFila((etapaId) =>
+      this.obtenerReglasVisibilidad(etapaId),
+    );
+    this.servicioApi = new ServicioApi(this.props.proyecto_id);
+
+    // Crear primera fila
+    this.state.filas = [this.gestorFila.crearVacia()];
   }
 
-  _getToday() {
-    const hoy = new Date();
-    const offset = hoy.getTimezoneOffset();
-    const local = new Date(hoy.getTime() - offset * 60 * 1000);
-    return local.toISOString().split("T")[0];
+  obtenerHoy() {
+    return UtilidadFecha.obtenerHoy();
   }
 
-  _createEmptyRow() {
-    return { id: this.nextId++, miembro_id: "", etapa_id: "", referencia_cajas: "", no_expedientes: 0, total_folios: 0, total_escaneos: 0, tipo_escaner_ids: [], expedientes_editados: 0, folios_editados: 0, expedientes_indexados: 0, folios_indexados: 0, observacion: "" };
-  }
-
-  getVisibleColumns(etapaId) {
-    if (!etapaId) return REGLA_DEFAULT;
+  // Reglas de visibilidad por etapa
+  obtenerReglasVisibilidad(etapaId) {
+    if (!etapaId) return REGLA_POR_DEFECTO;
     const etapa = this.props.etapas.find((e) => e.id === etapaId);
-    return REGLAS_ETAPA[etapa?.name?.toLowerCase()] || REGLA_DEFAULT;
+    return REGLAS_ETAPA[etapa?.name?.toLowerCase()] || REGLA_POR_DEFECTO;
   }
 
-  onEtapaChange(fila) {
-    const reglas = this.getVisibleColumns(fila.etapa_id);
-    if (!reglas.caja) fila.referencia_cajas = "";
-    if (!reglas.expedientes) fila.no_expedientes = 0;
-    if (!reglas.folios) fila.total_folios = 0;
-    if (!reglas.escaneos) fila.total_escaneos = 0;
-    if (!reglas.escaner) fila.tipo_escaner_ids = [];
-    if (!reglas.expEditados) fila.expedientes_editados = 0;
-    if (!reglas.foliosEditados) fila.folios_editados = 0;
-    if (!reglas.expIndexados) fila.expedientes_indexados = 0;
-    if (!reglas.foliosIndexados) fila.folios_indexados = 0;
+  // Al cambiar etapa, reiniciar campos por etapa
+  alCambiarEtapa(fila) {
+    const reglas = this.obtenerReglasVisibilidad(fila.etapa_id);
+    this.gestorFila.reiniciarCamposPorEtapa(fila, reglas);
   }
 
-  onEscanerToggle(fila, escanerId, checked) {
-    if (!Array.isArray(fila.tipo_escaner_ids)) fila.tipo_escaner_ids = [];
-    const id = Number(escanerId);
-    if (checked) {
-      if (!fila.tipo_escaner_ids.includes(id)) fila.tipo_escaner_ids = [...fila.tipo_escaner_ids, id];
-    } else {
-      fila.tipo_escaner_ids = fila.tipo_escaner_ids.filter((v) => v !== id);
-    }
+  // Al alternar escaner, reiniciar campos por etapa
+  alAlternarEscaner(fila, escanerId, seleccionado) {
+    this.gestorFila.alternarEscaner(fila, escanerId, seleccionado);
   }
 
-  addRow() { this.state.filas.push(this._createEmptyRow()); }
-  removeRow(id) { this.state.filas = this.state.filas.filter((fila) => fila.id !== id); }
-
-  extraerMensajeError(errorData) {
-    if (errorData.result?.error) return errorData.result.error.message;
-    if (errorData.error) return errorData.error.message || "Error del servidor";
-    return "Error desconocido.";
+  validarYActualizar(fila) {
+    const { errores, esValido } = this.validador.validar(fila);
+    fila.errores = errores;
+    return esValido;
   }
 
-  async save() {
+  agregarFila() {
+    this.state.filas.push(this.gestorFila.crearVacia());
+  }
+
+  eliminarFila(id) {
+    this.state.filas = this.state.filas.filter((fila) => fila.id !== id);
+  }
+
+  // Guardar registros
+  async guardar() {
     if (!this.state.fecha || this.state.filas.length === 0) return;
 
-    for (const [index, fila] of this.state.filas.entries()) {
-        const produccion = (fila.no_expedientes || 0) + (fila.total_folios || 0) + (fila.total_escaneos || 0) + 
-                           (fila.expedientes_editados || 0) + (fila.folios_editados || 0) + 
-                           (fila.expedientes_indexados || 0) + (fila.folios_indexados || 0);
-        
-        if (!fila.miembro_id || !fila.etapa_id) {
-            this.state.alerta = { tipo: "warning", mensaje: `Debe asignar un digitalizador y una etapa en la línea ${index + 1}.` };
-            return;
-        }
-
-        if (produccion <= 0) {
-            this.state.alerta = { tipo: "warning", mensaje: `La línea ${index + 1} no tiene cantidades de producción reportadas. No se permiten registros en cero.` };
-            return;
-        }
+    let formularioTieneErrores = false;
+    for (const fila of this.state.filas) {
+      if (!this.validarYActualizar(fila)) formularioTieneErrores = true;
     }
 
-    this.state.isSaving = true;
-    this.state.alerta = null;
-    try {
-      const respuesta = await fetch(`/digitalizacion/api/v1/proyectos/${this.props.proyecto_id}/registros`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-CSRFToken": this._getCookie("csrf_token") },
-        body: JSON.stringify({ jsonrpc: "2.0", params: { fecha: this.state.fecha, filas: this.state.filas } }),
-      });
-      const data = await respuesta.json();
-      if (data.result?.success) {
-        this.state.alerta = { tipo: "success", mensaje: "¡Producción guardada correctamente!" };
-        this.state.filas = [this._createEmptyRow()];
-      } else {
-        this.state.alerta = { tipo: "danger", mensaje: this.extraerMensajeError(data) };
-      }
-    } catch {
-      this.state.alerta = { tipo: "danger", mensaje: "Error de conexión." };
-    } finally { this.state.isSaving = false; }
-  }
+    if (formularioTieneErrores) {
+      this.state.alerta = {
+        tipo: "danger",
+        mensaje:
+          "El formulario contiene inconsistencias o alertas pendientes marcadas en letras y bordes rojos. Por favor, asegúrese de rellenar adecuadamente la(s) línea(s) bloqueada(s).",
+      };
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
 
-  _getCookie(name) {
-    const parts = `; ${document.cookie}`.split(`; ${name}=`);
-    return parts.length === 2 ? parts.pop().split(";").shift() : "";
+    this.state.guardando = true;
+    this.state.alerta = null;
+
+    const filasLimpias = this.state.filas.map((f) =>
+      this.gestorFila.limpiarParaGuardar(f),
+    );
+
+    try {
+      const datos = await this.servicioApi.guardarRegistros(
+        this.state.fecha,
+        filasLimpias,
+      );
+
+      if (datos.result?.success) {
+        this.state.alerta = {
+          tipo: "success",
+          mensaje:
+            "¡Reporte validado y guardado correctamente!",
+        };
+        this.state.filas = [this.gestorFila.crearVacia()];
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        this.state.alerta = {
+          tipo: "danger",
+          mensaje: AnalizadorError.procesar(datos),
+        };
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } catch (error) {
+      this.state.alerta = {
+        tipo: "danger",
+        mensaje:
+          "Se interrumpió la conexión. Revisar red interna antes de enviar los datos.",
+      };
+    } finally {
+      this.state.guardando = false;
+    }
   }
 }
 
+// ============= WIDGET =============
+// OWL, se monta el componente, se le pasan los datos del widget y se renderiza
 publicWidget.registry.DigitalizacionRegistro = publicWidget.Widget.extend({
   selector: ".o_digitalizacion_registro_mount",
   start() {

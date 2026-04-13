@@ -1,7 +1,7 @@
 // ============================================================
 // MÓDULO DE GESTIÓN DE DIGITALIZACIÓN — Diagrama ER
 // Jimena Castro · Práctica Profesional · OTEC GLOBAL 2026
-// Versión: 17.0.1.0.0  |  Odoo 17 Community
+// Versión: 17.0.2.0.0  |  Odoo 17 Community
 //
 // Tablas del módulo:
 //   T-01  digitalizacion_etapa
@@ -105,11 +105,12 @@ Table digitalizacion_proyecto {
   fecha_inicio          date      [not null]
   fecha_fin_estimada    date      [note: 'Debe ser >= fecha_inicio']
   duracion_estimada     int       [note: 'COMPUTE: días entre inicio y fin']
-  state                 varchar   [not null, default: 'activo', note: 'activo | inactivo']
+  state                 varchar   [not null, default: 'en_curso', note: 'en_curso | pausado | finalizado']
   active                boolean   [default: true, note: 'Soft delete']
-  color                 int       [note: 'Índice de color para vista Kanban']
-  meta_escaneos         int       [default: 0, note: 'Objetivo en escaneos. Rango: 0 – 100 000 000.']
-  progreso              float     [note: 'COMPUTE: % avance respecto a meta_escaneos']
+  total_miembros        int       [note: 'COMPUTE (stored): Total miembros activos']
+  total_registros       int       [note: 'COMPUTE (stored): Total registros asociados']
+  total_escaneos        int       [note: 'COMPUTE (stored): Suma total de escaneos del proyecto']
+  etapa_dominante       varchar   [note: 'COMPUTE: Etapa con mayor producción']
   create_date           timestamp
   write_date            timestamp
   create_uid            int       [ref: > res_users.id]
@@ -204,7 +205,7 @@ Table digitalizacion_registro {
   etapa_id                int       [not null, ref: > digitalizacion_etapa.id, note: 'Determina qué campos de producción son obligatorios.']
 
   // --- Temporal ---
-  fecha                   date      [not null, note: 'Fecha de la jornada. No puede ser futura.']
+  fecha                   date      [not null, note: 'Fecha de la producción. No puede ser futura.']
 
   // --- Campos comunes ---
   referencia_cajas        varchar   [note: 'Texto libre. Ej: BF202, BF199. Máx. 200 chars. Requiere al menos 1 alfanumérico.']
@@ -281,6 +282,7 @@ Table digitalizacion_registro_tipo_escaner_rel {
 // ------------------------------------------------------------
 
 Enum estado_proyecto {
-  activo   [note: 'Proyecto en curso — visible en portal']
-  inactivo [note: 'Proyecto pausado o finalizado — oculto en portal']
+  en_curso   [note: 'Proyecto activo y visible en portal']
+  pausado    [note: 'Proyecto en espera']
+  finalizado [note: 'Proyecto terminado']
 }

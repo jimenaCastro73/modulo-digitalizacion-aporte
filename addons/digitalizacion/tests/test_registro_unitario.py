@@ -52,8 +52,7 @@ class TestRegistroUnitario(TransactionCase):
             {
                 "name": "Proyecto Test Unitario",
                 "fecha_inicio": date.today(),
-                "state": "activo",
-                "meta_escaneos": 1000,
+                "state": "en_curso",
             }
         )
 
@@ -72,7 +71,7 @@ class TestRegistroUnitario(TransactionCase):
             {
                 "name": "Otro Proyecto Test",
                 "fecha_inicio": date.today(),
-                "state": "activo",
+                "state": "en_curso",
             }
         )
 

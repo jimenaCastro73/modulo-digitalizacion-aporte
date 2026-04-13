@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 test_miembro_unitario.py — PRUEBAS DE CAJA BLANCA / UNITARIAS
 =============================================================
@@ -37,7 +37,7 @@ class TestMiembroUnitario(TransactionCase):
             {
                 "name": "Proyecto Miembro Test",
                 "fecha_inicio": cls.hoy,
-                "state": "activo",
+                "state": "en_curso",
             }
         )
 

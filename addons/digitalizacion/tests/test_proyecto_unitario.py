@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 test_proyecto_unitario.py — PRUEBAS DE CAJA BLANCA / UNITARIAS
 ===============================================================
@@ -6,8 +6,6 @@ Modelo: digitalizacion.proyecto  (T-03)
 
 Cobertura:
   PY-01  _check_fechas          → fecha_fin < fecha_inicio
-  PY-02  _check_meta_escaneos   → meta_escaneos < 0
-  PY-03  _compute_progreso      → cálculo de porcentaje
   PY-04  _sql_constraints       → nombre único
   PY-05  action_archivar        → desactiva proyecto y líderes
   PY-06  action_ver_registros   → retorna acción de ventana correcta
@@ -37,8 +35,7 @@ class TestProyectoUnitario(TransactionCase):
         vals = {
             "name": f"Proyecto Test {self.hoy}",
             "fecha_inicio": self.hoy,
-            "state": "activo",
-            "meta_escaneos": 500,
+            "state": "en_curso",
         }
         vals.update(kwargs)
         return self.env["digitalizacion.proyecto"].create(vals)
@@ -75,84 +72,6 @@ class TestProyectoUnitario(TransactionCase):
         self.assertEqual(p.duracion_estimada, 30)
 
     # ──────────────────────────────────────────────────────────────────────────
-    # PY-02 — _check_meta_escaneos
-    # ──────────────────────────────────────────────────────────────────────────
-
-    def test_py02_meta_escaneos_negativa(self):
-        """PY-02a: meta_escaneos < 0 lanza ValidationError."""
-        with self.assertRaises(ValidationError):
-            self._crear_proyecto(name="Meta Negativa", meta_escaneos=-1)
-
-    def test_py02_meta_escaneos_cero_permitida(self):
-        """PY-02b: meta_escaneos == 0 es válido (sin meta definida)."""
-        p = self._crear_proyecto(name="Proyecto Sin Meta", meta_escaneos=0)
-        self.assertEqual(p.meta_escaneos, 0)
-
-    # ──────────────────────────────────────────────────────────────────────────
-    # PY-03 — _compute_progreso
-    # ──────────────────────────────────────────────────────────────────────────
-
-    def test_py03_progreso_sin_meta(self):
-        """PY-03a: Si meta_escaneos == 0, progreso = 0.0."""
-        p = self._crear_proyecto(name="Sin Meta Progreso", meta_escaneos=0)
-        self.assertEqual(p.progreso, 0.0)
-
-    def test_py03_progreso_con_registros(self):
-        """PY-03b: Progreso se calcula tras crear registros de escaneo."""
-        p = self._crear_proyecto(name="Progreso con Registros", meta_escaneos=1000)
-
-        etapa_digitalizado = self.env["digitalizacion.etapa"].search(
-            [("name", "=", "Digitalizado")], limit=1
-        )
-        partner = self.env["res.partner"].create({"name": "Digitalizador Progreso"})
-        miembro = self.env["digitalizacion.miembro_proyecto"].create(
-            {
-                "proyecto_id": p.id,
-                "partner_id": partner.id,
-                "fecha_integracion": self.hoy,
-            }
-        )
-        self.env["digitalizacion.registro"].create(
-            {
-                "proyecto_id": p.id,
-                "miembro_id": miembro.id,
-                "etapa_id": etapa_digitalizado.id,
-                "fecha": self.hoy,
-                "total_escaneos": 500,
-                "total_folios": 400,
-            }
-        )
-        p.invalidate_recordset()
-        self.assertAlmostEqual(p.progreso, 50.0, places=1)
-
-    def test_py03_progreso_no_supera_100(self):
-        """PY-03c: Progreso no supera el 100% aunque los escaneos excedan la meta."""
-        p = self._crear_proyecto(name="Progreso Máximo", meta_escaneos=100)
-        etapa_digitalizado = self.env["digitalizacion.etapa"].search(
-            [("name", "=", "Digitalizado")], limit=1
-        )
-        partner = self.env["res.partner"].create({"name": "Digitalizador 100"})
-        miembro = self.env["digitalizacion.miembro_proyecto"].create(
-            {
-                "proyecto_id": p.id,
-                "partner_id": partner.id,
-                "fecha_integracion": self.hoy,
-            }
-        )
-        self.env["digitalizacion.registro"].create(
-            {
-                "proyecto_id": p.id,
-                "miembro_id": miembro.id,
-                "etapa_id": etapa_digitalizado.id,
-                "fecha": self.hoy,
-                "total_escaneos": 500,
-                "total_folios": 100,
-            }
-        )
-        p.invalidate_recordset()
-        self.assertLessEqual(p.progreso, 100.0)
-
-    # ──────────────────────────────────────────────────────────────────────────
     # PY-04 — SQL constraint nombre único
     # ──────────────────────────────────────────────────────────────────────────
 
@@ -172,21 +91,24 @@ class TestProyectoUnitario(TransactionCase):
     # PY-05 — action_archivar
     # ──────────────────────────────────────────────────────────────────────────
 
-    def test_py05_action_archivar(self):
-        """PY-05: action_archivar desactiva el proyecto."""
-        p = self._crear_proyecto(name="Proyecto a Archivar")
-        self.assertTrue(p.active)
-        p.action_archivar()
-        self.assertFalse(p.active)
+    def test_py05_action_pausar(self):
+        """PY-05a: action_pausar cambia el estado a pausado."""
+        p = self._crear_proyecto(name="Proyecto a Pausar")
+        self.assertEqual(p.state, "en_curso")
+        p.action_pausar()
+        self.assertEqual(p.state, "pausado")
 
-    def test_py05_action_activar(self):
-        """PY-05b: action_activar reactiva un proyecto archivado."""
-        p = self._crear_proyecto(name="Proyecto a Reactivar")
-        p.action_archivar()
-        self.assertFalse(p.active)
-        p.with_context(active_test=False).action_activar()
-        p.invalidate_recordset()
-        self.assertTrue(p.active)
+    def test_py05_action_finalizar(self):
+        """PY-05b: action_finalizar cambia el estado a finalizado."""
+        p = self._crear_proyecto(name="Proyecto a Finalizar")
+        p.action_finalizar()
+        self.assertEqual(p.state, "finalizado")
+
+    def test_py05_action_reactivar(self):
+        """PY-05c: action_reactivar vuelve a poner el proyecto en_curso."""
+        p = self._crear_proyecto(name="Proyecto a Reactivar", state="pausado")
+        p.action_reactivar()
+        self.assertEqual(p.state, "en_curso")
 
     # ──────────────────────────────────────────────────────────────────────────
     # PY-06 — action_ver_registros

@@ -1,7 +1,7 @@
 # Gestión de Digitalización — Módulo Odoo 17
 
 > **Módulo desarrollado como Práctica Profesional en OTEC GLOBAL**  
-> Autor: Jimena Castro · Versión `17.0.1.0.0` · Licencia LGPL-3
+> Autor: Jimena Castro · Versión `17.0.2.0.0` · Licencia LGPL-3
 
 ---
 
@@ -108,11 +108,14 @@ digitalizacion/
 │   └── etapa_data.xml           # Datos iniciales de las 5 etapas
 │
 ├── views/
-│   ├── admin/                   # Backend (solo Admin)
+│   ├── admin/                   # Backend (solo Administrador)
 │   │   ├── proyectos/
-│   │   ├── operaciones/
+│   │   │   ├── proyecto_views.xml        # Dashboard, Equipos y Estadísticas unificadas
+│   │   │   └── proyecto_report_views.xml # Formatos de reporte PDF
 │   │   ├── configuracion/
-│   │   ├── dashboard_views.xml
+│   │   │   ├── etapa_views.xml
+│   │   │   └── tipo_escaner_views.xml
+│   │   ├── dashboard_views.xml  # Dashboard global (vista de inicio)
 │   │   └── digitalizacion_menus.xml
 │   └── portal/                  # Frontend (Líder)
 │       ├── portal_home_templates.xml
@@ -180,8 +183,6 @@ Registro central de cada proyecto de digitalización.
 | `duracion_estimada` | Integer (compute) | Días entre inicio y fin |
 | `state` | Selection | `activo` / `inactivo` |
 | `active` | Boolean | Soft delete |
-| `meta_escaneos` | Integer | Objetivo en número de escaneos (0 a 100 000 000) |
-| `progreso` | Float (compute) | Porcentaje de avance respecto a la meta |
 | `asignacion_ids` | One2many | Líderes asignados |
 | `miembro_ids` | One2many | Equipo del proyecto |
 | `registro_ids` | One2many | Registros de trabajo |
@@ -236,7 +237,7 @@ Granularidad: 1 registro = 1 miembro + 1 etapa + cantidades del día.
 | `miembro_id` | Many2one | Digitalizador |
 | `proyecto_id` | Many2one | Proyecto |
 | `etapa_id` | Many2one | Etapa del proceso |
-| `fecha` | Date | Fecha de la jornada (no futura) |
+| `fecha` | Date | Fecha de la producción (no futura) |
 | `hora` | Datetime | Timestamp de envío (readonly) |
 | `referencia_cajas` | Char | Códigos o descripción de cajas (máx. 200 chars) |
 | `no_expedientes` | Integer | Expedientes procesados (0 – 999 999) |
@@ -298,7 +299,7 @@ El portal está disponible en `/digitalizacion/v1/` y requiere autenticación co
 | Ruta | Vista | Descripción |
 |------|-------|-------------|
 | `/digitalizacion/v1/dashboard` | `portal_home_templates.xml` | Dashboard principal con KPIs, resumen por etapa y últimos registros |
-| `/digitalizacion/v1/proyectos/<id>` | `portal_proyecto_templates.xml` | Detalle del proyecto: progreso, meta y accesos rápidos |
+| `/digitalizacion/v1/proyectos/<id>` | `portal_proyecto_templates.xml` | Detalle del proyecto y accesos rápidos |
 | `/digitalizacion/v1/proyectos/<id>/form` | `portal_registro_form_templates.xml` | Formulario multi-fila para registrar producción |
 | `/digitalizacion/v1/proyectos/<id>/miembros` | `portal_miembros_templates.xml` | Equipo del proyecto con gráfico de participación |
 
@@ -384,13 +385,11 @@ Accesibles desde el menú principal **Digitalización** (solo rol Administrador)
 
 | Menú | Vista | Descripción |
 |------|-------|-------------|
-| Proyectos | Lista + Kanban + Formulario | Gestión completa de proyectos |
-| Asignaciones | Lista + Formulario | Control de líderes por proyecto |
-| Miembros | Lista + Formulario | Gestión del equipo por proyecto |
-| Registros | Lista + Formulario + Pivot + Gráfico | Análisis de producción diaria |
-| Configuración → Etapas | Lista + Formulario | Catálogo de etapas del proceso |
-| Configuración → Escáneres | Lista + Formulario | Catálogo de equipos |
-| Dashboard | Vista especial | KPIs globales de producción |
+| **Proyectos** | Lista + Formulario (V2) | **Centralizado:** Gestión de líderes, personal, estadísticas y reportes desde una sola vista. |
+| Dashboard | Vista especial | KPIs globales de producción de todos los proyectos activos. |
+| Reportes | PDF (QWeb) | Reporte por proyecto con métricas de producción y equipo. |
+| Configuración → Etapas | Lista + Formulario | Catálogo de etapas del proceso. |
+| Configuración → Escáneres | Lista + Formulario | Catálogo de equipos de digitalización. |
 
 ---
 
@@ -406,7 +405,6 @@ Accesibles desde el menú principal **Digitalización** (solo rol Administrador)
 | `asignacion` | `_check_lider_tiene_grupo` | El usuario debe pertenecer al grupo Líder |
 | `asignacion` | `_check_fecha_asignacion` | Fecha de asignación no futura |
 | `proyecto` | `_check_fechas` | `fecha_fin ≥ fecha_inicio` |
-| `proyecto` | `_check_meta_escaneos` | `0 ≤ meta_escaneos ≤ 100 000 000` |
 | `proyecto` | `_check_name` | Nombre no vacío, no solo dígitos |
 | `proyecto` | `_check_description_longitud` | Descripción ≤ 5 000 caracteres |
 | `miembro_proyecto` | `_check_fechas` | `fecha_salida ≥ fecha_integracion` |
@@ -456,7 +454,7 @@ docker exec odoo.17.otecglobal odoo \
 |---------|-------|-------|------|-----------|
 | `test_registro_unitario.py` | `TestRegistroUnitario` | 28 | Caja blanca | CB-01 a CB-10: validaciones, cómputos, overrides |
 | `test_registro_regresion.py` | `TestRegistroRegresion` | 12 | Caja negra | CN-01 a CN-10: flujos completos CRUD, regresión |
-| `test_proyecto_unitario.py` | `TestProyectoUnitario` | 14 | Caja blanca | PY-01 a PY-07: fechas, progreso, constraints |
+| `test_proyecto_unitario.py` | `TestProyectoUnitario` | 14 | Caja blanca | PY-01 a PY-07: fechas, constraints |
 | `test_miembro_unitario.py` | `TestMiembroUnitario` | 13 | Caja blanca | MP-01 a MP-07: liderazgo, salida, unicidad |
 
 **Resultado esperado:**
@@ -493,6 +491,15 @@ modulo-digitalizacion-aporte/
 │       │   ├── digitalizacion_proyecto_security.xml
 │       │   ├── digitalizacion_registro_security.xml
 │       │   └── ir.model.access.csv
+│       ├── static/
+│       │   ├── description/
+│       │   │   └── icon.png
+│       │   └── src/
+│       │       └── portal/
+│       │           ├── js/
+│       │           │   └── portal_registro_form.js
+│       │           └── css/
+│       │               └── portal_digitalizacion.css
 │       ├── tests/
 │       │   ├── __init__.py
 │       │   ├── test_miembro_unitario.py
@@ -504,11 +511,8 @@ modulo-digitalizacion-aporte/
 │           │   ├── configuracion/
 │           │   │   ├── etapa_views.xml
 │           │   │   └── tipo_escaner_views.xml
-│           │   ├── operaciones/
-│           │   │   ├── miembro_views.xml
-│           │   │   └── registro_views.xml
 │           │   ├── proyectos/
-│           │   │   ├── asignacion_views.xml
+│           │   │   ├── proyecto_report_views.xml
 │           │   │   └── proyecto_views.xml
 │           │   ├── dashboard_views.xml
 │           │   └── digitalizacion_menus.xml
@@ -518,15 +522,9 @@ modulo-digitalizacion-aporte/
 │               ├── portal_proyecto_templates.xml
 │               ├── portal_registro_form_templates.xml
 │               └── website_menu.xml
-├── static/
-│   └── src/
-│       └── portal/
-│           ├── js/
-│           │   └── portal_registro_form.js
-│           └── css/
-│               └── portal_digitalizacion.css
 ├── docker-compose.yaml
-├── odoo.conf
+├── config/
+│   └── odoo.conf
 └── README.md
 ```
 
@@ -576,7 +574,9 @@ docker restart odoo.17.otecglobal
 - **Portal — fetch nativo:** El componente OWL utiliza `fetch()` nativo con CSRF token de Odoo para comunicarse con la API, eliminando dependencias de métodos legacy.
 - **Iconos — FontAwesome 6:** En Odoo 17 se deben utilizar las clases `fa-solid` (para FA 6) y etiquetas de cierre explícito `</i>` para garantizar el renderizado correcto en el portal.
 - **lider_id en registros:** El campo `lider_id` se asigna automáticamente en `create()` al usuario en sesión y no puede modificarse mediante `write()`.
+- **Arquitectura de Vistas V2 (Centralizado):** Se eliminaron los menús redundantes de Miembros, Asignaciones y Registros. Ahora todo el control operativo se realiza desde el formulario del Proyecto, filtrando automáticamente la información relacionada para mejorar la experiencia de usuario (UX) y evitar errores de contexto.
+- **Reportes:** Se implementó un motor de reportes PDF que hereda los estilos visuales del dashboard del portal, proporcionando un documento ejecutivo con branding corporativo y métricas limpias para la gerencia.
 
 ---
 
-*Desarrollado como aporte de la Práctica Profesional · OTEC GLOBAL · 2026*
+*Desarrollado como aporte de la Práctica Profesional · OTEC GLOBAL · Febrero-Abril 2026*
