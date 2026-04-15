@@ -9,11 +9,7 @@ y un proyecto de digitalización.
 Restricciones de negocio:
   - UNIQUE(lider_id, proyecto_id).
   - El líder puede rotar entre proyectos (múltiples asignaciones activas).
-
-Efecto secundario en create/write:
-  Al crear una asignación, el sistema crea automáticamente el registro
-  en digitalizacion.miembro_proyecto (T-05) para que el Líder aparezca
-  en el selector de digitalizadores del formulario.
+  - SOLO el admin puede crear/asignar líderes.
 """
 
 import logging
@@ -37,7 +33,7 @@ class DigitalizacionAsignacion(models.Model):
         ),
     ]
 
-    # ── Campos ────────────────────────────────────────────────────────────────
+    # Campos
 
     lider_id = fields.Many2one(
         comodel_name="res.users",
@@ -67,7 +63,7 @@ class DigitalizacionAsignacion(models.Model):
         help="Soft delete. False = el líder pierde acceso al proyecto en el portal.",
     )
 
-    # ── Campo computado de nombre ─────────────────────────────────────────────
+    # Campo computado de nombre
 
     display_name = fields.Char(
         string="Nombre",
@@ -75,7 +71,7 @@ class DigitalizacionAsignacion(models.Model):
         store=False,
     )
 
-    # ── Restricciones Python ──────────────────────────────────────────────────
+    # Restricciones Python
 
     @api.constrains("lider_id", "proyecto_id")
     def _check_lider_tiene_grupo(self):
@@ -83,15 +79,13 @@ class DigitalizacionAsignacion(models.Model):
         Verifica que el usuario asignado pertenezca al grupo de Líder.
 
         Regla de negocio: solo un usuario con el grupo correcto puede
-        acceder al portal de digitalización. Asignar un usuario sin ese
-        grupo resultaría en un portal vacío o errores de acceso.
+        acceder al portal de digitalización.
         """
         grupo_lider = self.env.ref(
             "digitalizacion.group_digitalizacion_lider",
             raise_if_not_found=False,
         )
 
-        # Si el grupo no existe (ej: módulo parcialmente instalado), no validar
         if not grupo_lider:
             return
 
@@ -108,15 +102,10 @@ class DigitalizacionAsignacion(models.Model):
 
     @api.constrains("fecha_asignacion")
     def _check_fecha_asignacion(self):
-        """
-        La fecha de asignación no puede ser futura.
-
-        Regla de negocio: las asignaciones son hechos ya ocurridos.
-        """
+        """La fecha de asignación no puede ser futura."""
         hoy = fields.Date.today()
         for record in self:
-            fecha_es_futura = record.fecha_asignacion and record.fecha_asignacion > hoy
-            if fecha_es_futura:
+            if record.fecha_asignacion and record.fecha_asignacion > hoy:
                 raise ValidationError(
                     _(
                         "La fecha de asignación (%s) no puede ser futura.",
@@ -124,7 +113,7 @@ class DigitalizacionAsignacion(models.Model):
                     )
                 )
 
-    # ── Métodos computados ────────────────────────────────────────────────────
+    # Métodos computados
 
     @api.depends("lider_id", "proyecto_id")
     def _compute_display_name(self):
@@ -133,23 +122,15 @@ class DigitalizacionAsignacion(models.Model):
             proyecto = record.proyecto_id.name or "Sin proyecto"
             record.display_name = f"{lider} → {proyecto}"
 
-    # ── Overrides CRUD ────────────────────────────────────────────────────────
+    # Overrides CRUD
 
     @api.model_create_multi
     def create(self, vals_list):
         """
         Crea asignaciones con patrón reactivar-si-existe, crear-si-no-existe.
-
-        Antes de crear un nuevo registro, verifica si ya existe uno archivado
-        (active=False) para el mismo líder + proyecto. Si existe, lo reactiva
-        en lugar de crear un duplicado (respetando la constraint UNIQUE).
-
-        Efecto secundario: tras crear/reactivar la asignación, llama a
-        _crear_miembro_para_lider() para que el líder también aparezca
-        como digitalizador en el selector del formulario.
+        ELIMINADO: ya no crea miembro_proyecto automáticamente.
         """
         registros_a_crear = []
-        registros_procesados = self.env["digitalizacion.asignacion"]
 
         for vals in vals_list:
             asignacion_archivada = self.with_context(active_test=False).search(
@@ -162,7 +143,6 @@ class DigitalizacionAsignacion(models.Model):
             )
 
             if asignacion_archivada:
-                # Reactivar en lugar de crear un duplicado
                 asignacion_archivada.write(
                     {
                         "active": True,
@@ -171,84 +151,20 @@ class DigitalizacionAsignacion(models.Model):
                         ),
                     }
                 )
-                registros_procesados |= asignacion_archivada
             else:
                 registros_a_crear.append(vals)
 
         if registros_a_crear:
-            registros_procesados |= super().create(registros_a_crear)
-
-        for asig in registros_procesados:
-            self._crear_miembro_para_lider(asig)
-
-        return registros_procesados
+            return super().create(registros_a_crear)
+        return self.env["digitalizacion.asignacion"]
 
     def write(self, vals):
         """
-        Al reactivar una asignación (active=True), verifica que el
-        miembro_proyecto del líder también esté activo en ese proyecto.
+        Al reactivar una asignación (active=True), ya NO crea miembro_proyecto.
         """
-        resultado = super().write(vals)
+        return super().write(vals)
 
-        reactivando_asignacion = vals.get("active") is True
-        if reactivando_asignacion:
-            for asig in self:
-                self._crear_miembro_para_lider(asig)
-
-        return resultado
-
-    # ── Métodos internos ──────────────────────────────────────────────────────
-
-    def _crear_miembro_para_lider(self, asignacion):
-        """
-        Crea o reactiva el registro digitalizacion.miembro_proyecto
-        correspondiente al líder para el proyecto dado.
-        """
-        Miembro = self.env["digitalizacion.miembro_proyecto"].sudo()
-        partner = asignacion.lider_id.partner_id
-
-        if not partner:
-            _logger.warning(
-                "El líder '%s' (ID %d) no tiene partner_id asociado. "
-                "No se creó miembro_proyecto automáticamente.",
-                asignacion.lider_id.name,
-                asignacion.lider_id.id,
-            )
-            return
-
-        miembro_existente = Miembro.with_context(active_test=False).search(
-            [
-                ("proyecto_id", "=", asignacion.proyecto_id.id),
-                ("partner_id", "=", partner.id),
-            ],
-            limit=1,
-        )
-
-        if miembro_existente:
-            if not miembro_existente.active:
-                miembro_existente.write({"active": True, "fecha_salida": False})
-                _logger.info(
-                    "Miembro_proyecto reactivado para líder '%s' en proyecto '%s'.",
-                    asignacion.lider_id.name,
-                    asignacion.proyecto_id.name,
-                )
-        else:
-            Miembro.create(
-                {
-                    "proyecto_id": asignacion.proyecto_id.id,
-                    "partner_id": partner.id,
-                    "fecha_integracion": asignacion.fecha_asignacion
-                    or fields.Date.today(),
-                    "active": True,
-                }
-            )
-            _logger.info(
-                "Miembro_proyecto creado para líder '%s' en proyecto '%s'.",
-                asignacion.lider_id.name,
-                asignacion.proyecto_id.name,
-            )
-
-    # ── Acciones ──────────────────────────────────────────────────────────────
+    # Acciones
 
     def action_desactivar(self):
         """Desactiva la asignación."""

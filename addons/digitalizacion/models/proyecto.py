@@ -21,7 +21,7 @@ class DigitalizacionProyecto(models.Model):
         ),
     ]
 
-    # ── Campos principales ────────────────────────────────────────────────────
+    # Campos principales
 
     name = fields.Char(
         string="Nombre",
@@ -71,7 +71,7 @@ class DigitalizacionProyecto(models.Model):
         help="Soft delete de Odoo. False = proyecto archivado.",
     )
 
-    # ── Relaciones inversas ───────────────────────────────────────────────────
+    # Relaciones inversas
 
     asignacion_ids = fields.One2many(
         comodel_name="digitalizacion.asignacion",
@@ -91,7 +91,7 @@ class DigitalizacionProyecto(models.Model):
         string="Registros de trabajo",
     )
 
-    # ── Campos computados ─────────────────────────────────────────────────────
+    # Campos computados
 
     lider_ids = fields.Many2many(
         comodel_name="res.users",
@@ -129,7 +129,7 @@ class DigitalizacionProyecto(models.Model):
         help="Etapa con mayor producción acumulada.",
     )
 
-    # ── Restricciones Python ──────────────────────────────────────────────────
+    # Restricciones Python
 
     @api.constrains("fecha_inicio", "fecha_fin_estimada")
     def _check_fechas(self):
@@ -173,7 +173,7 @@ class DigitalizacionProyecto(models.Model):
                     )
                 )
 
-    # ── Métodos computados ────────────────────────────────────────────────────
+    # Métodos computados
 
     @api.depends("fecha_inicio", "fecha_fin_estimada")
     def _compute_duracion_estimada(self):
@@ -207,7 +207,9 @@ class DigitalizacionProyecto(models.Model):
                 registro.total_escaneos or 0 for registro in proyecto.registro_ids
             )
 
-    @api.depends("registro_ids", "registro_ids.produccion_principal", "registro_ids.etapa_nombre")
+    @api.depends(
+        "registro_ids", "registro_ids.produccion_principal", "registro_ids.etapa_nombre"
+    )
     def _compute_etapa_dominante(self):
         for proyecto in self:
             if not proyecto.registro_ids:
@@ -226,7 +228,7 @@ class DigitalizacionProyecto(models.Model):
             else:
                 proyecto.etapa_dominante = _("N/A")
 
-    # ── Métodos de negocio ────────────────────────────────────────────────────
+    # Métodos de negocio
 
     def action_pausar(self):
         """Pone el proyecto en pausa (Standby)."""

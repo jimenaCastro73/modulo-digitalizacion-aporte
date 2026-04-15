@@ -99,13 +99,6 @@ const UtilidadFecha = {
   },
 };
 
-const UtilidadCookie = {
-  obtener(nombre) {
-    const partes = `; ${document.cookie}`.split(`; ${nombre}=`);
-    return partes.length === 2 ? partes.pop().split(";").shift() : "";
-  },
-};
-
 const AnalizadorError = {
   procesar(datosError) {
     if (datosError.result?.error) return datosError.result.error.message;
@@ -326,16 +319,18 @@ class ServicioApi {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-CSRFToken": UtilidadCookie.obtener("csrf_token"),
         },
         body: JSON.stringify({
           jsonrpc: "2.0",
-          params: { fecha, filas },
+          params: {
+            fecha: fecha,
+            registros: filas,
+          },
         }),
       },
     );
 
-    return respuesta.json();
+    return await respuesta.json();
   }
 }
 
@@ -593,22 +588,33 @@ export class RegistroForm extends Component {
         filasLimpias,
       );
 
-      if (datos.result?.success) {
+      // Odoo JSON-RPC devuelve los errores en data.error
+      if (datos.error) {
+        let msg = "Error del servidor";
+        if (datos.error.data?.message) msg = datos.error.data.message;
+        else if (datos.error.message) msg = datos.error.message;
+
+        this.state.alerta = { tipo: "danger", mensaje: msg };
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      // El resultado exitoso o validación lógica está en data.result
+      const resultado = datos.result;
+
+      if (resultado && resultado.success) {
         this.state.alerta = {
           tipo: "success",
-          mensaje:
-            "¡Reporte validado y guardado correctamente!",
+          mensaje: `¡Reporte validado y guardado correctamente! (${resultado.total} registro(s))`,
         };
         this.state.filas = [this.gestorFila.crearVacia()];
         window.scrollTo({ top: 0, behavior: "smooth" });
-      } else {
-        this.state.alerta = {
-          tipo: "danger",
-          mensaje: AnalizadorError.procesar(datos),
-        };
+      } else if (resultado && resultado.error) {
+        this.state.alerta = { tipo: "danger", mensaje: resultado.error };
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     } catch (error) {
+      console.error("Error en petición:", error);
       this.state.alerta = {
         tipo: "danger",
         mensaje:

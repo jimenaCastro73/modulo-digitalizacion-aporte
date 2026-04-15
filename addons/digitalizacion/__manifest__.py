@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "Gestión de Digitalización",
-    "version": "17.0.1.0.0",
+    "version": "17.0.2.0.0",
     "category": "Services",
     "summary": "Gestión de proyectos de digitalización de documentos",
     "author": "Jimena Castro — Práctica Profesional OTEC GLOBAL",
@@ -15,7 +15,7 @@
         "security/ir.model.access.csv",
         # --- Datos ---
         "data/etapa_data.xml",
-        "views/admin/proyectos/proyecto_report_views.xml",
+        # --- Vistas del backoffice ---
         "views/admin/proyectos/proyecto_views.xml",
         "views/admin/configuracion/etapa_views.xml",
         "views/admin/configuracion/tipo_escaner_views.xml",
@@ -27,6 +27,8 @@
         "views/portal/portal_registro_form_templates.xml",
         "views/portal/portal_miembros_templates.xml",
         "views/portal/website_menu.xml",
+        # --- Reportes PDF ---
+        "report/proyecto_report_views.xml",
     ],
     "assets": {
         "web.assets_frontend": [
