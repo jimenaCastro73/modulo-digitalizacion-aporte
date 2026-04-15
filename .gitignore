@@ -3,7 +3,7 @@ config/odoo.conf
 .vscode
 
 # Python
-__pycache__/
+**/__pycache__/
 *.py[cod]
 *.pyc
 *.pyo
