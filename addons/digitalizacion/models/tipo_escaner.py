@@ -4,14 +4,19 @@ tipo_escaner.py — Modelo: digitalizacion.tipo_escaner
 Tabla T-02 · Catálogo global de tipos de escáneres
 """
 
-from odoo import _, api, fields, models
-from odoo.exceptions import ValidationError
+from odoo import _, fields, models
+
+from .mixins import _NombreValidoMixin
 
 
-class DigitalizacionTipoEscaner(models.Model):
+class DigitalizacionTipoEscaner(_NombreValidoMixin, models.Model):
     _name = "digitalizacion.tipo_escaner"
     _description = "Tipo de Escáner"
     _order = "name asc"
+    _inherit = ["digitalizacion.mixin.nombre_valido"]
+
+    # Personaliza el mensaje del mixin _check_name
+    _nombre_objeto = _("el tipo de escáner")
 
     _sql_constraints = [
         (
@@ -21,7 +26,7 @@ class DigitalizacionTipoEscaner(models.Model):
         ),
     ]
 
-    # ── Campos ────────────────────────────────────────────────────────────────
+    # Campos
 
     name = fields.Char(
         string="Nombre",
@@ -40,65 +45,7 @@ class DigitalizacionTipoEscaner(models.Model):
         help="Soft delete. False = escáner archivado/fuera de uso.",
     )
 
-    registro_count = fields.Integer(
-        string="Usos en registros",
-        compute="_compute_registro_count",
-        store=False,
-        help="Cantidad de registros que usan este escáner.",
-    )
-
-    # ── Restricciones Python ──────────────────────────────────────────────────
-
-    @api.constrains("name")
-    def _check_name(self):
-        """
-        El nombre del tipo de escáner debe identificar claramente el equipo.
-
-        No se aceptan nombres vacíos ni solo numéricos porque
-        impedirían identificar visualmente el equipo en los reportes.
-        """
-        for record in self:
-            nombre = (record.name or "").strip()
-
-            if not nombre:
-                raise ValidationError(
-                    _("El nombre del tipo de escáner no puede estar vacío.")
-                )
-
-            solo_numeros = nombre.isdigit()
-            if solo_numeros:
-                raise ValidationError(
-                    _(
-                        "El nombre del escáner no puede ser solo números: '%s'. "
-                        "Usa el modelo o marca. Ej: 'Fujitsu fi-7300NX'.",
-                        nombre,
-                    )
-                )
-
-    # ── Métodos computados ────────────────────────────────────────────────────
-
-    @api.depends("name")
-    def _compute_registro_count(self):
-        """
-        Cuenta los registros en los que se usó este tipo de escáner.
-
-        Usa _read_group para evitar N queries — una sola consulta
-        agrupa todos los registros del recordset en una sola ida a la BD.
-        """
-        if not self.ids:
-            for record in self:
-                record.registro_count = 0
-            return
-
-        datos = self.env["digitalizacion.registro"]._read_group(
-            domain=[("tipo_escaner_ids", "in", self.ids)],
-            groupby=["tipo_escaner_ids"],
-            aggregates=["__count"],
-        )
-        conteos = {escaner.id: count for escaner, count in datos}
-
-        for record in self:
-            record.registro_count = conteos.get(record.id, 0)
+    # Métodos de acción
 
     def action_ver_registros(self):
         """Abre los registros donde se usó este tipo de escáner."""
@@ -110,5 +57,5 @@ class DigitalizacionTipoEscaner(models.Model):
             "view_mode": "tree,form",
             "domain": [("tipo_escaner_ids", "in", self.id)],
             "context": {"default_tipo_escaner_ids": [(4, self.id)]},
+            "target": "current",
         }
-

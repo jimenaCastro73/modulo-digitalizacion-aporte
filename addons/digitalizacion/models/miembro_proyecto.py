@@ -4,8 +4,7 @@ miembro_proyecto.py — Modelo: digitalizacion.miembro_proyecto
 Tabla T-05 · Integrantes del equipo de digitalización por proyecto
 
 Puente entre el catálogo global de contactos (res.partner) y los proyectos.
-Permite al Líder gestionar su equipo desde el portal: consultar miembros,
-agregar nuevos y registrar incorporaciones tardías.
+SOLO el admin puede gestionar miembros desde el backend.
 
 Reglas de negocio clave:
   - UNIQUE(proyecto_id, partner_id): un contacto no puede aparecer dos veces
@@ -17,9 +16,7 @@ Reglas de negocio clave:
   - Si fecha_salida está informada, el miembro NO aparece en el selector del
     formulario de registro.
   - Un mismo contacto puede ser miembro de múltiples proyectos.
-
-Referenciado por:
-  - digitalizacion.registro (miembro_id)  → T-06
+  - ELIMINADO: método crear_desde_portal (ya no se usa)
 """
 
 import logging
@@ -44,7 +41,7 @@ class DigitalizacionMiembroProyecto(models.Model):
         ),
     ]
 
-    # ── Campos ────────────────────────────────────────────────────────────────
+    # Campos
 
     proyecto_id = fields.Many2one(
         comodel_name="digitalizacion.proyecto",
@@ -90,7 +87,7 @@ class DigitalizacionMiembroProyecto(models.Model):
         "Al desactivar, desactiva la asignación correspondiente.",
     )
 
-    # ── Campos relacionados almacenados ───────────────────────────────────────
+    # Campos relacionados almacenados
 
     partner_name = fields.Char(
         string="Nombre del miembro",
@@ -106,7 +103,7 @@ class DigitalizacionMiembroProyecto(models.Model):
         readonly=True,
     )
 
-    # ── Campos computados ─────────────────────────────────────────────────────
+    # Campos computados
 
     display_name = fields.Char(
         string="Nombre",
@@ -122,7 +119,7 @@ class DigitalizacionMiembroProyecto(models.Model):
         help="Cantidad de registros de trabajo asociados a este miembro en el proyecto.",
     )
 
-    # ── Restricciones Python ──────────────────────────────────────────────────
+    # Restricciones Python
 
     @api.constrains("fecha_integracion", "fecha_salida")
     def _check_fechas(self):
@@ -160,23 +157,44 @@ class DigitalizacionMiembroProyecto(models.Model):
                         )
                     )
 
-    # ── Overrides CRUD ────────────────────────────────────────────────────────
+    # Overrides CRUD
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """
+        Crea miembros. Si es_lider=True, sincroniza con asignación.
+        """
+        records = super().create(vals_list)
+
+        for record in records:
+            if record.es_lider:
+                record._sincronizar_liderazgo(True)
+
+        return records
 
     def write(self, vals):
         """
         Sincroniza es_lider con digitalizacion.asignacion (T-04).
         Si se informa fecha_salida, desactiva el miembro y limpia liderazgo.
         """
+        # Guardar estado actual antes de escribir
+        old_es_lider = {r.id: r.es_lider for r in self}
+
         res = super().write(vals)
 
+        # Sincronizar cambios de liderazgo
         if "es_lider" in vals:
             for record in self:
-                record._sincronizar_liderazgo(record.es_lider)
+                new_es_lider = vals.get("es_lider")
+                if new_es_lider != old_es_lider.get(record.id):
+                    record._sincronizar_liderazgo(new_es_lider)
 
+        # Manejar fecha_salida
         if vals.get("fecha_salida"):
             activos = self.filtered(lambda r: r.active)
             if activos:
                 super(DigitalizacionMiembroProyecto, activos).write({"active": False})
+
             lideres = self.filtered(lambda r: r.es_lider)
             if lideres:
                 for record in lideres:
@@ -185,7 +203,7 @@ class DigitalizacionMiembroProyecto(models.Model):
 
         return res
 
-    # ── Sincronización con digitalizacion.asignacion ──────────────────────────
+    # Sincronización con digitalizacion.asignacion
 
     def _sincronizar_liderazgo(self, activar):
         """
@@ -244,7 +262,9 @@ class DigitalizacionMiembroProyecto(models.Model):
         for otro in otros_lideres:
             otro._desactivar_asignacion()
         if otros_lideres:
-            super(DigitalizacionMiembroProyecto, otros_lideres).write({"es_lider": False})
+            super(DigitalizacionMiembroProyecto, otros_lideres).write(
+                {"es_lider": False}
+            )
 
         # Crear o reactivar asignación
         asig = Asignacion.with_context(active_test=False).search(
@@ -313,7 +333,7 @@ class DigitalizacionMiembroProyecto(models.Model):
                 self.proyecto_id.name,
             )
 
-    # ── Métodos computados ────────────────────────────────────────────────────
+    # Métodos computados
 
     @api.depends("partner_id", "proyecto_id")
     def _compute_display_name(self):
@@ -338,7 +358,6 @@ class DigitalizacionMiembroProyecto(models.Model):
             record.total_registros = conteos.get(record.id, 0)
 
     def _search_total_registros(self, operator, value):
-        # Optimizado: _read_group en vez de search([]).mapped()
         datos = self.env["digitalizacion.registro"]._read_group(
             [], ["miembro_id"], ["__count"]
         )
@@ -352,7 +371,7 @@ class DigitalizacionMiembroProyecto(models.Model):
             _("Búsqueda no soportada para total_registros con este operador.")
         )
 
-    # ── Métodos de negocio ────────────────────────────────────────────────────
+    # Métodos de negocio (solo admin)
 
     def action_registrar_salida(self):
         """Registra la salida del miembro: asigna fecha_salida=hoy y desactiva."""
@@ -391,69 +410,3 @@ class DigitalizacionMiembroProyecto(models.Model):
             },
             "target": "current",
         }
-
-    # ── Método de clase: creación desde el portal ─────────────────────────────
-
-    @api.model
-    def crear_desde_portal(
-        self, proyecto_id, nombre, partner_id=None, fecha_integracion=None
-    ):
-        """
-        Método de alto nivel llamado desde el controlador al agregar un miembro
-        desde el portal web. Implementa la lógica nota 3.7.
-        """
-        Partner = self.env["res.partner"].sudo()
-
-        if partner_id:
-            partner = Partner.browse(partner_id)
-            if not partner.exists():
-                raise ValidationError(_("El contacto ID %s no existe.", partner_id))
-        else:
-            nombre_limpio = (nombre or "").strip()
-            if not nombre_limpio:
-                raise ValidationError(_("El nombre del miembro no puede estar vacío."))
-            partner = Partner.search(
-                [("name", "=ilike", nombre_limpio), ("active", "=", True)],
-                limit=1,
-            )
-            if not partner:
-                partner = Partner.create({"name": nombre_limpio})
-                _logger.info(
-                    "Nuevo res.partner creado desde portal: '%s' (ID %d)",
-                    nombre_limpio,
-                    partner.id,
-                )
-
-        existente = self.with_context(active_test=False).search(
-            [("proyecto_id", "=", proyecto_id), ("partner_id", "=", partner.id)],
-            limit=1,
-        )
-
-        if existente:
-            if existente.active:
-                raise ValidationError(
-                    _("'%s' ya es miembro activo de este proyecto.", partner.name)
-                )
-            existente.write({"active": True, "fecha_salida": False})
-            _logger.info(
-                "Miembro_proyecto reactivado: '%s' en proyecto ID %d.",
-                partner.name,
-                proyecto_id,
-            )
-            return {"id": existente.id, "name": partner.name}
-
-        nuevo = self.sudo().create(
-            {
-                "proyecto_id": proyecto_id,
-                "partner_id": partner.id,
-                "fecha_integracion": fecha_integracion or fields.Date.today(),
-                "active": True,
-            }
-        )
-        _logger.info(
-            "Miembro_proyecto creado desde portal: '%s' (ID %d) en proyecto ID %d.",
-            partner.name,
-            nuevo.id,
-            proyecto_id,
-        )
-        return {"id": nuevo.id, "name": partner.name}
