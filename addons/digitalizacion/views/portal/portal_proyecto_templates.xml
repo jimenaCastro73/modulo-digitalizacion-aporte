@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ================================================================
+         portal_proyecto_templates.xml
+         Vista detallada del proyecto para el Líder de Equipo.
+         Enfoque: Seguimiento de metas globales y accesos operativos.
+         ================================================================ -->
+    <template id="digitalizacion_portal_proyecto_detalle" name="Portal: detalle del proyecto">
+        <t t-call="portal.portal_layout">
+            <!-- Capa de Notificaciones -->
+            <t t-if="notifications">
+                <div class="container mt-3">
+                    <t t-foreach="notifications" t-as="notif">
+                        <div t-attf-class="alert alert-{{ notif['type'] }} alert-dismissible fade show border-0 shadow-sm" role="alert">
+                            <t t-esc="notif['message']" />
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" />
+                        </div>
+                    </t>
+                </div>
+            </t>
+            <div class="container py-4">
+                <!-- CABECERA DEL PROYECTO -->
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <i class="fa fa-folder-open fa-3x text-primary me-3"></i>
+                                <div>
+                                    <h2 class="mb-1 fw-bold text-dark">
+                                        <t t-esc="proyecto.name" />
+                                    </h2>
+                                    <t t-if="proyecto.state == 'en_curso'">
+                                        <span class="badge rounded-pill px-3 py-2 bg-success">
+                                            <i class="fa fa-play-circle me-1"></i> Estado: En curso
+                                        </span>
+                                    </t>
+                                    <t t-if="proyecto.state == 'pausado'">
+                                        <span class="badge rounded-pill px-3 py-2 bg-warning text-dark">
+                                            <i class="fa fa-pause-circle me-1"></i> Estado: Pausa / Standby
+                                        </span>
+                                    </t>
+                                    <t t-if="proyecto.state == 'finalizado'">
+                                        <span class="badge rounded-pill px-3 py-2 bg-info">
+                                            <i class="fa fa-check-circle me-1"></i> Estado: Finalizado
+                                        </span>
+                                    </t>
+                                </div>
+                            </div>
+                            <!-- Acciones rápidas -->
+                            <div class="d-flex gap-2">
+                                <t t-if="proyecto.state == 'en_curso'">
+                                    <a t-attf-href="/digitalizacion/v1/proyectos/{{ proyecto.id }}/form" class="btn btn-primary d-flex align-items-center px-3 shadow-sm">
+                                        <i class="fa fa-plus-circle me-1" />
+                                        <strong>Nueva Producción</strong>
+                                    </a>
+                                </t>
+                                <a t-attf-href="/digitalizacion/v1/proyectos/{{ proyecto.id }}/miembros" class="btn btn-white border d-flex align-items-center px-3 shadow-sm">
+                                    <i class="fa fa-users me-1 text-muted" />
+                                    Equipo
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- SECCIÓN DE CANTIDAD ACUMULADA -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-uppercase text-muted fw-bold small mb-1 tracking-wider">CANTIDAD DE ESCANEOS ACUMULADOS</h6>
+                                <div class="h2 mb-0 fw-bold text-dark">
+                                    <i class="fa fa-camera text-primary me-2" />
+                                    <t t-esc="proyecto.total_escaneos" />
+                                    <span class="text-muted h4 fw-normal ms-2">producción progresiva</span>
+                                </div>
+                            </div>
+                            <div class="text-end text-muted">
+                                <small class="fw-bold">PROYECTO: <t t-esc="proyecto.name.upper()"/></small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- MATRIZ DE KPI DETALLADO -->
+                <div class="row g-4 mb-4">
+                    <div class="col-6 col-md-3">
+                        <div class="card text-center h-100 border-0 shadow-sm">
+                            <div class="card-body py-4">
+                                <div class="h2 fw-bold text-primary mb-1">
+                                    <t t-esc="proyecto.total_miembros" />
+                                </div>
+                                <div class="text-muted small fw-bold text-uppercase">Integrantes</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card text-center h-100 border-0 shadow-sm">
+                            <div class="card-body py-4">
+                                <div class="h2 fw-bold text-success mb-1">
+                                    <t t-esc="proyecto.total_escaneos" />
+                                </div>
+                                <div class="text-muted small fw-bold text-uppercase">Escaneos</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card text-center h-100 border-0 shadow-sm text-decoration-none">
+                            <div class="card-body py-4">
+                                <div class="h2 fw-bold text-info mb-1">
+                                    <t t-esc="proyecto.total_registros" />
+                                </div>
+                                <div class="text-muted small fw-bold text-uppercase">Producciones</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card text-center h-100 border-0 shadow-sm">
+                            <div class="card-body py-4">
+                                <div class="h2 fw-bold text-warning mb-1">
+                                    <t t-esc="proyecto.duracion_estimada or '—'" />
+                                </div>
+                                <div class="text-muted small fw-bold text-uppercase">Días Estimados</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- DETALLES ESTRUCTURALES -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-bottom py-3 px-4">
+                        <h6 class="mb-0 fw-bold text-dark">
+                            <i class="fa fa-info-circle text-primary me-2" />
+                            Configuración del Proyecto
+                        </h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-4">
+                            <div class="col-md-7 border-end-md">
+                                <div class="row g-3">
+                                    <div class="col-sm-6">
+                                        <div class="p-3 bg-light rounded-3">
+                                            <small class="text-muted d-block mb-1 fw-bold text-uppercase">Fecha de Inicio</small>
+                                            <span class="fw-semibold text-dark">
+                                                <t t-esc="proyecto.fecha_inicio" />
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="p-3 bg-light rounded-3">
+                                            <small class="text-muted d-block mb-1 fw-bold text-uppercase">Cierre Estimado</small>
+                                            <span class="fw-semibold text-dark">
+                                                <t t-esc="proyecto.fecha_fin_estimada or 'No definida'" />
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                            <div class="col-md-5 ps-md-4">
+                                <t t-if="proyecto.description">
+                                    <h6 class="fw-bold text-muted small text-uppercase mb-2">Descripción del Proyecto</h6>
+                                    <div class="text-muted small lh-lg bg-light p-3 rounded-3" style="min-height: 100px;">
+                                        <t t-esc="proyecto.description" />
+                                    </div>
+                                </t>
+                                <t t-else="">
+                                    <div class="d-flex h-100 align-items-center justify-content-center border border-dashed rounded-3 p-4">
+                                        <span class="text-muted small">Sin descripción detallada</span>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>

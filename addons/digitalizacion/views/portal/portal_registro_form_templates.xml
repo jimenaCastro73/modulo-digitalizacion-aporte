@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ================================================================
+         portal_registro_form_templates.xml
+         Punto de montaje para la Aplicación Owl de Registro de Producción.
+         Mantiene el contexto del proyecto y carga los datos maestros
+         necesarios para la reactividad del formulario.
+         ================================================================ -->
+    <template id="digitalizacion_portal_registro_form" name="Portal: formulario de registro">
+        <t t-call="portal.portal_layout">
+            <!-- Capa de Notificaciones Flash -->
+            <t t-if="notifications">
+                <div class="container mt-3">
+                    <t t-foreach="notifications" t-as="notif">
+                        <div t-attf-class="alert alert-{{ notif['type'] }} alert-dismissible fade show border-0 shadow-sm" role="alert">
+                            <t t-esc="notif['message']" />
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" />
+                        </div>
+                    </t>
+                </div>
+            </t>
+            <div class="container py-4">
+                <!-- CABECERA DE OPERACIÓN -->
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 p-3 bg-white shadow-sm rounded-3 border-start border-primary border-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width:48px; height:48px;">
+                            <i class="fa fa-pencil-square-o fa-lg text-primary" />
+                        </div>
+                        <div>
+                            <h3 class="mb-0 fw-bold text-dark">Registrar Producción</h3>
+                            <p class="text-muted mb-0 small fw-semibold">
+                                <i class="fa fa-folder-open-o me-1" />
+                                <t t-esc="proyecto.name" />
+                            </p>
+                        </div>
+                    </div>
+                    <a t-attf-href="/digitalizacion/v1/proyectos/#{ proyecto.id }" class="btn btn-outline-secondary btn-sm px-3 shadow-sm">
+                        <i class="fa fa-arrow-left me-1" />
+                        Volver al Proyecto
+                    </a>
+                </div>
+                <!-- CONTENEDOR RAIZ: MONTAJE COMPONENTE OWL -->
+                <!-- Los atributos data-* se inyectan como props al Componente en portal_registro_form.js -->
+                <div class="o_digitalizacion_registro_mount"
+                     t-att-data-proyecto-id="proyecto.id"
+                     t-att-data-miembros="miembros_json"
+                     t-att-data-etapas="etapas_json"
+                     t-att-data-escaneres="escaneres_json">
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>

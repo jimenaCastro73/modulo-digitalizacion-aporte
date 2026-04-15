@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ================================================================
+         proyecto_views.xml — Centro de Mando de Proyectos (V2)
+         ENCAPSULA: Proyectos, Asignaciones, Miembros y Registros.
+         ================================================================ -->
+    <!-- ════════════════════════════════════════════════════════════════
+         SECCIÓN 1 — VISTAS DE APOYO (MIEMBROS Y REGISTROS)
+         ════════════════════════════════════════════════════════════════ -->
+    <!-- VISTA LISTA MIEMBROS (PARA PESTAÑA EQUIPO) -->
+    <record id="view_miembro_proyecto_tree_inline" model="ir.ui.view">
+        <field name="name">digitalizacion.miembro_proyecto.tree.inline</field>
+        <field name="model">digitalizacion.miembro_proyecto</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom" decoration-muted="not active">
+                <field name="partner_id" string="Digitalizador" />
+                <field name="fecha_integracion" string="Ingreso" />
+                <field name="es_lider" string="¿Es Líder?" widget="boolean_toggle" />
+                <field name="total_registros" string="Registros" readonly="1" />
+                <field name="active" column_invisible="True" />
+            </tree>
+        </field>
+    </record>
+    <!-- VISTA LISTA REGISTROS (PARA PESTAÑA ESTADÍSTICAS) -->
+    <record id="view_registro_tree_inline" model="ir.ui.view">
+        <field name="name">digitalizacion.registro.tree.inline</field>
+        <field name="model">digitalizacion.registro</field>
+        <field name="arch" type="xml">
+            <tree string="Producción" decoration-muted="produccion_principal == 0">
+                <field name="fecha" />
+                <field name="miembro_nombre" string="Digitalizador" />
+                <field name="etapa_nombre" string="Etapa" />
+                <field name="produccion_principal" string="Producción" />
+                <field name="unidad_produccion" string="Unidad" />
+                <field name="total_escaneos" string="Escaneos" />
+            </tree>
+        </field>
+    </record>
+
+    <!-- VISTA PIVOT REGISTROS -->
+    <record id="digitalizacion_registro_view_pivot" model="ir.ui.view">
+        <field name="name">digitalizacion.registro.pivot</field>
+        <field name="model">digitalizacion.registro</field>
+        <field name="arch" type="xml">
+            <pivot string="Análisis de Producción" disable_linking="0">
+                <field name="proyecto_nombre" type="row" />
+                <field name="miembro_nombre" type="row" />
+                <field name="etapa_nombre" type="col" />
+                <field name="produccion_principal" string="Producción" type="measure" />
+                <field name="total_escaneos" string="Escaneos" type="measure" />
+                <field name="fecha" type="col" interval="month" invisible="1" />
+            </pivot>
+        </field>
+    </record>
+
+    <!-- VISTA GRÁFICO (Exclusiva para Dashboard) -->
+    <record id="digitalizacion_registro_view_graph_dashboard" model="ir.ui.view">
+        <field name="name">digitalizacion.registro.graph.dashboard</field>
+        <field name="model">digitalizacion.registro</field>
+        <field name="arch" type="xml">
+            <graph string="Análisis de Producción" type="line" sample="1">
+                <field name="fecha" interval="day" type="row" />
+                <field name="etapa_nombre" type="col" />
+                <field name="produccion_principal" type="measure" />
+            </graph>
+        </field>
+    </record>
+
+    <!-- VISTA BÚSQUEDA REGISTROS -->
+    <record id="digitalizacion_registro_view_search" model="ir.ui.view">
+        <field name="name">digitalizacion.registro.search</field>
+        <field name="model">digitalizacion.registro</field>
+        <field name="arch" type="xml">
+            <search string="Buscar registros">
+                <field name="miembro_nombre" string="Digitalizador" />
+                <field name="proyecto_nombre" string="Proyecto" />
+                <field name="etapa_nombre" string="Etapa" />
+                <group string="Agrupar por" expand="1">
+                    <filter name="group_proyecto" string="Proyecto" context="{'group_by': 'proyecto_nombre'}" />
+                    <filter name="group_etapa" string="Etapa" context="{'group_by': 'etapa_nombre'}" />
+                    <filter name="group_fecha" string="Fecha" context="{'group_by': 'fecha:day'}" />
+                </group>
+            </search>
+        </field>
+    </record>
+    <!-- ════════════════════════════════════════════════════════════════
+         SECCIÓN 2 — VISTAS DE PROYECTO
+         ════════════════════════════════════════════════════════════════ -->
+    <!-- 2.1 LISTA PROYECTOS -->
+    <record id="digitalizacion_proyecto_view_tree" model="ir.ui.view">
+        <field name="name">digitalizacion.proyecto.list</field>
+        <field name="model">digitalizacion.proyecto</field>
+        <field name="arch" type="xml">
+            <tree string="Proyectos" default_order="fecha_inicio desc" decoration-muted="state == 'pausado'" decoration-success="state == 'en_curso'" decoration-info="state == 'finalizado'">
+                <field name="name" string="Proyecto" />
+                <field name="fecha_inicio" string="Inicio" />
+                <field name="state" string="Estado" widget="badge" decoration-success="state == 'en_curso'" decoration-warning="state == 'pausado'" decoration-info="state == 'finalizado'" />
+                <field name="total_miembros" string="Miembros" />
+                <field name="total_escaneos" string="CANTIDAD DE ESCANEOS" />
+            </tree>
+        </field>
+    </record>
+    <!-- 2.2 FORMULARIO PROYECTO (ENCAPSULADO) -->
+    <record id="digitalizacion_proyecto_view_form" model="ir.ui.view">
+        <field name="name">digitalizacion.proyecto.form</field>
+        <field name="model">digitalizacion.proyecto</field>
+        <field name="arch" type="xml">
+            <form string="Proyecto de Digitalización">
+                <header>
+                    <button name="action_reactivar" string="Iniciar / Reanudar" type="object" class="btn-primary" invisible="state == 'en_curso'" />
+                    <button name="action_pausar" string="Pausar (Standby)" type="object" class="btn-secondary" invisible="state != 'en_curso'" />
+                    <button name="action_finalizar" string="Finalizar Proyecto" type="object" class="btn-info" confirm="¿Confirmas que se han terminado los escaneos de este proyecto?" invisible="state == 'finalizado'" />
+                    <field name="state" widget="statusbar" statusbar_visible="en_curso,pausado,finalizado" />
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label string="Nombre del Proyecto" for="name" />
+                        <h1>
+                            <field name="name" placeholder="Ej: Inprema 2026..." />
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Datos Generales">
+                            <field name="fecha_inicio" />
+                            <field name="fecha_fin_estimada" />
+                        </group>
+                        <group string="Producción Acumulada">
+                            <field name="total_escaneos" string="CANTIDAD DE ESCANEOS" readonly="1" />
+                            <field name="total_miembros" string="Personal Asignado" readonly="1" />
+                        </group>
+                    </group>
+                    <notebook>
+                        <!-- DASHBOARD ESPECÍFICO (UI/UX MEJORADA) -->
+                        <page name="dashboard" string="Dashboard">
+                            <div class="o_horizontal_separator mt-3 mb-4 text-primary fw-bold">
+                                <i class="fa fa-dashboard me-2" />
+                                RESUMEN OPERATIVO DEL PROYECTO
+                            </div>
+                            <div class="row text-center mb-4">
+                                <!-- CARD: ESCANEOS TOTALES -->
+                                <div class="col-md-4">
+                                    <div class="card shadow-sm border-0 bg-light p-3 h-100">
+                                        <div class="text-muted small text-uppercase fw-bold mb-2">Cantidad de Escaneos</div>
+                                        <div class="h2 fw-bold text-primary mb-0">
+                                            <field name="total_escaneos" readonly="1" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- CARD: REGISTROS -->
+                                <div class="col-md-4">
+                                    <div class="card shadow-sm border-0 bg-light p-3 h-100">
+                                        <div class="text-muted small text-uppercase fw-bold mb-2">Registros del Proyecto</div>
+                                        <div class="h2 fw-bold text-dark mb-0">
+                                            <field name="total_registros" readonly="1" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- CARD: ETAPA DOMINANTE -->
+                                <div class="col-md-4">
+                                    <div class="card shadow-sm border-0 bg-light p-3 h-100">
+                                        <div class="text-muted small text-uppercase fw-bold mb-2">Etapa con más registros</div>
+                                        <div class="h3 fw-bold text-info mb-0">
+                                            <field name="etapa_dominante" readonly="1" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row justify-content-center mt-5">
+                                <div class="col-md-6 text-center border-top pt-4">
+                                    <p class="text-muted mb-4">Pulsa el siguiente botón para visualizar las gráficas de tendencia y análisis detallado de carga por día.</p>
+                                    <button name="action_ver_analisis_grafico" type="object" 
+                                            class="btn btn-primary btn-lg shadow p-2 rounded-pill" icon="fa-line-chart" style="width: 100%;">
+                                        <span class="ms-2 fw-bold">ABRIR ANÁLISIS GRÁFICO</span>
+                                    </button>
+                                    
+                                </div>
+                                <div class="col-md-6 text-center border-top pt-4">
+                                    <p class="text-muted mb-4">Pulsa el siguiente botón para generar el reporte PDF del proyecto.</p>
+                                    <button name="action_print_report" type="object" 
+                                            class="btn btn-secondary btn-lg shadow-sm p-2 rounded-pill" icon="fa-file-pdf-o" style="width: 80%;">
+                                        <span class="ms-1 small fw-bold">GENERAR REPORTE PDF</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </page>
+                        <!-- EQUIPOS (ASIGNACIONES + MIEMBROS) -->
+                        <page name="equipo" string="Equipos">
+                            <separator string="Gestión de Líderes (Usuarios)" />
+                            <field name="asignacion_ids" context="{'default_proyecto_id': active_id}">
+                                <tree editable="bottom">
+                                    <field name="lider_id" string="Usuario Líder" options="{'no_create': True}" />
+                                    <field name="fecha_asignacion" string="Desde" />
+                                    <field name="active" string="Acceso Activo" widget="boolean_toggle" />
+                                </tree>
+                            </field>
+                            <separator string="Gestión de Personal Digitalizador (Partners)" class="mt-4" />
+                            <field name="miembro_ids" context="{'default_proyecto_id': active_id}" view_id="%(view_miembro_proyecto_tree_inline)s" />
+                        </page>
+                        <!-- ESTADÍSTICAS (REGISTROS) -->
+                        <page name="estadisticas" string="Estadísticas">
+                            <field name="registro_ids" readonly="1" view_id="%(view_registro_tree_inline)s" />
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <!-- 4. VISTA BÚSQUEDA -->
+    <record id="digitalizacion_proyecto_view_search" model="ir.ui.view">
+        <field name="name">digitalizacion.proyecto.search</field>
+        <field name="model">digitalizacion.proyecto</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Proyectos">
+                <field name="name" string="Proyecto" />
+                <field name="state" />
+                <!-- Campos de medida necesarios para el Dashboard -->
+                <field name="total_escaneos" />
+                <field name="total_miembros" />
+                <field name="total_registros" />
+                <separator />
+                <filter name="en_curso" string="En curso" domain="[('state', '=', 'en_curso')]" />
+                <filter name="pausado" string="Pausa / Standby" domain="[('state', '=', 'pausado')]" />
+                <filter name="finalizado" string="Finalizados" domain="[('state', '=', 'finalizado')]" />
+                <group string="Agrupar por" expand="0">
+                    <filter name="group_state" string="Estado" context="{'group_by': 'state'}" />
+                </group>
+            </search>
+        </field>
+    </record>
+    <!-- 5. ACCIÓN: PROYECTOS -->
+    <record id="digitalizacion_proyecto_action" model="ir.actions.act_window">
+        <field name="name">Gestión de Proyectos</field>
+        <field name="res_model">digitalizacion.proyecto</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Crea un nuevo proyecto</p>
+            <p>Gestiona líderes, personal y producción desde un solo lugar.</p>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ================================================================
+         etapa_data.xml — Datos iniciales del catalogo de etapas
+         noupdate="1": se insertan solo en la instalacion inicial.
+         Si el Admin modifica nombres o secuencias desde el backend,
+         una actualizacion del modulo NO sobreescribira sus cambios.
+         ================================================================ -->
+    <data noupdate="1">
+
+        <record id="etapa_limpieza" model="digitalizacion.etapa">
+            <field name="name">Limpieza</field>
+            <field name="sequence">10</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="etapa_digitalizado" model="digitalizacion.etapa">
+            <field name="name">Digitalizado</field>
+            <field name="sequence">20</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="etapa_editado" model="digitalizacion.etapa">
+            <field name="name">Editado</field>
+            <field name="sequence">30</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="etapa_indexado" model="digitalizacion.etapa">
+            <field name="name">Indexado</field>
+            <field name="sequence">40</field>
+            <field name="active" eval="True"/>
+        </record>
+
+        <record id="etapa_ordenado" model="digitalizacion.etapa">
+            <field name="name">Ordenado</field>
+            <field name="sequence">50</field>
+            <field name="active" eval="True"/>
+        </record>
+
+    </data>
+</odoo>

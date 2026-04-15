@@ -1,0 +1,152 @@
+:root {
+    --dig-primary: #b21010; /* Rojo corporativo refinado */
+    --dig-primary-light: #fef2f2;
+    --dig-primary-soft: #fca5a5;
+    --dig-secondary: #4b5563;
+    --dig-bg: #f9fafb;
+    --dig-card-border: #e5e7eb;
+    --dig-card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.o_digitalizacion_form_wrapper {
+    background-color: var(--dig-bg);
+    padding: 2.5rem 1rem;
+    border-radius: 12px;
+}
+
+/* Forzar renderizado de iconos */
+.fa {
+    font-family: 'FontAwesome' !important;
+    display: inline-block !important;
+}
+
+/* Tarjetas de registros individuales */
+.o_digitalizacion_record_card {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid var(--dig-card-border) !important;
+    border-radius: 12px !important;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.o_digitalizacion_record_card:hover {
+    box-shadow: var(--dig-card-shadow);
+    transform: translateY(-2px);
+}
+
+.o_digitalizacion_record_card .card-header {
+    background: white !important;
+    border-bottom: 1px solid #f3f4f6 !important;
+    padding: 1rem 1.25rem !important;
+    border-top-left-radius: 12px !important;
+    border-top-right-radius: 12px !important;
+}
+
+.o_digitalizacion_record_card .card-body {
+    padding: 1.5rem !important;
+}
+
+/* Estilos para inputs y selects */
+.o_digitalizacion_record_card .form-control, 
+.o_digitalizacion_record_card .form-select {
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.o_digitalizacion_record_card .form-control:focus, 
+.o_digitalizacion_record_card .form-select:focus {
+    border-color: var(--dig-primary);
+    box-shadow: 0 0 0 3px rgba(178, 16, 16, 0.15);
+}
+
+/* Etiquetas de sección descriptivas */
+.o_digitalizacion_section_label {
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--dig-secondary);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.o_digitalizacion_section_label::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #f3f4f6;
+}
+
+/* Colores específicos de Etapa */
+.o_digitalizacion_record_card select.bg-primary {
+    background-color: var(--dig-primary-light) !important;
+    color: var(--dig-primary) !important;
+    border: 1px solid var(--dig-primary-soft) !important;
+}
+
+/* Checkboxes de escáner */
+.o_digitalizacion_escaner_chip {
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+.o_digitalizacion_escaner_chip input:checked + span {
+    background-color: var(--dig-primary) !important;
+    color: white !important;
+    border-color: var(--dig-primary) !important;
+}
+
+.o_digitalizacion_escaner_chip span {
+    padding: 0.35rem 0.85rem;
+    border: 1px solid #d1d5db;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    display: inline-block;
+    background: white;
+}
+
+/* Botones */
+.btn-primary {
+    background-color: var(--dig-primary) !important;
+    border-color: var(--dig-primary) !important;
+    font-weight: 600;
+    border-radius: 8px !important;
+}
+
+.btn-primary:hover {
+    background-color: #900d0d !important;
+}
+
+.btn-outline-primary {
+    color: var(--dig-primary) !important;
+    border-color: var(--dig-primary) !important;
+    border-radius: 8px !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--dig-primary) !important;
+    color: white !important;
+}
+
+/* Animaciones */
+.o_digitalizacion_cards_list > div {
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .o_digitalizacion_form_wrapper {
+        padding: 1rem 0.5rem;
+    }
+}

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- RAÍZ -->
+    <menuitem id="menu_digitalizacion_root"
+              name="Digitalización"
+              sequence="50"
+              groups="digitalizacion.group_digitalizacion_admin"
+              web_icon="digitalizacion,static/description/icon.png" />
+
+    <!-- 1. PROYECTOS (Primero en cargar) -->
+    <menuitem id="menu_digitalizacion_proyectos"
+              name="Proyectos"
+              parent="menu_digitalizacion_root"
+              action="digitalizacion_proyecto_action"
+              sequence="10"
+              groups="digitalizacion.group_digitalizacion_admin" />
+
+    <!-- 2. DASHBOARD -->
+    <menuitem id="menu_digitalizacion_dashboard"
+              name="Dashboard"
+              parent="menu_digitalizacion_root"
+              action="digitalizacion_dashboard_action"
+              sequence="20"
+              groups="digitalizacion.group_digitalizacion_admin" />
+
+    <!-- 3. CONFIGURACIÓN -->
+    <menuitem id="menu_digitalizacion_configuracion"
+              name="Configuración"
+              parent="menu_digitalizacion_root"
+              sequence="40"
+              groups="digitalizacion.group_digitalizacion_admin" />
+
+    <menuitem id="menu_digitalizacion_etapas"
+              name="Etapas"
+              parent="menu_digitalizacion_configuracion"
+              action="digitalizacion_etapa_action"
+              sequence="10"
+              groups="digitalizacion.group_digitalizacion_admin" />
+
+    <menuitem id="menu_digitalizacion_escaneres"
+              name="Tipos de Escáner"
+              parent="menu_digitalizacion_configuracion"
+              action="digitalizacion_tipo_escaner_action"
+              sequence="20"
+              groups="digitalizacion.group_digitalizacion_admin" />
+</odoo>
