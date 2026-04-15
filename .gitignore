@@ -1,3 +1,26 @@
 .env
 config/odoo.conf
 .vscode
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+
+# Odoo logs
+*.log
+*.pid
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
