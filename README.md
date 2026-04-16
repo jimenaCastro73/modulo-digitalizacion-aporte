@@ -579,4 +579,4 @@ docker restart odoo.17.otecglobal
 
 ---
 
-*Desarrollado como aporte de la Práctica Profesional · OTEC GLOBAL · Febrero-Abril 2026*
+*_Desarrollado como aporte de la Práctica Profesional · OTEC GLOBAL · Febrero-Abril 2026*

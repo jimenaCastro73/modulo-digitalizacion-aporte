@@ -3,6 +3,14 @@
 portal.py — Controller HTTP del portal del Líder
 Módulo de Gestión de Digitalización · Odoo 17
 
+CAMBIOS DRY/KISS respecto a la versión original:
+  - _sanitizar_entero, _sanitizar_texto, _validar_fila → eliminadas.
+    Ahora viven en utils.py y registro.py respectivamente.
+  - _get_resumen_etapas → eliminada. Ahora es registro.get_resumen_etapas().
+  - api_guardar_registros → llama a registro.validar_fila_api() en vez
+    de validar inline. El controlador solo habla HTTP.
+  - Las constantes MAX_* se importan desde tools/constantes.py.
+
 Rutas GET (vistas):
     /digitalizacion/v1/dashboard                    → dashboard
     /digitalizacion/v1/proyectos/<id>/form          → formulario_registro
@@ -15,32 +23,28 @@ Rutas POST (JSON API):
 Permisos:
     Todas las rutas requieren auth='user' y grupo digitalizacion_lider.
     El líder solo accede a proyectos donde tiene asignación activa.
-    La vista de miembros es solo lectura — el admin gestiona el equipo
-    desde el backoffice.
 """
 
 import json
 import logging
-import re
 from datetime import timedelta
+
 from markupsafe import Markup
 
 from odoo import _, fields, http
-from odoo.exceptions import AccessError, ValidationError, UserError
+from odoo.tools.misc import format_date
+# from odoo.exceptions import AccessError, UserError, ValidationError
+
+from odoo.exceptions import AccessError, ValidationError
 from odoo.http import request
 from odoo.addons.portal.controllers.portal import CustomerPortal
 
+from ..tools.constantes import MAX_FILAS, MAX_NOTIFICACIONES
+
 _logger = logging.getLogger(__name__)
 
-# Máximo de notificaciones en sesión (evita crecimiento ilimitado)
-_MAX_NOTIFICACIONES = 5
-# Máximo de filas por payload (protege contra abuso)
-_MAX_FILAS = 50
-# Límite numérico razonable por campo de producción
-_MAX_CAMPO_NUMERICO = 999_999
 
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── Helpers de acceso y sesión ────────────────────────────────────────────────
 
 
 def _verificar_lider():
@@ -100,21 +104,12 @@ def _verificar_acceso_proyecto(proyecto_id, lider_id):
     return proyecto
 
 
-def _calcular_kpis(lider_id, domain_extra=None):
-    """Delega cálculo de KPIs al modelo."""
-    return (
-        request.env["digitalizacion.registro"]
-        .sudo()
-        .get_kpis_lider(lider_id, domain_extra=domain_extra)
-    )
-
-
 def _add_notification(type_, message):
     """Agrega notificación a la sesión. Tipo: info, success, warning, danger."""
     if "notifications" not in request.session:
         request.session["notifications"] = []
     notifs = request.session["notifications"]
-    if len(notifs) < _MAX_NOTIFICACIONES:
+    if len(notifs) < MAX_NOTIFICACIONES:
         notifs.append({"type": type_, "message": message})
 
 
@@ -123,213 +118,68 @@ def _build_date_domain(periodo, fecha_desde, fecha_hasta):
     Construye dominio de fechas según el período seleccionado.
     Retorna (domain, periodo_actual_str).
     """
-    # Obtener 'hoy' respetando la zona horaria del usuario en el portal
     hoy = fields.Date.context_today(request.env.user)
 
     if periodo == "hoy":
         return (
             [("fecha", "=", hoy)],
-            _("Hoy · %s", hoy.strftime("%d/%m/%Y")),
+            _("Hoy · %s", format_date(request.env, hoy, date_format="dd/MM/yyyy")),
         )
 
     if periodo == "semana":
         inicio = hoy - timedelta(days=hoy.weekday())
         return (
             [("fecha", ">=", inicio), ("fecha", "<=", hoy)],
-            _("Esta semana · desde %s", inicio.strftime("%d/%m/%Y")),
+            _(
+                "Esta semana · desde %s",
+                format_date(request.env, inicio, date_format="dd/MM/yyyy"),
+            ),
         )
 
     if periodo == "custom" and fecha_desde and fecha_hasta:
         try:
             desde = fields.Date.from_string(fecha_desde)
             hasta = fields.Date.from_string(fecha_hasta)
-            # desde no puede ser posterior a hasta
             if desde > hasta:
                 raise ValueError("fecha_desde posterior a fecha_hasta")
-            # hasta no puede ser futura
             if hasta > hoy:
                 hasta = hoy
             return (
                 [("fecha", ">=", desde), ("fecha", "<=", hasta)],
-                _("%s — %s", desde.strftime("%d/%m/%Y"), hasta.strftime("%d/%m/%Y")),
+                _(
+                    "%s — %s",
+                    format_date(request.env, desde, date_format="dd/MM/yyyy"),
+                    format_date(request.env, hasta, date_format="dd/MM/yyyy"),
+                ),
             )
-        except Exception:
+        except Exception as e:
             _logger.warning(
-                "Fechas custom inválidas: %s - %s", fecha_desde, fecha_hasta
+                "Fechas custom inválidas: %s - %s. Error: %s",
+                fecha_desde,
+                fecha_hasta,
+                e,
             )
 
-    # Default: mes actual
+    # Caso default: mes actual (SIEMPRE debe retornar algo)
     inicio_mes = hoy.replace(day=1)
     return (
         [("fecha", ">=", inicio_mes), ("fecha", "<=", hoy)],
-        _("Este mes · %s", hoy.strftime("%B %Y")),
+        _(
+            "Este mes · %s",
+            format_date(request.env, hoy, date_format="MMMM yyyy"),
+        ),
     )
 
 
-def _sanitizar_entero(valor, nombre_campo, min_val=0, max_val=_MAX_CAMPO_NUMERICO):
-    """
-    Convierte `valor` a int y lo valida dentro de [min_val, max_val].
-    Lanza ValidationError con mensaje amigable si falla.
-    """
-    if valor is None or valor == "" or valor is False:
-        return 0
-    try:
-        v = int(valor)
-    except (TypeError, ValueError):
-        raise ValidationError(
-            _(
-                "El campo '%s' debe ser un número entero, no '%s'.",
-                nombre_campo,
-                str(valor)[:30],
-            )
-        )
-    if v < min_val:
-        raise ValidationError(
-            _(
-                "El campo '%s' no puede ser negativo (valor: %d).",
-                nombre_campo, v,
-            )
-        )
-    if v > max_val:
-        raise ValidationError(
-            _(
-                "El campo '%s' supera el máximo permitido de %d (valor: %d).",
-                nombre_campo, max_val, v,
-            )
-        )
-    return v
+# ── Respuesta JSON estandarizada ──────────────────────────────────────────────
 
 
-def _sanitizar_texto(valor, nombre_campo, max_len=2000):
-    """
-    Valida que `valor` sea string o None.
-    - Si es otro tipo, convierte a string.
-    - Rechaza si excede max_len.
-    - Devuelve None si está vacío.
-    """
-    if valor is None or valor is False:
-        return None
-    if not isinstance(valor, str):
-        valor = str(valor)[:max_len]
-    valor = valor.strip()
-    if not valor:
-        return None
-    if len(valor) > max_len:
-        raise ValidationError(
-            _(
-                "El campo '%s' no puede superar %d caracteres (actual: %d).",
-                nombre_campo, max_len, len(valor),
-            )
-        )
-    return valor
+def _json_ok(data=None):
+    return request.make_json_response({"ok": True, **(data or {})})
 
 
-def _validar_fila(fila, idx):
-    """
-    Valida y normaliza una fila del payload POST.
-    `idx` es el índice 1-based para mensajes de error descriptivos.
-    Retorna un dict limpio listo para ORM, o lanza ValidationError.
-    """
-    prefijo = _("Fila %d", idx)
-
-    # miembro_id: requerido, entero positivo
-    miembro_id = fila.get("miembro_id")
-    if not miembro_id:
-        raise ValidationError(
-            _("%s: falta el digitalizador (miembro).", prefijo)
-        )
-    try:
-        miembro_id = int(miembro_id)
-        if miembro_id <= 0:
-            raise ValueError
-    except (TypeError, ValueError):
-        raise ValidationError(
-            _("%s: 'miembro_id' debe ser un ID válido, no '%s'.", prefijo, miembro_id)
-        )
-
-    # etapa_id: requerido, entero positivo
-    etapa_id = fila.get("etapa_id")
-    if not etapa_id:
-        raise ValidationError(
-            _("%s: falta la etapa.", prefijo)
-        )
-    try:
-        etapa_id = int(etapa_id)
-        if etapa_id <= 0:
-            raise ValueError
-    except (TypeError, ValueError):
-        raise ValidationError(
-            _("%s: 'etapa_id' debe ser un ID válido, no '%s'.", prefijo, etapa_id)
-        )
-
-    # tipo_escaner_ids: lista de enteros
-    escaner_raw = fila.get("tipo_escaner_ids", [])
-    if not isinstance(escaner_raw, list):
-        escaner_raw = []
-    tipo_escaner_ids = []
-    for eid in escaner_raw:
-        try:
-            tipo_escaner_ids.append(int(eid))
-        except (TypeError, ValueError):
-            pass  # ignorar IDs inválidos silenciosamente
-
-    # Campos numéricos de producción
-    no_expedientes        = _sanitizar_entero(fila.get("no_expedientes"),        _("Expedientes"))
-    total_folios          = _sanitizar_entero(fila.get("total_folios"),          _("Folios totales"))
-    total_escaneos        = _sanitizar_entero(fila.get("total_escaneos"),        _("Escaneos"))
-    expedientes_editados  = _sanitizar_entero(fila.get("expedientes_editados"),  _("Exp. editados"))
-    folios_editados       = _sanitizar_entero(fila.get("folios_editados"),       _("Folios editados"))
-    expedientes_indexados = _sanitizar_entero(fila.get("expedientes_indexados"), _("Exp. indexados"))
-    folios_indexados      = _sanitizar_entero(fila.get("folios_indexados"),      _("Folios indexados"))
-
-    # Campos de texto
-    referencia_cajas = _sanitizar_texto(fila.get("referencia_cajas"), _("Referencia de cajas"), max_len=200)
-    if referencia_cajas and not re.search(r'[\w\d]', referencia_cajas):
-        raise ValidationError(
-            _("%s: 'Referencia de cajas' solo contiene símbolos: '%s'.", prefijo, referencia_cajas)
-        )
-
-    observacion = _sanitizar_texto(fila.get("observacion"), _("Observación"), max_len=2000)
-
-    return {
-        "miembro_id":            miembro_id,
-        "etapa_id":              etapa_id,
-        "tipo_escaner_ids":      [(6, 0, tipo_escaner_ids)],
-        "no_expedientes":        no_expedientes,
-        "total_folios":          total_folios,
-        "total_escaneos":        total_escaneos,
-        "expedientes_editados":  expedientes_editados,
-        "folios_editados":       folios_editados,
-        "expedientes_indexados": expedientes_indexados,
-        "folios_indexados":      folios_indexados,
-        "referencia_cajas":      referencia_cajas,
-        "observacion":           observacion,
-    }
-
-
-def _get_resumen_etapas(proyecto_id, domain):
-    """
-    Resumen de producción por etapa para el dashboard.
-    Usa _read_group para eficiencia.
-    """
-    Registro = request.env["digitalizacion.registro"].sudo()
-    datos = Registro._read_group(
-        domain=domain,
-        groupby=["etapa_id"],
-        aggregates=["produccion_principal:sum"],
-    )
-    if not datos:
-        return []
-
-    max_val = max((total or 0) for _, total in datos) or 1
-    return [
-        {
-            "nombre": etapa.name or "Sin etapa",
-            "cantidad": total or 0,
-            "porcentaje": round(((total or 0) / max_val) * 100),
-        }
-        for etapa, total in sorted(datos, key=lambda fila: fila[0].sequence)
-    ]
+def _json_error(mensaje, status=400):
+    return request.make_json_response({"ok": False, "error": mensaje}, status=status)
 
 
 # ── Controlador principal ─────────────────────────────────────────────────────
@@ -370,7 +220,6 @@ class DigitalizacionPortal(http.Controller):
                 },
             )
 
-        # Proyecto activo — desde query param o el primero disponible
         try:
             proyecto_id = int(kwargs.get("proyecto_id", asignaciones[0].proyecto_id.id))
             proyecto = _verificar_acceso_proyecto(proyecto_id, lider_id)
@@ -380,21 +229,24 @@ class DigitalizacionPortal(http.Controller):
         periodo = kwargs.get("periodo", "mes")
         fecha_desde = kwargs.get("fecha_desde", "")
         fecha_hasta = kwargs.get("fecha_hasta", "")
-
-        # Evitar que page sea 0 o None (el or 1 protege si viene vacío del formulario)
-        numero_pagina_raw = kwargs.get("page", 1) or 1
-        numero_pagina = max(1, int(numero_pagina_raw))
+        numero_pagina = max(1, int(kwargs.get("page", 1) or 1))
         limit = 10
 
+        # Obtener dominio de fechas
         date_domain, periodo_actual = _build_date_domain(
             periodo, fecha_desde, fecha_hasta
         )
         domain_final = date_domain + [("proyecto_id", "=", proyecto.id)]
 
-        kpis = _calcular_kpis(lider_id, domain_final)
-        resumen_etapas = _get_resumen_etapas(proyecto.id, domain_final)
-
         Registro = request.env["digitalizacion.registro"].sudo()
+
+        # KPIs usando el método del modelo
+        kpis = Registro.get_kpis_lider(lider_id, domain_final)
+
+        # Resumen por etapas - método del modelo
+        resumen_etapas = Registro.get_resumen_etapas(domain_final)
+
+        # Últimos registros
         ultimos_registros = Registro.search(
             [("lider_id", "=", lider_id)] + domain_final,
             order="fecha desc, id desc",
@@ -437,9 +289,17 @@ class DigitalizacionPortal(http.Controller):
             _verificar_lider_raise()
             lider_id = request.env.user.id
             proyecto = _verificar_acceso_proyecto(proyecto_id, lider_id)
-            if proyecto.state != 'en_curso':
-                _add_notification("warning", _("El proyecto '%s' está en pausa o finalizado. No se puede registrar nueva producción.", proyecto.name))
-                return request.redirect("/digitalizacion/v1/dashboard?proyecto_id=%s" % proyecto.id)
+            if proyecto.state != "en_curso":
+                _add_notification(
+                    "warning",
+                    _(
+                        "El proyecto '%s' está en pausa o finalizado. No se puede registrar nueva producción.",
+                        proyecto.name,
+                    ),
+                )
+                return request.redirect(
+                    "/digitalizacion/v1/dashboard?proyecto_id=%s" % proyecto.id
+                )
         except AccessError as e:
             _add_notification("danger", str(e))
             return request.redirect("/digitalizacion/v1/dashboard")
@@ -449,39 +309,37 @@ class DigitalizacionPortal(http.Controller):
             .sudo()
             .search([("active", "=", True)], order="sequence asc")
         )
-        # Miembros activos del proyecto sin fecha de salida
         miembros = (
             request.env["digitalizacion.miembro_proyecto"]
             .sudo()
             .search(
                 [
-                    ("proyecto_id", "=", proyecto_id),
+                    ("proyecto_id", "=", proyecto.id),
                     ("active", "=", True),
                     ("fecha_salida", "=", False),
-                ],
-                order="partner_name asc",
+                ]
             )
         )
-
         escaneres = (
             request.env["digitalizacion.tipo_escaner"]
             .sudo()
-            .search([("active", "=", True)], order="name asc")
+            .search([("active", "=", True)])
         )
 
         return request.render(
             "digitalizacion.digitalizacion_portal_registro_form",
             {
                 "proyecto": proyecto,
-                "etapas_json": Markup(json.dumps(
-                    [{"id": e.id, "name": e.name} for e in etapas]
-                )),
-                "miembros_json": Markup(json.dumps(
-                    [{"id": m.id, "name": m.partner_name} for m in miembros]
-                )),
-                "escaneres_json": Markup(json.dumps(
-                    [{"id": e.id, "name": e.name} for e in escaneres]
-                )),
+                "proyecto_actual": proyecto,
+                "etapas_json": Markup(
+                    json.dumps([{"id": e.id, "name": e.name} for e in etapas])
+                ),
+                "miembros_json": Markup(
+                    json.dumps([{"id": m.id, "name": m.partner_name} for m in miembros])
+                ),
+                "escaneres_json": Markup(
+                    json.dumps([{"id": e.id, "name": e.name} for e in escaneres])
+                ),
                 "notifications": request.session.pop("notifications", []),
                 "page_name": "digitalizacion_formulario",
             },
@@ -510,6 +368,7 @@ class DigitalizacionPortal(http.Controller):
             "digitalizacion.digitalizacion_portal_proyecto_detalle",
             {
                 "proyecto": proyecto,
+                "proyecto_actual": proyecto,
                 "notifications": request.session.pop("notifications", []),
                 "page_name": "digitalizacion_proyecto",
             },
@@ -551,12 +410,9 @@ class DigitalizacionPortal(http.Controller):
             )
         )
 
-        # Datos para el gráfico de participación
-        participacion = (
-            request.env["digitalizacion.registro"]
-            .sudo()
-            .get_participacion_equipo(proyecto_id)
-        )
+        # Datos para el gráfico de participación (método del modelo)
+        Registro = request.env["digitalizacion.registro"].sudo()
+        participacion = Registro.get_participacion_equipo(proyecto_id)
 
         # Colores para las etapas (en orden de sequence)
         colores_etapa = [
@@ -575,6 +431,7 @@ class DigitalizacionPortal(http.Controller):
             "digitalizacion.digitalizacion_portal_miembros_equipo",
             {
                 "proyecto": proyecto,
+                "proyecto_actual": proyecto,
                 "miembros": miembros,
                 "participacion": participacion,
                 "etapas_con_color": etapas_con_color,
@@ -589,101 +446,74 @@ class DigitalizacionPortal(http.Controller):
         "/digitalizacion/api/v1/proyectos/<int:proyecto_id>/registros",
         type="json",
         auth="user",
-        website=True,
         methods=["POST"],
-        csrf=True,
     )
     def api_guardar_registros(self, proyecto_id, **kwargs):
         """
-        Guarda un lote de registros de producción.
-        Payload esperado: { "fecha": "YYYY-MM-DD", "filas": [...] }
+        Recibe payload JSON con una lista de filas de producción y las persiste.
+        Odoo 17 extrae automáticamente de 'params' a 'kwargs'
         """
-        if not _verificar_lider():
-            return {
-                "success": False,
-                "error": {"message": _("Acceso denegado. Se requiere grupo Líder.")},
-            }
+        try:
+            _verificar_lider_raise()
+            lider_id = request.env.user.id
+            proyecto = _verificar_acceso_proyecto(proyecto_id, lider_id)
+        except AccessError as e:
+            # Para errores de acceso, Odoo espera un dict con 'error'
+            return {"success": False, "error": str(e)}
 
-        lider_id = request.env.user.id
-        proyecto = _get_proyecto_del_lider(proyecto_id, lider_id)
-        if not proyecto:
-            return {
-                "success": False,
-                "error": {"message": _("Proyecto no encontrado o sin acceso.")},
-            }
-
-        filas = kwargs.get("filas", [])
+        # Con type='json', los datos están en kwargs directamente
         fecha = kwargs.get("fecha")
+        filas = kwargs.get("registros", [])
 
-        # —— Validación temprana del payload ——
         if not fecha:
-            return {
-                "success": False,
-                "error": {"message": _("Fecha requerida.")},
-            }
-        # Validar formato y que no sea futura
+            return {"error": _("Fecha requerida.")}
+
+        # Validar formato de fecha y que no sea futura
         try:
             fecha_date = fields.Date.from_string(str(fecha))
+            hoy = fields.Date.context_today(request.env.user)
+            if fecha_date > hoy:
+                return {"error": _("La fecha no puede ser futura (%s).", fecha)}
         except Exception:
-            return {
-                "success": False,
-                "error": {"message": _("Formato de fecha inválido. Use YYYY-MM-DD.")},
-            }
-        hoy = fields.Date.context_today(request.env.user)
-        if fecha_date > hoy:
-            return {
-                "success": False,
-                "error": {"message": _("La fecha no puede ser futura (%s).", fecha)},
-            }
+            return {"error": _("Formato de fecha inválido. Use YYYY-MM-DD.")}
 
         if not isinstance(filas, list) or not filas:
+            return {"error": _("Se requiere al menos una fila de datos.")}
+
+        if len(filas) > MAX_FILAS:
             return {
-                "success": False,
-                "error": {"message": _("Se requiere al menos una fila de datos.")},
+                "error": _(
+                    "Se permiten máximo %d filas por envío (recibidas: %d).",
+                    MAX_FILAS,
+                    len(filas),
+                )
             }
-        if len(filas) > _MAX_FILAS:
-            return {
-                "success": False,
-                "error": {
-                    "message": _(
-                        "El número de filas (%d) supera el máximo permitido (%d).",
-                        len(filas), _MAX_FILAS,
-                    )
-                },
-            }
+
+        Registro = request.env["digitalizacion.registro"].sudo()
+        ids_creados = []
 
         try:
-            records_vals = []
+            # Usamos una transacción para que si una fila falla, no se guarde nada
             for idx, fila in enumerate(filas, start=1):
-                if not isinstance(fila, dict):
-                    return {
-                        "success": False,
-                        "error": {"message": _("Fila %d: formato inválido.", idx)},
+                vals = Registro.validar_fila_api(fila, idx)
+                vals.update(
+                    {
+                        "lider_id": lider_id,
+                        "proyecto_id": proyecto.id,
+                        "fecha": fecha,
                     }
-                fila_limpia = _validar_fila(fila, idx)
-                fila_limpia["proyecto_id"] = proyecto_id
-                fila_limpia["fecha"] = fecha
-                records_vals.append(fila_limpia)
+                )
+                nuevo = Registro.create(vals)
+                ids_creados.append(nuevo.id)
 
-            if records_vals:
-                # Crear con el entorno del líder (no sudo) para que
-                # el override de create() asigne lider_id correctamente
-                request.env["digitalizacion.registro"].create(records_vals)
-
-            return {"success": True}
-
-        except (ValidationError, UserError) as e:
-            # Errores de validación de negocio — mostrar al usuario
-            return {"success": False, "error": {"message": str(e)}}
+        except ValidationError as e:
+            # IMPORTANTE: Capturar el error de validación de Odoo
+            return {"success": False, "error": str(e.args[0] if e.args else e)}
         except Exception:
-            # Errores técnicos — loggear sin exponer detalles internos
-            _logger.exception(
-                "Error inesperado al guardar registros para proyecto %d", proyecto_id
-            )
-            return {
-                "success": False,
-                "error": {"message": _("Error interno. Contacta al administrador.")},
-            }
+            _logger.exception("Error inesperado en API portal")
+            return {"success": False, "error": _("Error interno del servidor.")}
+
+        return {"success": True, "ids": ids_creados, "total": len(ids_creados)}
 
 
 # ── Extensión del portal home ─────────────────────────────────────────────────

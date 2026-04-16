@@ -22,27 +22,17 @@
             <tree string="Etapas" default_order="sequence asc" editable="bottom" decoration-muted="not active">
                 <field name="sequence" widget="handle" />
                 <field name="name" string="Nombre de la etapa" />
-                <field name="registro_count" string="Registros" optional="show" />
                 <field name="active" string="Activo" widget="boolean_toggle" />
             </tree>
         </field>
     </record>
-    <!-- ================================================================
-         2. VISTA FORMULARIO
-         ================================================================ -->
+    <!-- 2. VISTA FORMULARIO -->
     <record id="digitalizacion_etapa_view_form" model="ir.ui.view">
         <field name="name">digitalizacion.etapa.form</field>
         <field name="model">digitalizacion.etapa</field>
         <field name="arch" type="xml">
-            <form string="Etapa de Digitalizacion">
+            <form string="Etapa de Digitalización">
                 <header />
-                <!-- Stat button: visible solo si ya tiene registros -->
-                <div name="button_box" class="oe_button_box">
-                    <button name="action_ver_registros" type="object" class="oe_stat_button" icon="fa-list-ul" invisible="registro_count == 0">
-                        <field name="registro_count" string="Registros" widget="statinfo" />
-                    </button>
-                </div>
-                <field name="active" widget="boolean_toggle" invisible="1" />
                 <sheet>
                     <div class="oe_title">
                         <label string="Nombre de la etapa" for="name" />
@@ -51,36 +41,21 @@
                         </h1>
                     </div>
                     <group>
-                        <group string="Configuracion">
-                            <field name="sequence" string="Secuencia" help="Orden de aparicion en listas y selectores. Menor numero = primera posicion." />
+                        <group string="Configuración">
+                            <field name="sequence" string="Secuencia" help="Orden de aparición en listas y selectores. Menor número = primera posición." />
                             <field name="active" string="Activo" widget="boolean_toggle" />
                         </group>
-                        <group string="Estadisticas" invisible="registro_count == 0">
-                            <field name="registro_count" string="Total de registros" readonly="1" />
-                        </group>
                     </group>
-                    <!-- Alerta: etapa nueva sin registros -->
-                    <div class="alert alert-info" role="alert" invisible="registro_count != 0">
-                        <i class="fa fa-info-circle" />
-                        Esta etapa aun no tiene registros de trabajo asociados.
-                        Aparecera en el formulario del Lider una vez que este activa.
-                    </div>
                     <!-- Alerta: etapa archivada -->
                     <div class="alert alert-warning" role="alert" invisible="active">
                         <i class="fa fa-archive" />
-                        Esta etapa esta archivada y no aparecera
-                        en el formulario de registro del portal.
+                        Esta etapa está archivada y no aparecerá en el formulario de registro del portal.
                     </div>
                 </sheet>
-                <!-- chatter eliminado: modelo no hereda mail.thread -->
             </form>
         </field>
     </record>
-    <!-- ================================================================
-         3. ACCION PRINCIPAL DEL MODELO
-         Declaracion completa aqui. menus.xml la referencia
-         mediante action="digitalizacion.action_digitalizacion_etapa".
-         ================================================================ -->
+    <!-- 3. ACCIÓN PRINCIPAL DEL MODELO -->
     <record id="digitalizacion_etapa_action" model="ir.actions.act_window">
         <field name="name">Etapas</field>
         <field name="res_model">digitalizacion.etapa</field>
