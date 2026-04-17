@@ -185,7 +185,7 @@
                                         <tr class="transition-all hover-bg-light position-relative">
                                             <td class="ps-4" data-label="Nombre">
                                                 <div class="d-flex align-items-center gap-2">
-                                                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width:32px; height:32px;">
+                                                    <div class="o_digitalizacion_circle_gradient">
                                                         <t t-esc="m.partner_id.name[0].upper()" />
                                                     </div>
                                                     <span class="fw-semibold text-dark">

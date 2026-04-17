@@ -130,7 +130,7 @@
                         <!-- DASHBOARD ESPECÍFICO (UI/UX MEJORADA) -->
                         <page name="dashboard" string="Dashboard">
                             <div class="o_horizontal_separator mt-3 mb-4 text-primary fw-bold">
-                                <i class="fa fa-dashboard me-2" />
+                                <i class="fa fa-dashboard me-2" title="Resumen operativo del proyecto" />
                                 RESUMEN OPERATIVO DEL PROYECTO
                             </div>
                             <div class="row text-center mb-4">
@@ -172,13 +172,13 @@
                             </div>
                         </page>
                         <!-- EQUIPOS (ASIGNACIONES + MIEMBROS) -->
-                        <page name="equipo" string="Equipos">
+                        <page name="equipo" string="Miembros de Equipo">
                             <separator string="Gestión de Personal Digitalizador (Partners)" class="mt-4" />
                             <field name="miembro_ids" context="{'default_proyecto_id': active_id}" view_id="%(view_miembro_proyecto_tree_inline)s" />
                         </page>
                         <!-- BITÁCORA (REGISTROS) -->
                         <page name="bitacora" string="Bitácora">
-                            <field name="registro_ids" readonly="1" view_id="%(view_registro_tree_inline)s" />
+                            <field name="registro_ids" readonly="1" context="{'tree_view_ref': 'digitalizacion.digitalizacion_registro_view_tree'}" />
                         </page>
                     </notebook>
                 </sheet>
@@ -193,38 +193,36 @@
         <field name="model">digitalizacion.proyecto</field>
         <field name="arch" type="xml">
             <kanban default_group_by="state" class="o_kanban_mobile">
-                <field name="name"/>
-                <field name="state"/>
-                <field name="fecha_inicio"/>
-                <field name="fecha_fin_estimada"/>
-                <field name="total_miembros"/>
-                <field name="total_escaneos"/>
-                <field name="total_registros"/>
-                <field name="description"/>
-                <field name="active"/>
-
+                <field name="name" />
+                <field name="state" />
+                <field name="fecha_inicio" />
+                <field name="fecha_fin_estimada" />
+                <field name="total_miembros" />
+                <field name="total_escaneos" />
+                <field name="total_registros" />
+                <field name="description" />
+                <field name="active" />
                 <templates>
                     <t t-name="kanban-box">
                         <div class="oe_kanban_global_click">
                             <div class="o_kanban_image">
                                 <t t-if="record.state.value == 'en_curso'">
-                                    <i class="fa fa-play-circle-o text-success" style="font-size: 40px;"/>
+                                    <i class="fa fa-play-circle-o text-success" style="font-size: 40px;" title="Proyecto en curso" />
                                 </t>
                                 <t t-elif="record.state.value == 'pausado'">
-                                    <i class="fa fa-pause-circle-o text-warning" style="font-size: 40px;"/>
+                                    <i class="fa fa-pause-circle-o text-warning" style="font-size: 40px;" title="Proyecto pausado" />
                                 </t>
                                 <t t-elif="record.state.value == 'finalizado'">
-                                    <i class="fa fa-check-circle-o text-info" style="font-size: 40px;"/>
+                                    <i class="fa fa-check-circle-o text-info" style="font-size: 40px;" title="Proyecto finalizado" />
                                 </t>
                                 <t t-else="">
-                                    <i class="fa fa-folder-open-o text-muted" style="font-size: 40px;"/>
+                                    <i class="fa fa-folder-open-o text-muted" style="font-size: 40px;" title="Proyecto sin estado definido" />
                                 </t>
                             </div>
                             <div class="oe_kanban_details">
                                 <strong class="o_kanban_record_title">
-                                    <field name="name"/>
+                                    <field name="name" />
                                 </strong>
-                                
                                 <div class="mt-1 mb-2">
                                     <t t-if="record.state.value == 'en_curso'">
                                         <span class="badge bg-success">En curso</span>
@@ -236,46 +234,60 @@
                                         <span class="badge bg-info">Finalizado</span>
                                     </t>
                                 </div>
-                                
                                 <ul class="list-unstyled mt-2 mb-0">
                                     <li class="mb-1">
-                                        <i class="fa fa-calendar fa-fw text-muted me-1"/>
-                                        <small>Inicio: <field name="fecha_inicio"/></small>
+                                        <i class="fa fa-calendar fa-fw text-muted me-1" title="Fecha de inicio del proyecto" />
+                                        <small>
+                                            Inicio:
+                                            <field name="fecha_inicio" />
+                                        </small>
                                     </li>
                                     <li t-if="record.fecha_fin_estimada.value" class="mb-1">
-                                        <i class="fa fa-calendar-check-o fa-fw text-muted me-1"/>
-                                        <small>Fin estimado: <field name="fecha_fin_estimada"/></small>
+                                        <i class="fa fa-calendar-check-o fa-fw text-muted me-1" title="Fecha de fin estimada del proyecto" />
+                                        <small>
+                                            Fin estimado:
+                                            <field name="fecha_fin_estimada" />
+                                        </small>
                                     </li>
                                     <li class="mb-1">
-                                        <i class="fa fa-users fa-fw text-muted me-1"/>
-                                        <small>Miembros: <field name="total_miembros"/></small>
+                                        <i class="fa fa-users fa-fw text-muted me-1" title="Miembros del proyecto" />
+                                        <small>
+                                            Miembros:
+                                            <field name="total_miembros" />
+                                        </small>
                                     </li>
                                     <li class="mb-1">
-                                        <i class="fa fa-camera fa-fw text-muted me-1"/>
-                                        <small>Escaneos: <field name="total_escaneos"/></small>
+                                        <i class="fa fa-camera fa-fw text-muted me-1" title="Escaneos del proyecto" />
+                                        <small>
+                                            Escaneos:
+                                            <field name="total_escaneos" />
+                                        </small>
                                     </li>
                                     <li class="mb-1">
-                                        <i class="fa fa-tasks fa-fw text-muted me-1"/>
-                                        <small>Registros: <field name="total_registros"/></small>
+                                        <i class="fa fa-tasks fa-fw text-muted me-1" title="Registros del proyecto" />
+                                        <small>
+                                            Registros:
+                                            <field name="total_registros" />
+                                        </small>
                                     </li>
                                 </ul>
-                                
                                 <div t-if="record.description.value" class="mt-2 text-muted small">
-                                    <i class="fa fa-align-left fa-fw me-1"/>
-                                    <span t-esc="record.description.value.length > 80 ? record.description.value.slice(0, 80) + '...' : record.description.value"/>
+                                    <i class="fa fa-align-left fa-fw me-1" title="Descripción del proyecto" />
+                                    <span t-esc="record.description.value.length > 80 ? record.description.value.slice(0, 80) + '...' : record.description.value" />
                                 </div>
-                                
                                 <div class="o_kanban_record_bottom mt-3 pt-2 border-top">
                                     <div class="oe_kanban_bottom_left">
                                         <small class="text-muted">
-                                            <i class="fa fa-folder-open-o me-1"/>
-                                            ID: <field name="id"/>
+                                            <i class="fa fa-folder-open-o me-1" title="ID del proyecto" />
+                                            ID:
+                                            <field name="id" />
                                         </small>
                                     </div>
                                     <div class="oe_kanban_bottom_right">
                                         <t t-if="record.active.value == False">
                                             <span class="badge bg-secondary opacity-50">
-                                                <i class="fa fa-archive"/> Archivado
+                                                <i class="fa fa-archive" title="Proyecto archivado" />
+                                                Archivado
                                             </span>
                                         </t>
                                     </div>

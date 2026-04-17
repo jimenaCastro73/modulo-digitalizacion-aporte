@@ -17,6 +17,7 @@
         "data/etapa_data.xml",
         # --- Vistas del backoffice ---
         "views/admin/proyectos/proyecto_views.xml",
+        "views/admin/proyectos/registro_views.xml",
         "views/admin/configuracion/etapa_views.xml",
         "views/admin/configuracion/tipo_escaner_views.xml",
         "views/admin/dashboard_views.xml",
@@ -30,7 +31,7 @@
         # --- Reportes PDF ---
         "report/proyecto_report_views.xml",
     ],
-    "assets": {
+    'assets': {
         "web.assets_frontend": [
             "digitalizacion/static/src/portal/css/portal_digitalizacion.css",
             "digitalizacion/static/src/portal/js/portal_registro_form.js",
