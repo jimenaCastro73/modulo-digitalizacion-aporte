@@ -7,13 +7,27 @@
               groups="digitalizacion.group_digitalizacion_admin"
               web_icon="digitalizacion,static/description/icon.png" />
 
-    <!-- 1. PROYECTOS (Primero en cargar) -->
+    <!-- 1. PROYECTOS -->
     <menuitem id="menu_digitalizacion_proyectos"
               name="Proyectos"
               parent="menu_digitalizacion_root"
-              action="digitalizacion_proyecto_action"
               sequence="10"
               groups="digitalizacion.group_digitalizacion_admin" />
+
+    <!-- Submenús de Proyectos -->
+    <menuitem id="menu_digitalizacion_proyectos_list" 
+              name="Todos los Proyectos" 
+              parent="menu_digitalizacion_proyectos" 
+              action="digitalizacion_proyecto_action" 
+              sequence="10" 
+              groups="digitalizacion.group_digitalizacion_admin"/>
+
+    <menuitem id="menu_digitalizacion_proyectos_archivados" 
+              name="Proyectos Archivados" 
+              parent="menu_digitalizacion_proyectos" 
+              action="action_show_archived_proyectos" 
+              sequence="20" 
+              groups="digitalizacion.group_digitalizacion_admin"/>
 
     <!-- 2. DASHBOARD -->
     <menuitem id="menu_digitalizacion_dashboard"

@@ -185,7 +185,7 @@
                                         <tr class="transition-all hover-bg-light position-relative">
                                             <td class="ps-4" data-label="Nombre">
                                                 <div class="d-flex align-items-center gap-2">
-                                                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width:32px; height:32px;">
+                                                    <div class="o_digitalizacion_circle_gradient">
                                                         <t t-esc="m.partner_id.name[0].upper()" />
                                                     </div>
                                                     <span class="fw-semibold text-dark">
@@ -210,15 +210,11 @@
                                             <td class="text-end pe-4" data-label="Estado">
                                                 <t t-if="m.fecha_salida">
                                                     <span class="badge bg-secondary opacity-75 small px-2 py-1">
-                                                        Salida:
-                                                        <t t-esc="m.fecha_salida" />
+                                                        Salida: <t t-esc="m.fecha_salida" />
                                                     </span>
                                                 </t>
-                                                <t t-elif="m.active">
-                                                    <span class="badge bg-success small px-2 py-1 shadow-sm">Activo</span>
-                                                </t>
                                                 <t t-else="">
-                                                    <span class="badge bg-warning text-dark small px-2 py-1">Inactivo</span>
+                                                    <span class="badge bg-success small px-2 py-1 shadow-sm">Activo</span>
                                                 </t>
                                             </td>
                                         </tr>

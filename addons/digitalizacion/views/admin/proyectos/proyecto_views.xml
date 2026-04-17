@@ -1,281 +1,293 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- ================================================================
-         proyecto_views.xml — Centro de Mando de Proyectos (V2)
-         ENCAPSULA: Proyectos, Asignaciones, Miembros y Registros.
-         ================================================================ -->
-    <!-- ════════════════════════════════════════════════════════════════
-         SECCIÓN 1 — VISTAS DE APOYO (MIEMBROS Y REGISTROS)
-         ════════════════════════════════════════════════════════════════ -->
-    <!-- VISTA LISTA MIEMBROS (PARA PESTAÑA EQUIPO) -->
-    <record id="view_miembro_proyecto_tree_inline" model="ir.ui.view">
-        <field name="name">digitalizacion.miembro_proyecto.tree.inline</field>
-        <field name="model">digitalizacion.miembro_proyecto</field>
-        <field name="arch" type="xml">
-            <tree editable="bottom" decoration-muted="not active">
-                <field name="partner_id" string="Digitalizador" />
-                <field name="fecha_integracion" string="Ingreso" />
-                <field name="es_lider" string="¿Es Líder?" widget="boolean_toggle" />
-                <field name="total_registros" string="Registros" readonly="1" />
-                <field name="active" column_invisible="True" />
-            </tree>
-        </field>
-    </record>
-    <!-- VISTA LISTA REGISTROS (PARA PESTAÑA ESTADÍSTICAS) -->
-    <record id="view_registro_tree_inline" model="ir.ui.view">
-        <field name="name">digitalizacion.registro.tree.inline</field>
-        <field name="model">digitalizacion.registro</field>
-        <field name="arch" type="xml">
-            <tree string="Producción" decoration-muted="produccion_principal == 0">
-                <field name="fecha" />
-                <field name="miembro_nombre" string="Digitalizador" />
-                <field name="etapa_nombre" string="Etapa" />
-                <field name="produccion_principal" string="Producción" />
-                <field name="unidad_produccion" string="Unidad" />
-                <field name="total_escaneos" string="Escaneos" />
-            </tree>
-        </field>
-    </record>
-    <!-- VISTA PIVOT REGISTROS -->
-    <record id="digitalizacion_registro_view_pivot" model="ir.ui.view">
-        <field name="name">digitalizacion.registro.pivot</field>
-        <field name="model">digitalizacion.registro</field>
-        <field name="arch" type="xml">
-            <pivot string="Análisis de Producción" disable_linking="0">
-                <field name="proyecto_nombre" type="row" />
-                <field name="miembro_nombre" type="row" />
-                <field name="etapa_nombre" type="col" />
-                <field name="produccion_principal" string="Producción" type="measure" />
-                <field name="total_escaneos" string="Escaneos" type="measure" />
-                <field name="fecha" type="col" interval="month" invisible="1" />
-            </pivot>
-        </field>
-    </record>
-    <!-- VISTA GRÁFICO (Exclusiva para Dashboard) -->
-    <record id="digitalizacion_registro_view_graph_dashboard" model="ir.ui.view">
-        <field name="name">digitalizacion.registro.graph.dashboard</field>
-        <field name="model">digitalizacion.registro</field>
-        <field name="arch" type="xml">
-            <graph string="Análisis de Producción" type="line" sample="1">
-                <field name="fecha" type="row" interval="day" />
-                <field name="etapa_nombre" type="col" />
-                <field name="produccion_principal" type="measure" />
-            </graph>
-        </field>
-    </record>
-    <!-- VISTA BÚSQUEDA REGISTROS -->
-    <record id="digitalizacion_registro_view_search" model="ir.ui.view">
-        <field name="name">digitalizacion.registro.search</field>
-        <field name="model">digitalizacion.registro</field>
-        <field name="arch" type="xml">
-            <search string="Buscar registros">
-                <field name="miembro_nombre" string="Digitalizador" />
-                <field name="proyecto_nombre" string="Proyecto" />
-                <field name="etapa_nombre" string="Etapa" />
-                <group string="Agrupar por" expand="1">
-                    <filter name="group_proyecto" string="Proyecto" context="{'group_by': 'proyecto_nombre'}" />
-                    <filter name="group_etapa" string="Etapa" context="{'group_by': 'etapa_nombre'}" />
-                    <filter name="group_fecha" string="Fecha" context="{'group_by': 'fecha:day'}" />
-                </group>
-            </search>
-        </field>
-    </record>
-    <!-- ════════════════════════════════════════════════════════════════
-         SECCIÓN 2 — VISTAS DE PROYECTO
-         ════════════════════════════════════════════════════════════════ -->
-    <!-- 2.1 LISTA PROYECTOS -->
+    <!-- Vista Tree -->
     <record id="digitalizacion_proyecto_view_tree" model="ir.ui.view">
-        <field name="name">digitalizacion.proyecto.list</field>
+        <field name="name">digitalizacion.proyecto.tree</field>
         <field name="model">digitalizacion.proyecto</field>
         <field name="arch" type="xml">
-            <tree string="Proyectos" default_order="fecha_inicio desc" decoration-muted="state == 'pausado'" decoration-success="state == 'en_curso'" decoration-info="state == 'finalizado'">
+            <tree string="Proyectos de Digitalización" default_order="fecha_inicio desc, name asc" decoration-muted="state == 'pausado'" decoration-success="state == 'en_curso'" decoration-info="state == 'finalizado'" decoration-danger="active == False">
                 <field name="name" string="Proyecto" />
-                <field name="fecha_inicio" string="Inicio" />
+                <field name="fecha_inicio" string="Inicio" widget="date" />
+                <field name="fecha_fin_estimada" string="Fin Estimado" widget="date" />
                 <field name="state" string="Estado" widget="badge" decoration-success="state == 'en_curso'" decoration-warning="state == 'pausado'" decoration-info="state == 'finalizado'" />
-                <field name="total_miembros" string="Miembros" />
-                <field name="total_escaneos" string="CANTIDAD DE ESCANEOS" />
+                <field name="total_miembros" string="Miembros" sum="Total" />
+                <field name="total_escaneos" string="Escaneos" sum="Total" />
+                <field name="total_registros" string="Registros" sum="Total" optional="hide" />
+                <field name="active" string="Archivado" widget="boolean_toggle" optional="hide" />
             </tree>
         </field>
     </record>
-    <!-- 2.2 FORMULARIO PROYECTO (ENCAPSULADO) -->
+    <!-- Vista Form -->
     <record id="digitalizacion_proyecto_view_form" model="ir.ui.view">
         <field name="name">digitalizacion.proyecto.form</field>
         <field name="model">digitalizacion.proyecto</field>
         <field name="arch" type="xml">
             <form string="Proyecto de Digitalización">
+                <!-- HEADER: Botones de acción y estado -->
                 <header>
                     <button name="action_reactivar" string="Iniciar / Reanudar" type="object" class="btn-primary" invisible="state == 'en_curso'" />
                     <button name="action_pausar" string="Pausar (Standby)" type="object" class="btn-secondary" invisible="state != 'en_curso'" />
                     <button name="action_finalizar" string="Finalizar Proyecto" type="object" class="btn-info" confirm="¿Confirmas que se han terminado los escaneos de este proyecto?" invisible="state == 'finalizado'" />
+                    <!-- Botones de Archivar/Desarchivar (soft delete) -->
+                    <button name="toggle_active" string="Archivar Proyecto" type="object" class="btn-secondary" invisible="not active" confirm="¿Archivar este proyecto? Los registros históricos se conservarán y podrás desarchivarlo más tarde." />
+                    <button name="toggle_active" string="Desarchivar Proyecto" type="object" class="btn-primary" invisible="active" />
+                    <!-- Statusbar de estado -->
                     <field name="state" widget="statusbar" statusbar_visible="en_curso,pausado,finalizado" />
                 </header>
                 <sheet>
+                    <!-- Título del proyecto -->
                     <div class="oe_title">
                         <label string="Nombre del Proyecto" for="name" />
                         <h1>
-                            <field name="name" placeholder="Ej: Inprema 2026..." />
+                            <field name="name" placeholder="Ej: Inprema 2026, Centro Cívico..." />
                         </h1>
+                        <!-- Badge de archivado visible -->
+                        <field name="active" invisible="1" />
+                        <div invisible="active" class="alert alert-warning mt-2" role="alert">
+                            <i class="fa fa-archive me-2" title="Icono Archivado" />
+                            <strong>Proyecto Archivado</strong>
+                            — Este proyecto está inactivo. Usa el botón "Desarchivar" para reactivarlo.
+                        </div>
                     </div>
-                    <group>
-                        <group string="Datos Generales">
-                            <field name="fecha_inicio" />
+                    <!-- Datos generales y KPIs -->
+                    <group name="grupo_principal">
+                        <group name="datos_generales" string="Datos Generales">
+                            <field name="fecha_inicio" required="1" />
                             <field name="fecha_fin_estimada" />
+                            <field name="duracion_estimada" readonly="1" />
+                            <field name="description" placeholder="Descripción del alcance del proyecto..." />
                         </group>
-                        <group string="Producción Acumulada">
-                            <field name="total_escaneos" string="CANTIDAD DE ESCANEOS" readonly="1" />
-                            <field name="total_miembros" string="Personal Asignado" readonly="1" />
+                        <group name="kpis" string="Métricas del Proyecto">
+                            <field name="total_miembros" string="Miembros Asignados" readonly="1" class="oe_inline" />
+                            <field name="total_registros" string="Registros de Producción" readonly="1" />
+                            <field name="total_escaneos" string="Total de Escaneos" readonly="1" />
+                            <field name="etapa_dominante" string="Etapa con más producción" readonly="1" />
                         </group>
                     </group>
+                    <!-- Notebook con pestañas -->
                     <notebook>
-                        <!-- DASHBOARD ESPECÍFICO (UI/UX MEJORADA) -->
+                        <!-- PESTAÑA 1: DASHBOARD ESPECÍFICO DEL PROYECTO -->
                         <page name="dashboard" string="Dashboard">
                             <div class="o_horizontal_separator mt-3 mb-4 text-primary fw-bold">
-                                <i class="fa fa-dashboard me-2" />
+                                <i class="fa fa-dashboard me-2" title="Dashboard" />
                                 RESUMEN OPERATIVO DEL PROYECTO
                             </div>
+                            <!-- Tarjetas de KPIs -->
                             <div class="row text-center mb-4">
-                                <!-- CARD: ESCANEOS TOTALES -->
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="card shadow-sm border-0 bg-light p-3 h-100">
-                                        <div class="text-muted small text-uppercase fw-bold mb-2">Cantidad de Escaneos</div>
+                                        <div class="text-muted small text-uppercase fw-bold mb-2">
+                                            <i class="fa fa-users me-1" title="Equipo" />
+                                            Equipo
+                                        </div>
                                         <div class="h2 fw-bold text-primary mb-0">
+                                            <field name="total_miembros" readonly="1" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card shadow-sm border-0 bg-light p-3 h-100">
+                                        <div class="text-muted small text-uppercase fw-bold mb-2">
+                                            <i class="fa fa-camera me-1" title="Escaneos" />
+                                            Escaneos
+                                        </div>
+                                        <div class="h2 fw-bold text-success mb-0">
                                             <field name="total_escaneos" readonly="1" />
                                         </div>
                                     </div>
                                 </div>
-                                <!-- CARD: REGISTROS -->
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="card shadow-sm border-0 bg-light p-3 h-100">
-                                        <div class="text-muted small text-uppercase fw-bold mb-2">Registros del Proyecto</div>
-                                        <div class="h2 fw-bold text-dark mb-0">
+                                        <div class="text-muted small text-uppercase fw-bold mb-2">
+                                            <i class="fa fa-tasks me-1" title="Registros" />
+                                            Registros
+                                        </div>
+                                        <div class="h2 fw-bold text-info mb-0">
                                             <field name="total_registros" readonly="1" />
                                         </div>
                                     </div>
                                 </div>
-                                <!-- CARD: ETAPA DOMINANTE -->
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="card shadow-sm border-0 bg-light p-3 h-100">
-                                        <div class="text-muted small text-uppercase fw-bold mb-2">Etapa con más registros</div>
-                                        <div class="h3 fw-bold text-info mb-0">
-                                            <field name="etapa_dominante" readonly="1" />
+                                        <div class="text-muted small text-uppercase fw-bold mb-2">
+                                            <i class="fa fa-calendar me-1" title="Duración" />
+                                            Duración
+                                        </div>
+                                        <div class="h2 fw-bold text-warning mb-0">
+                                            <field name="duracion_estimada" readonly="1" />
+                                            <small>días</small>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                            <!-- Botón para análisis gráfico -->
                             <div class="row justify-content-center mt-5">
-                                <div class="col-md-6 text-center border-top pt-4">
-                                    <p class="text-muted mb-4">Pulsa el siguiente botón para visualizar las gráficas de tendencia y análisis detallado de carga por día.</p>
-                                    <button name="action_ver_analisis_grafico" type="object" class="btn btn-primary btn-lg shadow p-2 rounded-pill" icon="fa-line-chart" style="width: 100%;">
-                                        <span class="ms-2 fw-bold">ABRIR ANÁLISIS GRÁFICO</span>
+                                <div class="col-md-8 text-center border-top pt-4">
+                                    <p class="text-muted mb-4">
+                                        <i class="fa fa-line-chart me-2" title="Análisis Gráfico" />
+                                        Visualiza análisis de producción, análisis por etapa y rendimiento del equipo.
+                                    </p>
+                                    <button name="action_ver_analisis_grafico" type="object" class="btn btn-primary btn-lg shadow rounded-pill px-5" icon="fa-line-chart">
+                                        <i class="fa fa-chart-line me-2" title="Análisis Gráfico" />
+                                        <span class="fw-bold">ABRIR ANÁLISIS GRÁFICO</span>
                                     </button>
                                 </div>
                             </div>
                         </page>
-                        <!-- EQUIPOS (ASIGNACIONES + MIEMBROS) -->
-                        <page name="equipo" string="Equipos">
-                            <separator string="Gestión de Personal Digitalizador (Partners)" class="mt-4" />
-                            <field name="miembro_ids" context="{'default_proyecto_id': active_id}" view_id="%(view_miembro_proyecto_tree_inline)s" />
+                        <!-- PESTAÑA 2: MIEMBROS DEL EQUIPO -->
+                        <page name="equipo" string="Miembros del Equipo">
+                            <field name="miembro_ids" context="{'default_proyecto_id': active_id}" nolabel="1">
+                                <tree string="Miembros del Equipo" default_order="fecha_integracion desc" editable="bottom" decoration-muted="fecha_salida != False" decoration-success="es_lider == True">
+                                    <field name="partner_id" string="Digitalizador" required="1" options="{'no_create': True}" />
+                                    <field name="fecha_integracion" string="Ingreso" widget="date" required="1" />
+                                    <field name="es_lider" string="Líder?" widget="boolean_toggle" />
+                                    <field name="total_registros" string="Registros" sum="Total" readonly="1" />
+                                    <field name="fecha_salida" string="Fecha Salida" widget="date" />
+                                    <!-- Botón para Registrar Salida (solo visible si está activo - sin fecha_salida) -->
+                                    <button name="action_registrar_salida" string="Salida" type="object" icon="fa-sign-out" class="btn-danger btn-sm" invisible="fecha_salida" confirm="¿Registrar salida de este miembro? Se establecerá fecha_salida = hoy." />
+                                    <!-- Botón para Reintegrar (solo visible si está inactivo - tiene fecha_salida) -->
+                                    <button name="action_reintegrar" string="Reintegrar" type="object" icon="fa-refresh" class="btn-success btn-sm" invisible="not fecha_salida" confirm="¿Reintegrar a este miembro? Se limpiará la fecha_salida." />
+                                </tree>
+                            </field>
                         </page>
-                        <!-- BITÁCORA (REGISTROS) -->
+                        <!-- PESTAÑA 3: BITÁCORA -->
                         <page name="bitacora" string="Bitácora">
-                            <field name="registro_ids" readonly="1" view_id="%(view_registro_tree_inline)s" />
+                            <div class="alert alert-info mb-3" role="alert">
+                                <i class="fa fa-info-circle me-2" title="Información" />
+                                <strong>Registros de Producción:</strong>
+                                Haz clic en cualquier registro para ver sus detalles. 
+                                Los registros se agrupan automáticamente por fecha.
+                            </div>
+                            <field name="registro_ids" readonly="1" context="{'tree_view_ref': 'digitalizacion.digitalizacion_registro_view_tree', 'form_view_ref': 'digitalizacion.digitalizacion_registro_view_form', 'default_proyecto_id': active_id}" options="{'no_create': True, 'no_edit': True}">
+                                <tree string="Registros del Proyecto" default_order="fecha desc, hora desc" decoration-muted="produccion_principal == 0">
+                                    <field name="fecha" width="110" />
+                                    <field name="miembro_id" string="Digitalizador" />
+                                    <field name="etapa_id" string="Etapa" />
+                                    <field name="produccion_principal" string="Producción" sum="Total" />
+                                    <field name="unidad_produccion" string="Unidad" />
+                                    <field name="total_escaneos" string="Escaneos" sum="Total" optional="show" />
+                                    <field name="referencia_cajas" optional="hide" />
+                                </tree>
+                            </field>
                         </page>
                     </notebook>
                 </sheet>
             </form>
         </field>
     </record>
-    <!-- ════════════════════════════════════════════════════════════════
-        SECCIÓN 3 — VISTA KANBAN (AGRUPADA POR ESTADO)
-    ════════════════════════════════════════════════════════════════ -->
+    <!-- Vista Kanban -->
     <record id="digitalizacion_proyecto_view_kanban" model="ir.ui.view">
         <field name="name">digitalizacion.proyecto.kanban</field>
         <field name="model">digitalizacion.proyecto</field>
         <field name="arch" type="xml">
             <kanban default_group_by="state" class="o_kanban_mobile">
-                <field name="name"/>
-                <field name="state"/>
-                <field name="fecha_inicio"/>
-                <field name="fecha_fin_estimada"/>
-                <field name="total_miembros"/>
-                <field name="total_escaneos"/>
-                <field name="total_registros"/>
-                <field name="description"/>
-                <field name="active"/>
-
+                <!-- Campos necesarios para el template -->
+                <field name="name" />
+                <field name="state" />
+                <field name="fecha_inicio" />
+                <field name="fecha_fin_estimada" />
+                <field name="total_miembros" />
+                <field name="total_escaneos" />
+                <field name="total_registros" />
+                <field name="description" />
+                <field name="active" />
                 <templates>
                     <t t-name="kanban-box">
                         <div class="oe_kanban_global_click">
+                            <!-- Icono según estado -->
                             <div class="o_kanban_image">
                                 <t t-if="record.state.value == 'en_curso'">
-                                    <i class="fa fa-play-circle-o text-success" style="font-size: 40px;"/>
+                                    <i class="fa fa-play-circle-o text-success" style="font-size: 40px;" title="Proyecto en curso" />
                                 </t>
                                 <t t-elif="record.state.value == 'pausado'">
-                                    <i class="fa fa-pause-circle-o text-warning" style="font-size: 40px;"/>
+                                    <i class="fa fa-pause-circle-o text-warning" style="font-size: 40px;" title="Proyecto pausado" />
                                 </t>
                                 <t t-elif="record.state.value == 'finalizado'">
-                                    <i class="fa fa-check-circle-o text-info" style="font-size: 40px;"/>
+                                    <i class="fa fa-check-circle-o text-info" style="font-size: 40px;" title="Proyecto finalizado" />
                                 </t>
                                 <t t-else="">
-                                    <i class="fa fa-folder-open-o text-muted" style="font-size: 40px;"/>
+                                    <i class="fa fa-folder-open-o text-muted" style="font-size: 40px;" title="Proyecto estado indefinido" />
                                 </t>
                             </div>
+                            <!-- Detalles de la tarjeta -->
                             <div class="oe_kanban_details">
+                                <!-- Título -->
                                 <strong class="o_kanban_record_title">
-                                    <field name="name"/>
+                                    <field name="name" />
                                 </strong>
-                                
+                                <!-- Badges de estado -->
                                 <div class="mt-1 mb-2">
                                     <t t-if="record.state.value == 'en_curso'">
-                                        <span class="badge bg-success">En curso</span>
+                                        <span class="badge bg-success">🚀 En curso</span>
                                     </t>
                                     <t t-elif="record.state.value == 'pausado'">
-                                        <span class="badge bg-warning text-dark">Pausa / Standby</span>
+                                        <span class="badge bg-warning text-dark">⏸️ Pausa / Standby</span>
                                     </t>
                                     <t t-elif="record.state.value == 'finalizado'">
-                                        <span class="badge bg-info">Finalizado</span>
+                                        <span class="badge bg-info">✅ Finalizado</span>
+                                    </t>
+                                    <!-- Badge de archivado -->
+                                    <t t-if="record.active.value == False">
+                                        <span class="badge bg-secondary ms-1">📦 Archivado</span>
                                     </t>
                                 </div>
-                                
+                                <!-- Métricas -->
                                 <ul class="list-unstyled mt-2 mb-0">
                                     <li class="mb-1">
-                                        <i class="fa fa-calendar fa-fw text-muted me-1"/>
-                                        <small>Inicio: <field name="fecha_inicio"/></small>
+                                        <i class="fa fa-calendar fa-fw text-muted me-1" title="Inicio" />
+                                        <small>
+                                            Inicio:
+                                            <field name="fecha_inicio" />
+                                        </small>
                                     </li>
                                     <li t-if="record.fecha_fin_estimada.value" class="mb-1">
-                                        <i class="fa fa-calendar-check-o fa-fw text-muted me-1"/>
-                                        <small>Fin estimado: <field name="fecha_fin_estimada"/></small>
+                                        <i class="fa fa-calendar-check-o fa-fw text-muted me-1" title="Fin estimado" />
+                                        <small>
+                                            Fin estimado:
+                                            <field name="fecha_fin_estimada" />
+                                        </small>
                                     </li>
                                     <li class="mb-1">
-                                        <i class="fa fa-users fa-fw text-muted me-1"/>
-                                        <small>Miembros: <field name="total_miembros"/></small>
+                                        <i class="fa fa-users fa-fw text-muted me-1" title="Equipo" />
+                                        <small>
+                                            Miembros:
+                                            <field name="total_miembros" />
+                                        </small>
                                     </li>
                                     <li class="mb-1">
-                                        <i class="fa fa-camera fa-fw text-muted me-1"/>
-                                        <small>Escaneos: <field name="total_escaneos"/></small>
+                                        <i class="fa fa-camera fa-fw text-muted me-1" title="Escaneos" />
+                                        <small>
+                                            Escaneos:
+                                            <field name="total_escaneos" />
+                                        </small>
                                     </li>
                                     <li class="mb-1">
-                                        <i class="fa fa-tasks fa-fw text-muted me-1"/>
-                                        <small>Registros: <field name="total_registros"/></small>
+                                        <i class="fa fa-tasks fa-fw text-muted me-1" title="Registros" />
+                                        <small>
+                                            Registros:
+                                            <field name="total_registros" />
+                                        </small>
                                     </li>
                                 </ul>
-                                
+                                <!-- Descripción -->
                                 <div t-if="record.description.value" class="mt-2 text-muted small">
-                                    <i class="fa fa-align-left fa-fw me-1"/>
-                                    <span t-esc="record.description.value.length > 80 ? record.description.value.slice(0, 80) + '...' : record.description.value"/>
+                                    <i class="fa fa-align-left fa-fw me-1" title="Descripción" />
+                                    <span t-esc="record.description.value.length > 80 ? record.description.value.slice(0, 80) + '...' : record.description.value" />
                                 </div>
-                                
+                                <!-- Pie de tarjeta -->
                                 <div class="o_kanban_record_bottom mt-3 pt-2 border-top">
                                     <div class="oe_kanban_bottom_left">
                                         <small class="text-muted">
-                                            <i class="fa fa-folder-open-o me-1"/>
-                                            ID: <field name="id"/>
+                                            <i class="fa fa-folder-open-o me-1" title="ID" />
+                                            ID:
+                                            <field name="id" />
                                         </small>
                                     </div>
                                     <div class="oe_kanban_bottom_right">
                                         <t t-if="record.active.value == False">
                                             <span class="badge bg-secondary opacity-50">
-                                                <i class="fa fa-archive"/> Archivado
+                                                <i class="fa fa-archive" title="Archivado" />
+                                                Archivado
                                             </span>
                                         </t>
                                     </div>
@@ -285,42 +297,6 @@
                     </t>
                 </templates>
             </kanban>
-        </field>
-    </record>
-    <!-- 4. VISTA BÚSQUEDA -->
-    <record id="digitalizacion_proyecto_view_search" model="ir.ui.view">
-        <field name="name">digitalizacion.proyecto.search</field>
-        <field name="model">digitalizacion.proyecto</field>
-        <field name="arch" type="xml">
-            <search string="Buscar Proyectos">
-                <field name="name" string="Proyecto" />
-                <field name="state" />
-                <!-- Campos de medida necesarios para el Dashboard -->
-                <field name="total_escaneos" />
-                <field name="total_miembros" />
-                <field name="total_registros" />
-                <separator />
-                <filter name="en_curso" string="En curso" domain="[('state', '=', 'en_curso')]" />
-                <filter name="pausado" string="Pausa / Standby" domain="[('state', '=', 'pausado')]" />
-                <filter name="finalizado" string="Finalizados" domain="[('state', '=', 'finalizado')]" />
-                <group string="Agrupar por" expand="0">
-                    <filter name="group_state" string="Estado" context="{'group_by': 'state'}" />
-                </group>
-            </search>
-        </field>
-    </record>
-    <!-- 5. ACCIÓN: PROYECTOS -->
-    <record id="digitalizacion_proyecto_action" model="ir.actions.act_window">
-        <field name="name">Gestión de Proyectos</field>
-        <field name="res_model">digitalizacion.proyecto</field>
-        <field name="view_mode">kanban,tree,form</field>
-        <!-- Kanban primero -->
-        <field name="view_id" ref="digitalizacion_proyecto_view_kanban" />
-        <!-- Vista kanban por defecto -->
-        <field name="search_view_id" ref="digitalizacion_proyecto_view_search" />
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">Crea un nuevo proyecto</p>
-            <p>Gestiona líderes, personal y producción desde un solo lugar.</p>
         </field>
     </record>
 </odoo>

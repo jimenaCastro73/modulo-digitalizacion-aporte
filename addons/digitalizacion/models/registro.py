@@ -9,6 +9,14 @@ CAMBIOS DRY/KISS respecto a la versión original:
   - get_resumen_etapas() → absorbido desde el helper en portal.py.
   - El controlador ahora llama a estos métodos y solo maneja HTTP.
 
+SIMPLIFICACIÓN (alineación con Excel original):
+  - Eliminados: expedientes_editados, folios_editados.
+    En el Excel, la etapa Editado usa la misma columna "No expedientes" que
+    Limpieza/Ordenado. Los campos específicos eran redundantes y no tenían
+    respaldo en los datos reales del cliente.
+  - Indexado conserva expedientes_indexados y folios_indexados porque en el
+    Excel son columnas independientes (no se usa usa "No expedientes" para indexar).
+
 El resto de campos y métodos (KPIs, participación equipo, etc.) no cambian
 porque ya estaban bien encapsulados en el modelo.
 """
@@ -120,24 +128,24 @@ class DigitalizacionRegistro(models.Model):
         "Aplica a: Limpieza, Ordenado, Digitalizado.",
     )
 
-    # Campos por etapa
-
+    # ── Campos de producción ──────────────────────────────────────────────────
+    # Compartidos por Limpieza, Ordenado, Digitalizado y Editado:
     no_expedientes = fields.Integer(
         string="Cantidad de expedientes", group_operator="sum"
     )
     total_folios = fields.Integer(string="Cantidad de folios", group_operator="sum")
+
+    # Exclusivo de Digitalizado:
     total_escaneos = fields.Integer(string="Número de escaneos", group_operator="sum")
     tipo_escaner_ids = fields.Many2many(
         comodel_name="digitalizacion.tipo_escaner", string="Tipo(s) de escáner"
     )
-    expedientes_editados = fields.Integer(
-        string="Expedientes editados", group_operator="sum"
-    )
-    folios_editados = fields.Integer(string="Folios editados")
+
+    # Exclusivos de Indexado (columnas independientes en el Excel):
     expedientes_indexados = fields.Integer(
         string="Expedientes indexados", group_operator="sum"
     )
-    folios_indexados = fields.Integer(string="Folios indexados")
+    folios_indexados = fields.Integer(string="Folios indexados", group_operator="sum")
 
     # Campos computados / relacionados
 
@@ -200,7 +208,6 @@ class DigitalizacionRegistro(models.Model):
         "no_expedientes",
         "total_folios",
         "total_escaneos",
-        "folios_editados",
         "folios_indexados",
     )
     def _compute_produccion_principal(self):
@@ -260,12 +267,6 @@ class DigitalizacionRegistro(models.Model):
         no_expedientes = sanitizar_entero(fila.get("no_expedientes"), _("Expedientes"))
         total_folios = sanitizar_entero(fila.get("total_folios"), _("Folios totales"))
         total_escaneos = sanitizar_entero(fila.get("total_escaneos"), _("Escaneos"))
-        expedientes_editados = sanitizar_entero(
-            fila.get("expedientes_editados"), _("Exp. editados")
-        )
-        folios_editados = sanitizar_entero(
-            fila.get("folios_editados"), _("Folios editados")
-        )
         expedientes_indexados = sanitizar_entero(
             fila.get("expedientes_indexados"), _("Exp. indexados")
         )
@@ -286,8 +287,6 @@ class DigitalizacionRegistro(models.Model):
             "no_expedientes": no_expedientes,
             "total_folios": total_folios,
             "total_escaneos": total_escaneos,
-            "expedientes_editados": expedientes_editados,
-            "folios_editados": folios_editados,
             "expedientes_indexados": expedientes_indexados,
             "folios_indexados": folios_indexados,
             "referencia_cajas": referencia_cajas,
@@ -302,29 +301,23 @@ class DigitalizacionRegistro(models.Model):
         Resumen de producción por etapa para el dashboard del portal.
         Retorna: lista de dicts [{"nombre": str, "cantidad": int}]
         """
-        # Asegurar que domain es una lista
         if not domain:
             domain = []
 
-        # Obtener todos los registros que cumplen el dominio
         registros = self.sudo().search(domain)
 
-        # Si no hay registros, retornar lista vacía con mensaje
         if not registros:
             return [{"nombre": "Sin registros", "cantidad": 0}]
 
-        # Agrupar manualmente por etapa
         conteo = {}
         for reg in registros:
             etapa_nombre = reg.etapa_nombre or "Sin etapa"
             conteo[etapa_nombre] = conteo.get(etapa_nombre, 0) + 1
 
-        # Convertir al formato que espera el template
         result = []
         for etapa_nombre, cantidad in conteo.items():
             result.append({"nombre": etapa_nombre, "cantidad": cantidad})
 
-        # Ordenar por cantidad descendente
         result.sort(key=lambda x: x["cantidad"], reverse=True)
 
         return result

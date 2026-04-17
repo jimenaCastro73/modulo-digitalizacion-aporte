@@ -16,10 +16,18 @@
         # --- Datos ---
         "data/etapa_data.xml",
         # --- Vistas del backoffice ---
-        "views/admin/proyectos/proyecto_views.xml",
+        # Vistas de configuración
         "views/admin/configuracion/etapa_views.xml",
         "views/admin/configuracion/tipo_escaner_views.xml",
+        # Vistas de apoyo
+        "views/admin/proyectos/registro_views.xml",
+        # Vistas de proyecto
+        "views/admin/proyectos/proyecto_search.xml",
+        "views/admin/proyectos/proyecto_views.xml",
+        "views/admin/proyectos/proyecto_actions.xml",
+        # Dashboard global
         "views/admin/dashboard_views.xml",
+        # Menús
         "views/admin/digitalizacion_menus.xml",
         # --- Vistas Portal (Líder) ---
         "views/portal/portal_home_templates.xml",

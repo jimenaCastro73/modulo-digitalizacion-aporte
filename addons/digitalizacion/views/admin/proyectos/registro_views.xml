@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- FORM VIEW REGISTRO -->
+    <record id="digitalizacion_registro_view_form" model="ir.ui.view">
+        <field name="name">digitalizacion.registro.form</field>
+        <field name="model">digitalizacion.registro</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="etapa_id" widget="statusbar" />
+                </header>
+                <sheet>
+                    <!-- Información básica (siempre visible) -->
+                    <group name="info_basica" string="Información del Registro">
+                        <group>
+                            <field name="fecha" />
+                            <field name="miembro_id" options="{'no_create': True}" />
+                            <field name="proyecto_id" readonly="1" />
+                            <field name="lider_id" readonly="1" />
+                        </group>
+                        <group>
+                            <field name="produccion_principal" readonly="1" />
+                            <field name="unidad_produccion" readonly="1" />
+                        </group>
+                    </group>
+                    <notebook>
+                        <!-- Page 1: Datos de Producción -->
+                        <page string="Datos de Producción">
+                            <!-- Referencia de cajas (visible para todas excepto Indexado) -->
+                            <group name="grupo_referencia" string="Referencia de Cajas" invisible="etapa_id.name == 'Indexado'">
+                                <field name="referencia_cajas" placeholder="Ej: BF202,199,208 o '7 cajas' o 'varios'" help="Códigos de caja o descripción textual" />
+                            </group>
+                            <!-- 1. LIMPIEZA Y ORDENADO: usan no_expedientes + total_folios (físicos) -->
+                            <group name="grupo_limpieza_ordenado" string="Datos de Expedientes Físicos" invisible="etapa_id.name not in ['Limpieza', 'Ordenado']">
+                                <field name="no_expedientes" string="Cantidad de expedientes" required="1" />
+                                <field name="total_folios" string="Cantidad de folios físicos" required="1" />
+                            </group>
+                            <!-- 2. DIGITALIZADO: usa total_escaneos + tipo_escaner (creación de digital) -->
+                            <group name="grupo_digitalizado" string="Digitalización (Escaneo)" invisible="etapa_id.name != 'Digitalizado'">
+                                <field name="total_escaneos" string="Total escaneos (hojas digitales)" required="1" />
+                                <field name="tipo_escaner_ids" widget="many2many_tags" help="Tipo(s) de escáner utilizado(s)" />
+                                <field name="no_expedientes" string="Expedientes escaneados" />
+                                <field name="total_folios" string="Folios escaneados" />
+                            </group>
+                            <!-- 3. EDITADO: usa total_folios (edición de digital) -->
+                            <group name="grupo_editado" string="Edición de Documentos Digitales" invisible="etapa_id.name != 'Editado'">
+                                <field name="total_folios" string="Folios editados/corregidos" required="1" />
+                                <field name="referencia_cajas" placeholder="Referencia de cajas editadas" />
+                            </group>
+                            <!-- 4. INDEXADO: usa expedientes_indexados + folios_indexados -->
+                            <group name="grupo_indexado" string="Indexación de Documentos" invisible="etapa_id.name != 'Indexado'">
+                                <field name="expedientes_indexados" string="Expedientes indexados" required="1" />
+                                <field name="folios_indexados" string="Folios indexados" required="1" />
+                            </group>
+                        </page>
+                        <!-- Page 2: Notas y Observaciones -->
+                        <page string="Notas y Observaciones">
+                            <group name="grupo_notas">
+                                <field name="observacion" nolabel="1" placeholder="Ej: Escaneo de expedientes sin editar (exp dobles) | Limpieza de expedientes, arreglo de expedientes | Indexado de expedientes, caida de sistema de 2pm a 2:20 pm" />
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <!-- TREE VIEW - Lista de registros (simplificada) -->
+    <record id="digitalizacion_registro_view_tree" model="ir.ui.view">
+        <field name="name">digitalizacion.registro.tree</field>
+        <field name="model">digitalizacion.registro</field>
+        <field name="arch" type="xml">
+            <tree string="Registros de Producción" default_order="fecha desc, hora desc" decoration-muted="produccion_principal == 0">
+                <field name="fecha" width="100" />
+                <field name="miembro_id" string="Digitalizador" />
+                <field name="etapa_id" string="Etapa" />
+                <field name="produccion_principal" string="Producción" sum="Total" />
+                <field name="unidad_produccion" string="Unidad" />
+                <field name="referencia_cajas" optional="show" />
+                <field name="observacion" optional="hide" />
+            </tree>
+        </field>
+    </record>
+    <!-- SEARCH VIEW - Búsqueda y filtros -->
+    <record id="digitalizacion_registro_view_search" model="ir.ui.view">
+        <field name="name">digitalizacion.registro.search</field>
+        <field name="model">digitalizacion.registro</field>
+        <field name="arch" type="xml">
+            <search string="Buscar registros">
+                <field name="miembro_id" string="Digitalizador" />
+                <field name="proyecto_id" string="Proyecto" />
+                <field name="etapa_id" string="Etapa" />
+                <field name="referencia_cajas" />
+                <field name="observacion" />
+                <filter name="my_records" string="Mis registros" domain="[('lider_id', '=', uid)]" />
+                <separator />
+                <filter name="fecha_today" string="Hoy" domain="[('fecha', '=', context_today)]" />
+                <filter name="fecha_week" string="Esta semana" domain="[('fecha', '>=', context_today - 7)]" />
+                <filter name="fecha_month" string="Este mes" domain="[('fecha', '>=', context_today.replace(day=1))]" />
+                <group string="Agrupar por" expand="0">
+                    <filter name="group_etapa" string="Etapa" context="{'group_by': 'etapa_id'}" />
+                    <filter name="group_proyecto" string="Proyecto" context="{'group_by': 'proyecto_id'}" />
+                    <filter name="group_miembro" string="Digitalizador" context="{'group_by': 'miembro_id'}" />
+                    <filter name="group_fecha" string="Fecha" context="{'group_by': 'fecha'}" />
+                </group>
+            </search>
+        </field>
+    </record>
+    <!-- PIVOT VIEW - Análisis de datos -->
+    <record id="digitalizacion_registro_view_pivot" model="ir.ui.view">
+        <field name="name">digitalizacion.registro.pivot</field>
+        <field name="model">digitalizacion.registro</field>
+        <field name="arch" type="xml">
+            <pivot string="Análisis de Producción" sample="1">
+                <field name="fecha" type="row" interval="month" />
+                <field name="etapa_id" type="col" />
+                <field name="proyecto_id" type="row" />
+                <field name="produccion_principal" string="Producción" type="measure" />
+                <field name="total_escaneos" string="Escaneos" type="measure" />
+                <field name="expedientes_indexados" string="Exp. Indexados" type="measure" />
+                <field name="folios_indexados" string="Folios Indexados" type="measure" />
+            </pivot>
+        </field>
+    </record>
+    <!-- GRAPH VIEW - Tendencia -->
+    <record id="digitalizacion_registro_view_graph" model="ir.ui.view">
+        <field name="name">digitalizacion.registro.graph</field>
+        <field name="model">digitalizacion.registro</field>
+        <field name="arch" type="xml">
+            <graph string="Tendencia de Producción" type="line" sample="1">
+                <field name="fecha" type="row" interval="day" />
+                <field name="etapa_id" type="col" />
+                <field name="produccion_principal" type="measure" />
+            </graph>
+        </field>
+    </record>
+</odoo>

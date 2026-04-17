@@ -1,11 +1,25 @@
 :root {
     --dig-primary: #b21010; /* Rojo corporativo refinado */
+    --dig-primary-rgb: 178, 16, 16;
     --dig-primary-light: #fef2f2;
     --dig-primary-soft: #fca5a5;
     --dig-secondary: #4b5563;
     --dig-bg: #f9fafb;
     --dig-card-border: #e5e7eb;
     --dig-card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.o_digitalizacion_circle_gradient {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, rgba(128, 128, 128, 0.8), rgba(var(--dig-primary-rgb), 0.8));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.875rem;
+    color: white;
 }
 
 .o_digitalizacion_form_wrapper {
