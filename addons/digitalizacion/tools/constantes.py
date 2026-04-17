@@ -56,8 +56,6 @@ ETAPAS_CONFIG = {
         "campos_minimos": ["no_expedientes", "total_folios"],
         "limpiar_al_cambiar": [
             "total_escaneos",
-            "expedientes_editados",
-            "folios_editados",
             "expedientes_indexados",
             "folios_indexados",
         ],
@@ -69,8 +67,6 @@ ETAPAS_CONFIG = {
         "campos_minimos": ["no_expedientes", "total_folios"],
         "limpiar_al_cambiar": [
             "total_escaneos",
-            "expedientes_editados",
-            "folios_editados",
             "expedientes_indexados",
             "folios_indexados",
         ],
@@ -81,35 +77,35 @@ ETAPAS_CONFIG = {
         "unidad": "escaneos",
         "campos_minimos": ["total_escaneos"],
         "limpiar_al_cambiar": [
-            "no_expedientes",
-            "expedientes_editados",
-            "folios_editados",
             "expedientes_indexados",
             "folios_indexados",
         ],
         "mensaje_minimo": "En Digitalizado debes registrar al menos un escaneo.",
     },
+    # CAMBIO: Editado ya no usa campos propios (expedientes_editados/folios_editados).
+    # En el Excel original, el digitalizador de Editado usa la misma columna
+    # "No expedientes" que Limpieza/Ordenado. Los campos específicos eran redundantes.
     "Editado": {
-        "campo_principal": "folios_editados",
+        "campo_principal": "total_folios",
         "unidad": "folios",
-        "campos_minimos": ["expedientes_editados", "folios_editados"],
+        "campos_minimos": ["total_folios"],
         "limpiar_al_cambiar": [
-            "no_expedientes",
             "total_escaneos",
             "expedientes_indexados",
             "folios_indexados",
         ],
-        "mensaje_minimo": "En Editado debes registrar expedientes o folios editados.",
+        "mensaje_minimo": "En Editado debes registrar al menos un folio.",
     },
+    # Indexado conserva sus campos propios (expedientes_indexados, folios_indexados)
+    # porque en el Excel son columnas separadas e independientes de "No expedientes".
     "Indexado": {
         "campo_principal": "folios_indexados",
         "unidad": "folios",
         "campos_minimos": ["expedientes_indexados", "folios_indexados"],
         "limpiar_al_cambiar": [
             "no_expedientes",
+            "total_folios",
             "total_escaneos",
-            "expedientes_editados",
-            "folios_editados",
         ],
         "mensaje_minimo": "En Indexado debes registrar expedientes o folios indexados.",
     },
