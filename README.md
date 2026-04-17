@@ -116,8 +116,10 @@ digitalizacion/
 ├── views/
 │   ├── admin/                   # Backend (solo Administrador)
 │   │   ├── proyectos/
-│   │   │   ├── proyecto_views.xml        # Centro de Mando: Dashboard, Equipo, Estadísticas
-│   │   │   └── registro_views.xml        # Vistas de registros (form, tree, pivot, graph)
+│   │   │   ├── proyecto_views.xml        # Vistas de proyecto
+│   │   │   ├── proyecto_search.xml       # Búsqueda y filtros
+│   │   │   ├── proyecto_actions.xml      # Acciones de ventana
+│   │   │   └── registro_views.xml        # Vistas de registros
 │   │   ├── configuracion/
 │   │   │   ├── etapa_views.xml
 │   │   │   └── tipo_escaner_views.xml
@@ -136,16 +138,17 @@ digitalizacion/
 │
 ├── static/
 │   ├── description/
-│   │   └── icon.png           # Icono del módulo
+│   │   └── icon.png
 │   └── src/
 │       └── portal/
 │           ├── js/
-│           │   └── portal_registro_form.js   # Componente OWL reactivo para el formulario de registros
+│           │   └── portal_registro_form.js   # Componente OWL reactivo
 │           └── css/
 │               └── portal_digitalizacion.css # Estilos CSS con variables
 │
 └── tests/
     ├── test_digitalizacion_v2.py
+    └── test_digitalizacion_portal.py
 ```
 
 ---
@@ -210,13 +213,11 @@ Registro central de cada proyecto de digitalización.
 - `total_escaneos`: Suma acumulada de escaneos
 - `etapa_dominante`: Etapa con mayor producción acumulada
 
-**Constraint SQL:** nombre único por base de datos.
-
 ---
 
 ### T-04 · `digitalizacion.asignacion` — Asignación Líder ↔ Proyecto
 
-Tabla puente entre un usuario portal (Líder) y un proyecto. **Se crea manualmente** desde el formulario de miembro cuando se marca `es_lider=True`.
+Tabla puente entre un usuario portal (Líder) y un proyecto. **Se crea automáticamente** cuando se marca `es_lider=True` en el miembro.
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
@@ -229,7 +230,7 @@ Tabla puente entre un usuario portal (Líder) y un proyecto. **Se crea manualmen
 
 ---
 
-### T-05 · `digitalizacion.miembro_proyecto` — Equipo por proyecto
+### T-05 · `digitalizacion.miembro_proyecto` — Equipo por proyecto (MEJORADO)
 
 Integrantes del equipo de digitalización. Un mismo contacto puede pertenecer a múltiples proyectos.
 
@@ -239,8 +240,8 @@ Integrantes del equipo de digitalización. Un mismo contacto puede pertenecer a 
 | `partner_id` | Many2one (res.partner) | Contacto del integrante |
 | `fecha_integracion` | Date | Fecha de incorporación |
 | `fecha_salida` | Date | Si está informada, excluye al miembro del formulario de registro |
-| `es_lider` | Boolean | Marca como líder — sincroniza con T-04 automáticamente |
-| `active` | Boolean | Soft delete |
+| `es_lider` | Boolean | Marca como líder — sincroniza con T-04 y grupo automáticamente |
+| `is_active` | Boolean (compute) | Calculado como: `fecha_salida == False` |
 
 **Campos computados:**
 - `total_registros`: Registros de trabajo emitidos
@@ -248,10 +249,22 @@ Integrantes del equipo de digitalización. Un mismo contacto puede pertenecer a 
 **Constraint SQL:** `UNIQUE(proyecto_id, partner_id)`.  
 **Regla de negocio:** Solo puede haber **un líder activo** por proyecto.
 
-**Sincronización con asignaciones:**
-- Al marcar `es_lider=True`, crea/reactiva automáticamente la asignación en T-04
-- Al desmarcar `es_lider=False`, desactiva la asignación correspondiente
-- Al informar `fecha_salida`, desactiva el miembro y limpia el liderazgo
+#### Gestión de liderazgo
+
+Cuando `es_lider=True`:
+1. **Validar usuario portal:** El partner debe tener un usuario portal (`share=True`)
+2. **Asignar grupo líder:** Se añade automáticamente el grupo `group_digitalizacion_lider` al usuario
+3. **Desmarcar otros líderes:** Se desmarca `es_lider` en otros miembros del mismo proyecto
+4. **Crear/reactivar asignación:** Se crea o reactiva el registro en T-04
+
+Cuando `es_lider=False`:
+1. **Remover grupo (inteligente):** Solo se quita el grupo si el usuario **no es líder en otros proyectos**
+2. **Desactivar asignación:** Se desactiva el registro en T-04
+
+Cuando se informa `fecha_salida`:
+1. **Desactivar miembro:** Se marca como `active=False`
+2. **Limpiar liderazgo:** Si es líder, se desactiva automáticamente
+3. **Permitir reactivación:** Un miembro archivado con salida puede ser reactivado (se limpia `fecha_salida`)
 
 ---
 
@@ -290,8 +303,6 @@ Granularidad: 1 registro = 1 miembro + 1 etapa + cantidades del día.
 | Editado | `referencia_cajas`, `total_folios` |
 | Indexado | `expedientes_indexados`, `folios_indexados` |
 
-**Nota sobre Editado:** A diferencia de versiones anteriores, la etapa Editado ahora usa el campo `total_folios` directamente (igual que Limpieza/Ordenado), sin campos propios. Esto simplifica el modelo y alinea con los datos reales del cliente.
-
 ---
 
 ## Seguridad y permisos
@@ -302,6 +313,8 @@ Granularidad: 1 registro = 1 miembro + 1 etapa + cantidades del día.
 |-------|-----------|--------|
 | **Administrador** | `base.group_user` | Backoffice completo: proyectos, registros, catálogos, dashboard |
 | **Líder de equipo** | `base.group_portal` | Solo portal web: registrar producción diaria |
+
+**Asignación automática:** El grupo Líder se asigna automáticamente cuando se marca `es_lider=True` en un miembro. Se remueve cuando ya no es líder en ningún proyecto.
 
 ### Permisos por modelo (ACL)
 
@@ -365,55 +378,13 @@ El componente OWL `RegistroForm` implementa validadores puros para sanitización
 
 | Validación | Descripción |
 |-----------|-------------|
-| **Digitalizador (miembro_id)** | Requerido |
+| **Digitalizador (miembro_id)** | Requerido; solo miembros activos (sin `fecha_salida`) |
 | **Etapa (etapa_id)** | Requerido |
 | **Campos numéricos** | 0 ≤ valor ≤ 999 999; entero (no decimales) |
 | **Referencia de cajas** | Máx. 200 chars; debe contener al menos 1 alfanumérico |
 | **Observación** | Máx. 500 caracteres |
 | **Producción mínima** | Al menos 1 campo de producción > 0 según etapa |
 | **Escáner (si Digitalizado)** | Obligatorio si `etapa_id = Digitalizado` |
-
-**Ejemplo de reglas por etapa:**
-
-```javascript
-// Limpieza y Ordenado
-{
-  caja: true,
-  expedientes: true,
-  folios: true,
-  escaneos: false,
-  escaner: false,
-}
-
-// Digitalizado
-{
-  caja: true,
-  expedientes: true,
-  folios: true,
-  escaneos: true,    // ← Obligatorio
-  escaner: true,     // ← Obligatorio
-}
-
-// Editado (Simplificado)
-{
-  caja: true,
-  expedientes: false, // ← Ya NO usa no_expedientes
-  folios: true,
-  escaneos: false,
-  escaner: false,
-}
-
-// Indexado
-{
-  caja: false,
-  expedientes: false,
-  folios: false,
-  escaneos: false,
-  escaner: false,
-  expIndexados: true,
-  foliosIndexados: true,
-}
-```
 
 ---
 
@@ -429,7 +400,7 @@ El componente OWL `RegistroForm` implementa validadores puros para sanitización
 {
   "jsonrpc": "2.0",
   "params": {
-    "fecha": "2026-04-03",
+    "fecha": "2026-04-17",
     "registros": [
       {
         "miembro_id": 42,
@@ -483,6 +454,7 @@ El componente OWL `RegistroForm` implementa validadores puros para sanitización
 | `referencia_cajas` | String, máx. 200 chars, debe contener al menos 1 alfanumérico |
 | `observacion` | String, máx. 500 chars |
 | Acceso al proyecto | El líder debe tener asignación activa |
+| Miembro activo | El miembro no debe tener `fecha_salida` |
 
 ---
 
@@ -494,37 +466,55 @@ Accesibles desde el menú principal **Digitalización** (solo rol Administrador)
 
 | Menú | Descripción |
 |------|-------------|
-| **Proyectos** | Centro de Mando: gestión unificada de líderes, personal, dashboard y reportes desde un solo formulario |
+| **Proyectos** | Gestión unificada de líderes, personal, dashboard y reportes |
 | **Dashboard** | Análisis global de producción con gráficos (línea, barras, pivot) |
 | **Configuración** | Catálogos de etapas y escáneres |
 
-### Vistas específicas
+### Vistas de Proyectos
 
-#### Proyectos (Centro de Mando V2)
+El módulo implementa múltiples vistas separadas para mejor organización:
 
-El formulario de Proyecto es el centro neurálgico y encapsula:
+#### 1. **Vista de búsqueda (proyecto_search.xml)**
+- Filtros rápidos: Activos, Archivados, Por estado
+- Agrupación por: Estado, Fecha de inicio
 
-1. **Pestaña Dashboard:**
+#### 2. **Vista Kanban (proyecto_views.xml)**
+- Tarjetas agrupadas por estado (`en_curso`, `pausado`, `finalizado`)
+- KPIs resumidos (miembros, escaneos, registros, duración)
+- Iconos representativos por estado
+- Icono de archivo para proyectos inactivos
+
+#### 3. **Vista de lista (proyecto_views.xml)**
+- Ordenada por fecha de inicio descendente
+- Colores decorativos por estado
+- Columnas: Proyecto, Inicio, Estado, Miembros, Escaneos
+
+#### 4. **Vista de formulario (proyecto_views.xml)**
+
+**Pestañas incluidas:**
+
+1. **Dashboard:**
    - KPIs: Escaneos totales, Registros, Etapa dominante, Duración estimada
    - Botón "ABRIR ANÁLISIS GRÁFICO" para ver líneas de tendencia
 
-2. **Pestaña Miembros de Equipo:**
+2. **Miembros de Equipo:**
    - Tabla inline editable con digitalizadores
    - Checkbox para marcar líder del proyecto
    - Cómputo automático de registros por miembro
+   - Sincronización automática de grupos y asignaciones
 
-3. **Pestaña Bitácora:**
+3. **Bitácora:**
    - Vistas de registros (tree, form, pivot, graph)
    - Análisis cruzado de producción por miembro, etapa y fecha
 
-#### Vistas de Registros
+#### 5. **Vistas de Registros**
 
 - **Tree (lista):** Ordenada por fecha descendente
 - **Form:** Con visibilidad dinámica de campos por etapa
 - **Pivot:** Análisis cruzado (Proyecto × Miembro × Etapa)
 - **Graph:** Tendencia diaria de producción (línea)
 
-#### Dashboard global
+#### 6. **Dashboard global**
 
 Accesible desde menú. Ofrece:
 - **Graph (Línea):** Tendencia diaria de escaneos
@@ -532,30 +522,15 @@ Accesible desde menú. Ofrece:
 - **Pivot:** Análisis cruzado de todos los proyectos
 - Filtros por proyecto, etapa, fecha
 
-#### Kanban de Proyectos
+### Acciones de ventana (proyecto_actions.xml)
 
-Vista de tarjetas agrupadas por estado (`en_curso`, `pausado`, `finalizado`) con:
-- Badges de estado
-- KPIs resumidos
-- Acciones rápidas (abrir formulario, ver registros)
+1. **Gestión de Proyectos (principal):**
+   - Vista por defecto: Kanban agrupado por estado
+   - Contexto: filtro automático de proyectos activos
 
----
-
-## Reportes PDF
-
-### Reporte de Proyecto
-
-**Acción:** Disponible desde el botón "Imprimir Reporte" en el formulario del Proyecto
-
-**Contenido:**
-- Cabecera con nombre del proyecto y estado (verde = en curso, ámbar = pausa, azul = finalizado)
-- Matriz de 4 KPIs: Integrantes, Escaneos, Producciones, Días Estimados
-- Configuración del proyecto: Fechas, Líderes de Operación
-- Desglose de producción acumulada por etapa (tabla)
-- Equipo de trabajo asignado con roles (Líder ★ vs Digitalizador)
-- Pie de página con metadatos
-
-**Estilo:** Inspirado en el portal del líder con branding corporativo (rojo #af1714), variables CSS y responsivo para impresión
+2. **Proyectos Archivados:**
+   - Vista separada para gestionar proyectos inactivos
+   - Permite ver y reactivar proyectos
 
 ---
 
@@ -565,9 +540,9 @@ Vista de tarjetas agrupadas por estado (`en_curso`, `pausado`, `finalizado`) con
 
 | Modelo | Constraint | Regla |
 |--------|-----------|-------|
-| `etapa` | `_check_name` | Nombre no vacío, no solo dígitos (heredado de mixin) |
+| `etapa` | `_check_name` | Nombre no vacío, no solo dígitos |
 | `etapa` | `_check_sequence` | Secuencia ≥ 0 |
-| `tipo_escaner` | `_check_name` | Nombre no vacío, no solo dígitos (heredado de mixin) |
+| `tipo_escaner` | `_check_name` | Nombre no vacío, no solo dígitos |
 | `proyecto` | `_check_name` | Nombre no vacío, no solo dígitos |
 | `proyecto` | `_check_fechas` | `fecha_fin ≥ fecha_inicio` |
 | `proyecto` | `_check_description_longitud` | Descripción ≤ 500 caracteres |
@@ -596,124 +571,63 @@ Vista de tarjetas agrupadas por estado (`en_curso`, `pausado`, `finalizado`) con
 ### Nivel HTML/JavaScript (Portal)
 
 - `<input type="number">` con `min="0"` y `max="999999"`
-- `<input type="text">` con `maxlength` correspondiente (200 para cajas, 500 para observación)
+- `<input type="text">` con `maxlength` correspondiente
 - `<input type="date">` con `max` = fecha actual (vía JavaScript)
 - Validación reactiva en tiempo real con OWL
 - Mensajes de error inline contextualizados por campo
 
 ---
 
-## Arquitectura DRY (Don't Repeat Yourself)
+## Reportes PDF
 
-El módulo implementa principios DRY en varios niveles:
+### Reporte de Proyecto (QWeb)
 
-### 1. **Constantes centralizadas (`tools/constantes.py`)**
+**Acción:** Disponible desde el botón en el formulario del Proyecto
 
-Todos los límites, configuración de etapas y mensajes se definen en un único lugar:
-
-```python
-MAX_FILAS = 50
-MAX_CAMPO_NUMERICO = 999_999
-MAX_LEN_TEXTO_CORTO = 200
-MAX_LEN_TEXTO_LARGO = 500
-
-ETAPAS_CONFIG = {
-    "Limpieza": {
-        "campo_principal": "no_expedientes",
-        "unidad": "expedientes",
-        "campos_minimos": ["no_expedientes", "total_folios"],
-    },
-    # ... resto de etapas
-}
-```
-
-### 2. **Validadores puros (`tools/utils.py`)**
-
-Funciones sin estado ORM, reutilizables desde controladores, modelos o tests:
-
-```python
-sanitizar_entero(valor, nombre_campo, min_val, max_val)
-validar_id_positivo(valor, nombre_campo, prefijo)
-sanitizar_texto(valor, nombre_campo, max_len)
-sanitizar_referencia_cajas(valor, prefijo)
-```
-
-### 3. **Mixin de validación (`models/mixins.py`)**
-
-La validación `_check_name` se hereda en 3 modelos (`etapa`, `tipo_escaner`, `proyecto`):
-
-```python
-class _NombreValidoMixin(models.AbstractModel):
-    @api.constrains("name")
-    def _check_name(self):
-        # Lógica única, heredada por 3 modelos
-```
-
-### 4. **Métodos del modelo como API (`models/registro.py`)**
-
-La lógica de validación, API y KPIs vive en el modelo, donde debe estar:
-
-```python
-@api.model
-def validar_fila_api(self, fila, idx):
-    # Valida y normaliza datos del portal
-
-@api.model
-def get_kpis_lider(self, lider_id, domain_extra=None):
-    # Calcula KPIs usados por templates
-
-@api.model
-def get_participacion_equipo(self, proyecto_id):
-    # Datos para gráficos sin duplicar lógica
-```
-
-### 5. **Componente OWL modular (`static/src/portal/js/portal_registro_form.js`)**
-
-Clases puras para validación, gestión de filas y API:
-
-```javascript
-class ValidadorFila { ... }    // Reutilizable
-class GestorFila { ... }       // Reutilizable
-class ServicioApi { ... }      // Reutilizable
-
-export class RegistroForm extends Component { ... }  // Orquestador
-```
-
-**Beneficio:** Cambiar un límite o regla de etapa actualiza automáticamente:
-- Validaciones Python (modelo)
-- Validaciones JavaScript (portal)
-- Reportes
-- Templates
+**Contenido:**
+- Cabecera con nombre del proyecto y estado (con badges de color)
+- Matriz de 4 KPIs: Integrantes, Escaneos, Producciones, Días Estimados
+- Configuración del proyecto: Fechas, Líderes de Operación
+- Desglose de producción acumulada por etapa (tabla)
+- Equipo de trabajo asignado con roles (Líder ★ y Digitalizador)
 
 ---
 
 ## Pruebas automatizadas
-
-### Ejecutar toda la suite
-
+ 
+### Ejecutar todo el modulo
+ 
 ```bash
 docker exec odoo.17.otecglobal odoo \
   -c /etc/odoo/odoo.conf \
   -d digitalizacion_dev \
   --test-enable \
   --stop-after-init \
-  --test-tags "/digitalizacion"
+  --test-tags=digitalizacion
 ```
-
-### Suite de pruebas — 70 casos en total
-
-| Archivo | Clase | Tests | Tipo | Cobertura |
-|---------|-------|-------|------|-----------|
-| `test_registro_unitario.py` | `TestRegistroUnitario` | 28 | Caja blanca | CB-01 a CB-10: validaciones, cómputos, overrides |
-| `test_registro_regresion.py` | `TestRegistroRegresion` | 12 | Caja negra | CN-01 a CN-10: flujos completos CRUD, regresión |
-| `test_proyecto_unitario.py` | `TestProyectoUnitario` | 14 | Caja blanca | PY-01 a PY-07: fechas, constraints, computados |
-| `test_miembro_unitario.py` | `TestMiembroUnitario` | 13 | Caja blanca | MP-01 a MP-07: liderazgo, salida, sincronización |
-
-**Resultado esperado:**
-
+ 
+### Ejecutar pruebas del portal (con acceso HTTP)
+ 
+Para ejecutar las pruebas del portal con acceso HTTP en un puerto alternativo:
+ 
+```bash
+docker exec -it odoo.17.otecglobal odoo \
+  -u digitalizacion \
+  --test-enable \
+  --stop-after-init \
+  -d digitalizacion_dev \
+  --test-tags=digitalizacion \
+  --http-port=8070
 ```
-0 failed, 0 error(s) of 70 tests
-```
+ 
+Esta opción permite que las pruebas que requieren acceso al servidor HTTP (como las del portal) se ejecuten correctamente en el puerto `8070`, evitando conflictos con el servidor principal en `8001`.
+
+### Ejecución de Pruebas
+
+| Archivo | Clase | Cobertura |
+|---------|-------|-----------|
+| `test_digitalizacion_v2.py` | Pruebas V2 del módulo | Validaciones, sincronización, liderazgo |
+| `test_digitalizacion_portal.py` | Pruebas del portal | Rutas, API, validaciones |
 
 ---
 
@@ -757,11 +671,10 @@ modulo-digitalizacion-aporte/
 │       │               └── portal_digitalizacion.css
 │       ├── tests/
 │       │   ├── __init__.py
-│       │   ├── test_miembro_unitario.py
-│       │   ├── test_proyecto_unitario.py
-│       │   ├── test_registro_regresion.py
-│       │   └── test_registro_unitario.py
+│       │   ├── test_digitalizacion_v2.py
+│       │   └── test_digitalizacion_portal.py
 │       ├── tools/
+│       │   ├── __init__.py
 │       │   ├── constantes.py
 │       │   └── utils.py
 │       └── views/
@@ -769,11 +682,13 @@ modulo-digitalizacion-aporte/
 │           │   ├── configuracion/
 │           │   │   ├── etapa_views.xml
 │           │   │   └── tipo_escaner_views.xml
+│           │   ├── proyectos/
+│           │   │   ├── proyecto_search.xml
+│           │   │   ├── proyecto_views.xml
+│           │   │   ├── proyecto_actions.xml
+│           │   │   └── registro_views.xml
 │           │   ├── dashboard_views.xml
-│           │   ├── digitalizacion_menus.xml
-│           │   └── proyectos/
-│           │       ├── proyecto_views.xml
-│           │       └── registro_views.xml
+│           │   └── digitalizacion_menus.xml
 │           └── portal/
 │               ├── portal_home_templates.xml
 │               ├── portal_miembros_templates.xml
@@ -818,48 +733,58 @@ docker exec -it odoo.17.otecglobal odoo shell \
   -c /etc/odoo/odoo.conf \
   -d digitalizacion_dev
 
-# Reiniciar servidor
+# Reiniciar servidor de odoo
 docker restart odoo.17.otecglobal
 ```
 
 ---
 
-## Notas de desarrollo
+## Cambios recientes (v17.0.2.0.0)
 
-- **Odoo 17 — sintaxis de vistas:** Se usan expresiones Python directas en `invisible=""` en lugar del objeto `attrs={}` deprecado.
-- **QWeb — operadores en XML:** Los operadores `>`, `>=`, `<`, `<=` dentro de atributos `t-if` o bloques `<script>` **deben escaparse** (`&gt;`, `&lt;`).
-- **Framework OWL (Odoo Web Library):** El formulario de registro ha sido modernizado utilizando OWL, el framework reactivo de Odoo. Esto permite una gestión dinámica de múltiples filas, estados reactivos para la visibilidad de campos por etapa y validaciones en tiempo real sin recargar la página.
-- **Portal — fetch nativo:** El componente OWL utiliza `fetch()` nativo con CSRF token de Odoo para comunicarse con la API, eliminando dependencias de métodos legacy.
-- **Iconos — FontAwesome 6:** En Odoo 17 se deben utilizar las clases `fa-solid` (para FA 6) y etiquetas de cierre explícito `</i>` para garantizar el renderizado correcto en el portal.
-- **CSS Variables:** El portal utiliza variables CSS personalizadas (`:root { --dig-primary, --dig-bg, etc. }`) para consistencia visual y mantenimiento centralizado.
-- **Gráficos sin librerías pesadas:** Los gráficos de barras apiladas y heatmaps se implementan con CSS Flexbox puro (sin Chart.js o similares), optimizando carga y rendimiento.
-- **lider_id en registros:** El campo `lider_id` se asigna automáticamente en `create()` al usuario en sesión y no puede modificarse mediante `write()`.
-- **Arquitectura de Vistas V2 (Centralizado):** Se eliminaron los menús redundantes de Miembros, Asignaciones y Registros. Ahora todo el control operativo se realiza desde el formulario del Proyecto, filtrando automáticamente la información relacionada para mejorar la experiencia de usuario (UX) y evitar errores de contexto.
-- **Principio DRY — Constantes:** Todos los límites numéricos y configuración de etapas residen en `tools/constantes.py`, evitando duplicación entre Python, JavaScript y reportes.
-- **Principio DRY — Validadores:** Las funciones de sanitización viven en `tools/utils.py` (funciones puras sin ORM) para reutilización desde controladores, modelos y tests.
-- **Reportes:** Se implementó un motor de reportes PDF que hereda los estilos visuales del dashboard del portal, proporcionando un documento ejecutivo con branding corporativo y métricas limpias para la gerencia.
+### Reorganización de vistas administrativas
+
+1. **Vistas separadas por responsabilidad:**
+   - `proyecto_search.xml`: Búsqueda y filtros
+   - `proyecto_views.xml`: Kanban, list, form
+   - `proyecto_actions.xml`: Acciones de ventana
+   - `registro_views.xml`: Vistas de registros
+
+2. **Mejora en acciones de ventana:**
+   - Acción principal con contexto predeterminado
+   - Acción separada para proyectos archivados
+   - Mejor control de qué datos se ven por defecto
+
+### Mejoras en gestión de liderazgo (miembro_proyecto.py)
+
+1. **Asignación automática de grupos:**
+   - Al marcar `es_lider=True`, se asigna automáticamente el grupo Líder
+   - Sincronización inteligente: solo se quita el grupo si no es líder en otros proyectos
+
+2. **Métodos específicos:**
+   - `_activar_liderazgo()`: Valida usuario, asigna grupo, crea/reactiva asignación
+   - `_desactivar_liderazgo()`: Verifica otros proyectos, quita grupo si es necesario
+   - `_desactivar_asignacion_sin_remover_grupo()`: Desactiva asignación sin tocar grupo
+
+3. **Reactivación de miembros:**
+   - Si un miembro archivado (con `fecha_salida`) se intenta crear nuevamente, se reactiva automáticamente
+   - El patrón `create()` implementa reactivar-si-existe, crear-si-no-existe
+
+### Mejoras en el campo `is_active`
+
+- Campo `is_active` computado (basado en `fecha_salida`)
+- Facilita consultas de miembros activos sin duplicar lógica
+- Almacenado para mejor rendimiento en búsquedas
 
 ---
 
-## Cambios recientes (vs. versiones anteriores)
+## Notas de desarrollo
 
-### Simplificaciones en el modelo de datos
-
-1. **Etapa Editado:** Ahora usa `total_folios` directamente (reutiliza campo de Limpieza/Ordenado) en lugar de campos propios `expedientes_editados` y `folios_editados`. Esto se alinea con los datos reales del cliente.
-
-2. **Asignaciones:** Ya **no crean automáticamente** `miembro_proyecto`. La creación de miembros es ahora manual desde el backoffice, simplificando la lógica de sincronización.
-
-3. **Límites de observación:** Actualizado a **500 caracteres máximo** (antes era documentado como 2000, pero el código siempre fue 500).
-
-### Mejoras arquitectónicas
-
-1. **Componente OWL reactivo:** Reemplaza el anterior formulario HTML con validación dual cliente/servidor.
-
-2. **Métodos de API en modelos:** `validar_fila_api()`, `get_kpis_lider()`, `get_participacion_equipo()` se encapsulan en el modelo donde pertenecen, no en el controlador.
-
-3. **Gráficos sin Chart.js:** Barras apiladas con CSS Flexbox puro, heatmaps con etiquetas HTML dinámicas.
-
-4. **Variables CSS centralizadas:** Portal y reportes PDF usan variables de root (`:root { --dig-primary, ... }`) para consistencia.
+- **Odoo 17 — sintaxis de vistas:** Se usan expresiones Python directas en `invisible=""`.
+- **QWeb — operadores en XML:** Los operadores `>`, `>=`, `<`, `<=` deben escaparse (`&gt;`, `&lt;`).
+- **Framework OWL:** Componente reactivo para formulario multi-fila con validación en tiempo real.
+- **Principio DRY:** Constantes centralizadas, validadores puros, mixins reutilizables.
+- **Seguridad en capas:** ACLs + ir.rules para protección en dos niveles.
+- **Sincronización automática:** Los cambios en miembros se propagan a asignaciones y grupos automáticamente.
 
 ---
 

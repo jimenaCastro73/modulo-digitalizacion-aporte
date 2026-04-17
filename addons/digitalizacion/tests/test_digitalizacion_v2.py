@@ -89,17 +89,6 @@ class TestDigitalizacionV2(TransactionCase):
         )
 
     def tearDown(self):
-        """Limpia los datos creados por el test"""
-        self.env["digitalizacion.registro"].search([]).unlink()
-        self.env["digitalizacion.asignacion"].search([]).unlink()
-        self.env["digitalizacion.miembro_proyecto"].search([]).unlink()
-        self.env["digitalizacion.proyecto"].search(
-            [("name", "like", "PROY_TEST_%")]
-        ).unlink()
-        self.env["res.partner"].search([("name", "like", "%TEST%")]).unlink()
-        self.env["res.users"].search(
-            [("login", "in", ["lider_a_test", "lider_b_test"])]
-        ).unlink()
         super(TestDigitalizacionV2, self).tearDown()
 
     # TEST 1: Limpieza - compute produccion_principal
@@ -252,3 +241,45 @@ class TestDigitalizacionV2(TransactionCase):
         )
         self.assertEqual(reg.produccion_principal, 30)
         self.assertEqual(reg.unidad_produccion, "expedientes")
+
+    # TEST 10: Asignación automática de grupo líder
+    def test_10_asignacion_automatica_grupo_lider(self):
+        """Al marcar es_lider=True, se asigna automáticamente el grupo líder al usuario portal"""
+        # Crear un partner y su usuario portal
+        partner = self.env["res.partner"].create(
+            {"name": f"Nuevo Líder TEST {int(time.time())}"}
+        )
+
+        usuario_portal = self.env["res.users"].create(
+            {
+                "name": partner.name,
+                "login": f"lider_test_{int(time.time())}",
+                "partner_id": partner.id,
+                "share": True,  # Usuario portal
+                "groups_id": [(6, 0, [self.env.ref("base.group_portal").id])],
+            }
+        )
+
+        # Crear miembro sin líder
+        miembro = self.env["digitalizacion.miembro_proyecto"].create(
+            {
+                "proyecto_id": self.proyecto_a.id,
+                "partner_id": partner.id,
+                "es_lider": False,
+            }
+        )
+
+        grupo_lider = self.env.ref("digitalizacion.group_digitalizacion_lider")
+        self.assertNotIn(grupo_lider, usuario_portal.groups_id)
+
+        # Marcar como líder
+        miembro.write({"es_lider": True})
+
+        # Verificar que se asignó el grupo
+        self.assertIn(grupo_lider, usuario_portal.groups_id)
+
+        # Desmarcar como líder
+        miembro.write({"es_lider": False})
+
+        # Verificar que se removió el grupo (ya que no es líder en otros proyectos)
+        self.assertNotIn(grupo_lider, usuario_portal.groups_id)
