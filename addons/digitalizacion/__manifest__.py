@@ -21,7 +21,6 @@
         "views/admin/configuracion/tipo_escaner_views.xml",
         # Vistas de apoyo
         "views/admin/proyectos/registro_views.xml",
-        "views/admin/proyectos/miembros_views.xml",
         # Vistas de proyecto
         "views/admin/proyectos/proyecto_search.xml",
         "views/admin/proyectos/proyecto_views.xml",
