@@ -210,15 +210,11 @@
                                             <td class="text-end pe-4" data-label="Estado">
                                                 <t t-if="m.fecha_salida">
                                                     <span class="badge bg-secondary opacity-75 small px-2 py-1">
-                                                        Salida:
-                                                        <t t-esc="m.fecha_salida" />
+                                                        Salida: <t t-esc="m.fecha_salida" />
                                                     </span>
                                                 </t>
-                                                <t t-elif="m.active">
-                                                    <span class="badge bg-success small px-2 py-1 shadow-sm">Activo</span>
-                                                </t>
                                                 <t t-else="">
-                                                    <span class="badge bg-warning text-dark small px-2 py-1">Inactivo</span>
+                                                    <span class="badge bg-success small px-2 py-1 shadow-sm">Activo</span>
                                                 </t>
                                             </td>
                                         </tr>

@@ -34,9 +34,9 @@
                         <form method="GET" action="/digitalizacion/v1/dashboard" class="d-flex align-items-center gap-2 bg-light p-2 rounded-2">
                             <label class="text-muted small mb-0 fw-semibold text-uppercase px-2">Proyecto:</label>
                             <select name="proyecto_id" class="form-select form-select-sm border-0 bg-transparent" style="width:auto; cursor:pointer;" onchange="this.form.submit()">
-                                <t t-foreach="asignaciones" t-as="asig">
-                                    <option t-att-value="asig.proyecto_id.id" t-att-selected="'selected' if proyecto_actual and asig.proyecto_id.id == proyecto_actual.id else None">
-                                        <t t-esc="asig.proyecto_id.name" />
+                                <t t-foreach="asignaciones" t-as="proy">
+                                    <option t-att-value="proy.id" t-att-selected="'selected' if proyecto_actual and proy.id == proyecto_actual.id else None">
+                                        <t t-esc="proy.name" />
                                     </option>
                                 </t>
                             </select>

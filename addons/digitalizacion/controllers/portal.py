@@ -33,7 +33,6 @@ from markupsafe import Markup
 
 from odoo import _, fields, http
 from odoo.tools.misc import format_date
-# from odoo.exceptions import AccessError, UserError, ValidationError
 
 from odoo.exceptions import AccessError, ValidationError
 from odoo.http import request
@@ -61,18 +60,25 @@ def _verificar_lider_raise():
 
 
 def _get_asignaciones_activas(lider_id):
-    """Retorna asignaciones activas del líder con proyecto activo."""
-    return (
-        request.env["digitalizacion.asignacion"]
-        .sudo()
-        .search(
-            [
-                ("lider_id", "=", lider_id),
-                ("active", "=", True),
-                ("proyecto_id.active", "=", True),
-            ]
-        )
+    """
+    Retorna asignaciones activas del líder con proyecto activo.
+    Una asignación es activa si active=True y no tiene fecha_salida.
+    """
+    Miembro = request.env["digitalizacion.miembro_proyecto"].sudo()
+
+    # Buscar miembros donde el partner es el líder (a través de res.users)
+    # y que no tengan fecha_salida (están activos)
+    miembros = Miembro.search(
+        [
+            ("partner_id", "=", request.env.user.partner_id.id),
+            ("es_lider", "=", True),
+            ("fecha_salida", "=", False),  # Solo miembros activos
+            ("proyecto_id.active", "=", True),  # Proyecto activo
+        ]
     )
+
+    # Retornar las asignaciones (relación con proyecto)
+    return miembros.mapped("proyecto_id")
 
 
 def _get_proyecto_del_lider(proyecto_id, lider_id):
@@ -80,20 +86,20 @@ def _get_proyecto_del_lider(proyecto_id, lider_id):
     Obtiene el proyecto si el líder tiene asignación activa sobre él.
     Retorna el recordset del proyecto o None.
     """
-    asig = (
-        request.env["digitalizacion.asignacion"]
-        .sudo()
-        .search(
-            [
-                ("lider_id", "=", lider_id),
-                ("proyecto_id", "=", proyecto_id),
-                ("active", "=", True),
-                ("proyecto_id.active", "=", True),
-            ],
-            limit=1,
-        )
+    Miembro = request.env["digitalizacion.miembro_proyecto"].sudo()
+
+    miembro = Miembro.search(
+        [
+            ("partner_id", "=", request.env.user.partner_id.id),
+            ("proyecto_id", "=", proyecto_id),
+            ("es_lider", "=", True),
+            ("fecha_salida", "=", False),  # Solo miembros activos
+            ("proyecto_id.active", "=", True),  # Proyecto activo
+        ],
+        limit=1,
     )
-    return asig.proyecto_id if asig else None
+
+    return miembro.proyecto_id if miembro else None
 
 
 def _verificar_acceso_proyecto(proyecto_id, lider_id):
@@ -206,9 +212,9 @@ class DigitalizacionPortal(http.Controller):
             return request.redirect("/web/login")
 
         lider_id = request.env.user.id
-        asignaciones = _get_asignaciones_activas(lider_id)
+        proyectos = _get_asignaciones_activas(lider_id)
 
-        if not asignaciones:
+        if not proyectos:
             return request.render(
                 "digitalizacion.digitalizacion_portal_dashboard",
                 {
@@ -221,10 +227,10 @@ class DigitalizacionPortal(http.Controller):
             )
 
         try:
-            proyecto_id = int(kwargs.get("proyecto_id", asignaciones[0].proyecto_id.id))
+            proyecto_id = int(kwargs.get("proyecto_id", proyectos[0].id))
             proyecto = _verificar_acceso_proyecto(proyecto_id, lider_id)
         except (ValueError, TypeError, AccessError):
-            proyecto = asignaciones[0].proyecto_id
+            proyecto = proyectos[0]
 
         periodo = kwargs.get("periodo", "mes")
         fecha_desde = kwargs.get("fecha_desde", "")
@@ -259,7 +265,7 @@ class DigitalizacionPortal(http.Controller):
             {
                 "kpis": kpis,
                 "ultimos_registros": ultimos_registros,
-                "asignaciones": asignaciones,
+                "asignaciones": proyectos,
                 "proyecto_actual": proyecto,
                 "resumen_etapas": resumen_etapas,
                 "periodo_actual": periodo_actual,
@@ -315,8 +321,7 @@ class DigitalizacionPortal(http.Controller):
             .search(
                 [
                     ("proyecto_id", "=", proyecto.id),
-                    ("active", "=", True),
-                    ("fecha_salida", "=", False),
+                    ("fecha_salida", "=", False),  # Solo miembros activos
                 ]
             )
         )
@@ -404,7 +409,6 @@ class DigitalizacionPortal(http.Controller):
             .search(
                 [
                     ("proyecto_id", "=", proyecto_id),
-                    ("active", "=", True),
                 ],
                 order="partner_name asc",
             )
