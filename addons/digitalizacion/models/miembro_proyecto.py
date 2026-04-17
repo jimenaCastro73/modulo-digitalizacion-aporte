@@ -17,6 +17,8 @@ Reglas de negocio clave:
     formulario de registro.
   - Un mismo contacto puede ser miembro de múltiples proyectos.
   - Al reintentar crear un miembro existente (con fecha_salida), se reactiva automáticamente
+  - Al marcar "Es líder", se asigna automáticamente el grupo 'Líder' al usuario portal
+  - Al desmarcar "Es líder" (si no es líder en otros proyectos), se remueve el grupo
 """
 
 import logging
@@ -305,23 +307,28 @@ class DigitalizacionMiembroProyecto(models.Model):
 
         activar=True:
           1. Verificar que el partner tenga usuario portal activo.
-          2. Desmarcar otros líderes del mismo proyecto.
-          3. Crear o reactivar la asignación.
+          2. Asignar grupo líder automáticamente si no lo tiene.
+          3. Desmarcar otros líderes del mismo proyecto.
+          4. Crear o reactivar la asignación.
 
         activar=False:
-          1. Buscar y desactivar la asignación activa.
+          1. Verificar si es líder en otros proyectos.
+          2. Si no es líder en ningún proyecto, quitar grupo líder.
+          3. Desactivar la asignación.
         """
         self.ensure_one()
         if activar:
             self._activar_liderazgo()
         else:
-            self._desactivar_asignacion()
+            self._desactivar_liderazgo()
 
     def _activar_liderazgo(self):
-        """Valida usuario portal y crea/reactiva la asignación en T-04."""
+        """Valida usuario portal, asigna grupo líder y crea/reactiva asignación."""
         self.ensure_one()
         Asignacion = self.env["digitalizacion.asignacion"].sudo()
+        GrupoLider = self.env.ref("digitalizacion.group_digitalizacion_lider")
 
+        # Buscar usuario portal vinculado al partner
         usuario = (
             self.env["res.users"]
             .sudo()
@@ -339,9 +346,19 @@ class DigitalizacionMiembroProyecto(models.Model):
             raise ValidationError(
                 _(
                     "'%s' no tiene un usuario portal de Odoo. "
-                    "Crea el usuario antes de marcarlo como líder.",
+                    "Primero debe crearle un usuario portal (Contactos → Otorgar acceso a portal) "
+                    "y luego marcarlo como líder.",
                     self.partner_id.name,
                 )
+            )
+
+        # Asignar grupo de líder automáticamente si no lo tiene
+        if GrupoLider not in usuario.groups_id:
+            usuario.write({"groups_id": [(4, GrupoLider.id)]})
+            _logger.info(
+                "Grupo 'Líder' asignado automáticamente al usuario '%s' (login: %s)",
+                usuario.name,
+                usuario.login,
             )
 
         # Desmarcar otros líderes del mismo proyecto (activos)
@@ -354,10 +371,15 @@ class DigitalizacionMiembroProyecto(models.Model):
             ]
         )
         for otro in otros_lideres:
-            otro._desactivar_asignacion()
+            otro._desactivar_asignacion_sin_remover_grupo()
         if otros_lideres:
             super(DigitalizacionMiembroProyecto, otros_lideres).write(
                 {"es_lider": False}
+            )
+            _logger.info(
+                "Otros líderes desmarcados en proyecto '%s': %s",
+                self.proyecto_id.name,
+                [otro.partner_id.name for otro in otros_lideres],
             )
 
         # Crear o reactivar asignación
@@ -391,8 +413,58 @@ class DigitalizacionMiembroProyecto(models.Model):
                 self.proyecto_id.name,
             )
 
-    def _desactivar_asignacion(self):
-        """Busca y desactiva la asignación activa de este miembro en su proyecto."""
+    def _desactivar_liderazgo(self):
+        """
+        Desactiva liderazgo:
+        1. Verifica si es líder en otros proyectos activos.
+        2. Si no es líder en ningún otro proyecto, quita el grupo líder.
+        3. Desactiva la asignación en T-04.
+        """
+        self.ensure_one()
+        GrupoLider = self.env.ref("digitalizacion.group_digitalizacion_lider")
+
+        # Buscar usuario portal vinculado al partner
+        usuario = (
+            self.env["res.users"]
+            .sudo()
+            .search(
+                [
+                    ("partner_id", "=", self.partner_id.id),
+                    ("share", "=", True),
+                ],
+                limit=1,
+            )
+        )
+
+        if usuario:
+            # Verificar si sigue siendo líder en algún otro proyecto activo
+            es_lider_en_otro = self.search(
+                [
+                    ("partner_id", "=", self.partner_id.id),
+                    ("es_lider", "=", True),
+                    ("fecha_salida", "=", False),
+                    ("id", "!=", self.id),
+                ],
+                limit=1,
+            )
+
+            if not es_lider_en_otro and GrupoLider in usuario.groups_id:
+                usuario.write({"groups_id": [(3, GrupoLider.id)]})
+                _logger.info(
+                    "Grupo 'Líder' removido del usuario '%s' (ya no es líder en ningún proyecto)",
+                    usuario.name,
+                )
+        else:
+            _logger.warning(
+                "No se encontró usuario portal para '%s' al desactivar liderazgo",
+                self.partner_id.name,
+            )
+
+        # Desactivar asignación
+        self._desactivar_asignacion_sin_remover_grupo()
+
+    def _desactivar_asignacion_sin_remover_grupo(self):
+        """Desactiva la asignación activa sin tocar el grupo del usuario."""
         self.ensure_one()
         usuario = (
             self.env["res.users"]

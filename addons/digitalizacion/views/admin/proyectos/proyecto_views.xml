@@ -136,18 +136,17 @@
                         </page>
                         <!-- PESTAÑA 2: MIEMBROS DEL EQUIPO -->
                         <page name="equipo" string="Miembros del Equipo">
-                            <div class="alert alert-info mb-3" role="alert">
-                                <i class="fa fa-info-circle me-2" title="Información" />
-                                <strong>Gestión de Personal:</strong>
-                                Hacer clic en cualquier miembro para ver sus detalles. 
-                            </div>
-                            <field name="miembro_ids" readonly="1" context="{'form_view_ref': 'digitalizacion.view_miembro_proyecto_form_inline', 'default_proyecto_id': active_id}" options="{'no_create': True, 'no_edit': True}">
-                                <tree string="Miembros del Equipo" default_order="fecha_integracion desc" decoration-muted="fecha_salida != False" decoration-success="es_lider == True">
-                                    <field name="partner_id" string="Digitalizador" />
-                                    <field name="fecha_integracion" string="Ingreso" widget="date" />
+                            <field name="miembro_ids" context="{'default_proyecto_id': active_id}" nolabel="1">
+                                <tree string="Miembros del Equipo" default_order="fecha_integracion desc" editable="bottom" decoration-muted="fecha_salida != False" decoration-success="es_lider == True">
+                                    <field name="partner_id" string="Digitalizador" required="1" options="{'no_create': True}" />
+                                    <field name="fecha_integracion" string="Ingreso" widget="date" required="1" />
+                                    <field name="es_lider" string="Líder?" widget="boolean_toggle" />
+                                    <field name="total_registros" string="Registros" sum="Total" readonly="1" />
                                     <field name="fecha_salida" string="Fecha Salida" widget="date" />
-                                    <field name="es_lider" string="Líder?" widget="boolean" />
-                                    <field name="total_registros" string="Registros" sum="Total" />
+                                    <!-- Botón para Registrar Salida (solo visible si está activo - sin fecha_salida) -->
+                                    <button name="action_registrar_salida" string="Salida" type="object" icon="fa-sign-out" class="btn-danger btn-sm" invisible="fecha_salida" confirm="¿Registrar salida de este miembro? Se establecerá fecha_salida = hoy." />
+                                    <!-- Botón para Reintegrar (solo visible si está inactivo - tiene fecha_salida) -->
+                                    <button name="action_reintegrar" string="Reintegrar" type="object" icon="fa-refresh" class="btn-success btn-sm" invisible="not fecha_salida" confirm="¿Reintegrar a este miembro? Se limpiará la fecha_salida." />
                                 </tree>
                             </field>
                         </page>
