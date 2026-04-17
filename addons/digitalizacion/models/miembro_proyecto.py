@@ -16,7 +16,7 @@ Reglas de negocio clave:
   - Si fecha_salida está informada, el miembro NO aparece en el selector del
     formulario de registro.
   - Un mismo contacto puede ser miembro de múltiples proyectos.
-  - ELIMINADO: método crear_desde_portal (ya no se usa)
+  - Al reintentar crear un miembro existente (con fecha_salida), se reactiva automáticamente
 """
 
 import logging
@@ -72,12 +72,6 @@ class DigitalizacionMiembroProyecto(models.Model):
         help="Opcional. Si está informada, el miembro no aparece en el selector del formulario de registro.",
     )
 
-    active = fields.Boolean(
-        string="Activo",
-        default=True,
-        help="Soft delete. False = miembro inactivo.",
-    )
-
     es_lider = fields.Boolean(
         string="Es líder",
         default=False,
@@ -85,6 +79,14 @@ class DigitalizacionMiembroProyecto(models.Model):
         "Solo puede haber un líder activo por proyecto. "
         "Al activar, crea o reactiva la asignación en T-04. "
         "Al desactivar, desactiva la asignación correspondiente.",
+    )
+
+    # Campo computado para saber si está activo (sin fecha_salida)
+    is_active = fields.Boolean(
+        string="Activo",
+        compute="_compute_is_active",
+        store=True,
+        help="Activo si no tiene fecha_salida",
     )
 
     # Campos relacionados almacenados
@@ -144,7 +146,7 @@ class DigitalizacionMiembroProyecto(models.Model):
                         ("proyecto_id", "=", record.proyecto_id.id),
                         ("es_lider", "=", True),
                         ("id", "!=", record.id),
-                        ("active", "=", True),
+                        ("fecha_salida", "=", False),
                     ]
                 )
                 if otros:
@@ -157,30 +159,123 @@ class DigitalizacionMiembroProyecto(models.Model):
                         )
                     )
 
+    # Métodos computados
+
+    @api.depends("fecha_salida")
+    def _compute_is_active(self):
+        for record in self:
+            record.is_active = not bool(record.fecha_salida)
+
+    @api.depends("partner_id", "proyecto_id")
+    def _compute_display_name(self):
+        for record in self:
+            nombre = record.partner_id.name or "Sin nombre"
+            proyecto = record.proyecto_id.name or "Sin proyecto"
+            record.display_name = f"{nombre} ({proyecto})"
+
+    @api.depends("proyecto_id", "partner_id")
+    def _compute_total_registros(self):
+        """Cuenta registros por miembro. Optimizado con _read_group."""
+        conteos = {}
+        reales = self.filtered(lambda r: r.id)
+        if reales:
+            datos = self.env["digitalizacion.registro"]._read_group(
+                domain=[("miembro_id", "in", reales.ids)],
+                groupby=["miembro_id"],
+                aggregates=["__count"],
+            )
+            conteos = {miembro.id: count for miembro, count in datos}
+        for record in self:
+            record.total_registros = conteos.get(record.id, 0)
+
+    def _search_total_registros(self, operator, value):
+        datos = self.env["digitalizacion.registro"]._read_group(
+            [], ["miembro_id"], ["__count"]
+        )
+        miembros_con = [miembro.id for miembro, _ in datos if miembro]
+
+        if operator == "=" and value == 0:
+            return [("id", "not in", miembros_con)]
+        if (operator == ">" and value == 0) or (operator == "!=" and value == 0):
+            return [("id", "in", miembros_con)]
+        raise NotImplementedError(
+            _("Búsqueda no soportada para total_registros con este operador.")
+        )
+
     # Overrides CRUD
 
     @api.model_create_multi
     def create(self, vals_list):
         """
-        Crea miembros. Si es_lider=True, sincroniza con asignación.
+        Crea miembros. Si ya existe un registro (con fecha_salida) para el mismo
+        proyecto/partner, lo reactiva en lugar de crear uno nuevo.
+        Si es_lider=True, sincroniza con asignación.
         """
-        records = super().create(vals_list)
+        registros_a_crear = []
 
-        for record in records:
-            if record.es_lider:
-                record._sincronizar_liderazgo(True)
+        for vals in vals_list:
+            # Buscar si ya existe un registro para este proyecto y partner (incluso con fecha_salida)
+            existente = self.search(
+                [
+                    ("proyecto_id", "=", vals.get("proyecto_id")),
+                    ("partner_id", "=", vals.get("partner_id")),
+                ],
+                limit=1,
+            )
 
-        return records
+            if existente:
+                # Si existe, lo reactivamos limpiando fecha_salida
+                valores_reactivacion = {
+                    "fecha_salida": False,
+                    "fecha_integracion": vals.get(
+                        "fecha_integracion", fields.Date.today()
+                    ),
+                    "es_lider": vals.get("es_lider", False),
+                }
+                existente.write(valores_reactivacion)
+
+                # Si se está marcando como líder, sincronizar
+                if existente.es_lider:
+                    existente._sincronizar_liderazgo(True)
+
+                _logger.info(
+                    "Miembro reactivado: %s en proyecto %s",
+                    existente.partner_id.name,
+                    existente.proyecto_id.name,
+                )
+            else:
+                # No existe, crear nuevo
+                registros_a_crear.append(vals)
+
+        if registros_a_crear:
+            records = super().create(registros_a_crear)
+            for record in records:
+                if record.es_lider:
+                    record._sincronizar_liderazgo(True)
+            return records
+
+        return self.env["digitalizacion.miembro_proyecto"]
 
     def write(self, vals):
         """
         Sincroniza es_lider con digitalizacion.asignacion (T-04).
-        Si se informa fecha_salida, desactiva el miembro y limpia liderazgo.
+        Si se informa fecha_salida, limpia liderazgo si corresponde.
         """
         # Guardar estado actual antes de escribir
         old_es_lider = {r.id: r.es_lider for r in self}
+        old_fecha_salida = {r.id: r.fecha_salida for r in self}
 
         res = super().write(vals)
+
+        # Verificar si se limpió fecha_salida (reactivación)
+        for record in self:
+            if (
+                "fecha_salida" in vals
+                and not vals.get("fecha_salida")
+                and old_fecha_salida.get(record.id)
+                and record.es_lider
+            ):
+                record._sincronizar_liderazgo(True)
 
         # Sincronizar cambios de liderazgo
         if "es_lider" in vals:
@@ -189,17 +284,16 @@ class DigitalizacionMiembroProyecto(models.Model):
                 if new_es_lider != old_es_lider.get(record.id):
                     record._sincronizar_liderazgo(new_es_lider)
 
-        # Manejar fecha_salida
+        # Si se estableció fecha_salida, desactivar liderazgo
         if vals.get("fecha_salida"):
-            activos = self.filtered(lambda r: r.active)
-            if activos:
-                super(DigitalizacionMiembroProyecto, activos).write({"active": False})
-
             lideres = self.filtered(lambda r: r.es_lider)
             if lideres:
                 for record in lideres:
                     record._sincronizar_liderazgo(False)
-                super(DigitalizacionMiembroProyecto, lideres).write({"es_lider": False})
+                    # Limpiar es_lider también
+                    super(DigitalizacionMiembroProyecto, lideres).write(
+                        {"es_lider": False}
+                    )
 
         return res
 
@@ -250,13 +344,13 @@ class DigitalizacionMiembroProyecto(models.Model):
                 )
             )
 
-        # Desmarcar otros líderes del mismo proyecto
+        # Desmarcar otros líderes del mismo proyecto (activos)
         otros_lideres = self.search(
             [
                 ("proyecto_id", "=", self.proyecto_id.id),
                 ("es_lider", "=", True),
                 ("id", "!=", self.id),
-                ("active", "=", True),
+                ("fecha_salida", "=", False),
             ]
         )
         for otro in otros_lideres:
@@ -333,48 +427,10 @@ class DigitalizacionMiembroProyecto(models.Model):
                 self.proyecto_id.name,
             )
 
-    # Métodos computados
-
-    @api.depends("partner_id", "proyecto_id")
-    def _compute_display_name(self):
-        for record in self:
-            nombre = record.partner_id.name or "Sin nombre"
-            proyecto = record.proyecto_id.name or "Sin proyecto"
-            record.display_name = f"{nombre} ({proyecto})"
-
-    @api.depends("proyecto_id", "partner_id")
-    def _compute_total_registros(self):
-        """Cuenta registros por miembro. Optimizado con _read_group."""
-        conteos = {}
-        reales = self.filtered(lambda r: r.id)
-        if reales:
-            datos = self.env["digitalizacion.registro"]._read_group(
-                domain=[("miembro_id", "in", reales.ids)],
-                groupby=["miembro_id"],
-                aggregates=["__count"],
-            )
-            conteos = {miembro.id: count for miembro, count in datos}
-        for record in self:
-            record.total_registros = conteos.get(record.id, 0)
-
-    def _search_total_registros(self, operator, value):
-        datos = self.env["digitalizacion.registro"]._read_group(
-            [], ["miembro_id"], ["__count"]
-        )
-        miembros_con = [miembro.id for miembro, _ in datos if miembro]
-
-        if operator == "=" and value == 0:
-            return [("id", "not in", miembros_con)]
-        if (operator == ">" and value == 0) or (operator == "!=" and value == 0):
-            return [("id", "in", miembros_con)]
-        raise NotImplementedError(
-            _("Búsqueda no soportada para total_registros con este operador.")
-        )
-
     # Métodos de negocio (solo admin)
 
     def action_registrar_salida(self):
-        """Registra la salida del miembro: asigna fecha_salida=hoy y desactiva."""
+        """Registra la salida del miembro: asigna fecha_salida=hoy."""
         hoy = fields.Date.today()
         for record in self:
             if record.fecha_salida:
@@ -385,12 +441,12 @@ class DigitalizacionMiembroProyecto(models.Model):
                         record.fecha_salida,
                     )
                 )
-            record.write({"fecha_salida": hoy, "active": False})
+            record.write({"fecha_salida": hoy})
 
     def action_reintegrar(self):
-        """Cancela la salida: limpia fecha_salida y reactiva."""
+        """Cancela la salida: limpia fecha_salida."""
         for record in self:
-            record.write({"fecha_salida": False, "active": True})
+            record.write({"fecha_salida": False})
 
     def action_ver_registros(self):
         """Abre los registros de trabajo de este miembro en el proyecto."""

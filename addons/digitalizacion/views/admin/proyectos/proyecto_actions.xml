@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Acción principal de proyectos -->
+    <record id="digitalizacion_proyecto_action" model="ir.actions.act_window">
+        <field name="name">Gestión de Proyectos</field>
+        <field name="res_model">digitalizacion.proyecto</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="view_mode">kanban,tree,form</field>
+        <field name="search_view_id" ref="digitalizacion.digitalizacion_proyecto_view_search" />
+        <field name="context">{'active_test': True, 'default_state': 'en_curso', 'search_default_activos': 1}</field>
+        <field name="target">current</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">¡Bienvenido al Centro de Mando de Proyectos!</p>
+            <p>Desde aquí podrás gestionar todos los proyectos de digitalización.</p>
+        </field>
+    </record>
+    <!-- Acción para ver proyectos archivados -->
+    <record id="action_show_archived_proyectos" model="ir.actions.act_window">
+        <field name="name">Proyectos Archivados</field>
+        <field name="res_model">digitalizacion.proyecto</field>
+        <field name="view_mode">kanban,tree,form</field>
+        <field name="context">{'active_test': False, 'search_default_archivados': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No hay proyectos archivados</p>
+            <p>Los proyectos archivados aparecerán aquí. Puedes desarchivarlos abriendo el proyecto y usando el botón "Desarchivar".</p>
+        </field>
+    </record>
+</odoo>

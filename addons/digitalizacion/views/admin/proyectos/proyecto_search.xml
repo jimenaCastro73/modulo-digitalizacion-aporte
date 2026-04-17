@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista Search -->
+    <record id="digitalizacion_proyecto_view_search" model="ir.ui.view">
+        <field name="name">digitalizacion.proyecto.search</field>
+        <field name="model">digitalizacion.proyecto</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Proyectos">
+                <!-- Campos de búsqueda rápida -->
+                <field name="name" string="Nombre del Proyecto" filter_domain="[('name', 'ilike', self)]" />
+                <field name="description" string="Descripción" filter_domain="[('description', 'ilike', self)]" />
+                <separator />
+                <!-- Filtros por estado -->
+                <filter name="en_curso" string="En curso" domain="[('state', '=', 'en_curso')]" help="Proyectos activos en producción" />
+                <filter name="pausado" string="Pausa / Standby" domain="[('state', '=', 'pausado')]" help="Proyectos temporalmente detenidos" />
+                <filter name="finalizado" string="Finalizados" domain="[('state', '=', 'finalizado')]" help="Proyectos completados" />
+                <separator />
+                <!-- Filtro especial: Proyectos archivados (soft delete) -->
+                <filter name="archivados" string="Proyectos Archivados" domain="[('active', '=', False)]" help="Ver proyectos que han sido archivados" />
+                <!-- Filtro: Proyectos activos (no archivados) -->
+                <filter name="activos" string="Activos" domain="[('active', '=', True)]" help="Proyectos no archivados" />
+                <separator />
+                <!-- Filtros por fechas -->
+                <filter name="inicio_ultimo_mes" string="Iniciados último mes" domain="[('fecha_inicio', '>=', (context_today() - relativedelta(months=1)).strftime('%Y-%m-01'))]" />
+                <filter name="inicio_este_anio" string="Iniciados este año" domain="[('fecha_inicio', '>=', (context_today().year, 1, 1))]" />
+                <separator />
+                <!-- Filtros por métricas (proyectos con actividad) -->
+                <filter name="con_produccion" string="Con producción" domain="[('total_registros', '>', 0)]" help="Proyectos que ya tienen registros de producción" />
+                <filter name="sin_produccion" string="Sin producción" domain="[('total_registros', '=', 0)]" help="Proyectos sin registros aún" />
+                <separator />
+                <!-- Agrupaciones (Group By) -->
+                <group string="Agrupar por" expand="0">
+                    <filter name="group_state" string="Estado" context="{'group_by': 'state'}" />
+                    <filter name="group_active" string="Activo/Archivado" context="{'group_by': 'active'}" />
+                    <filter name="group_miembros" string="Cantidad de miembros" context="{'group_by': 'total_miembros'}" />
+                    <filter name="group_fecha_inicio" string="Fecha de inicio" context="{'group_by': 'fecha_inicio:month'}" />
+                </group>
+                <!-- Atajos de teclado ocultos -->
+                <filter name="my_favorites" string="Mis favoritos" invisible="1" />
+            </search>
+        </field>
+    </record>
+</odoo>

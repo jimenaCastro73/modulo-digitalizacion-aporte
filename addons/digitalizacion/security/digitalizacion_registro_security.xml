@@ -3,8 +3,7 @@
     <data noupdate="1">
         <!--
             El líder solo ve registros de proyectos donde tiene asignación activa.
-            Usa subquery sobre proyecto_id para garantizar que la asignación
-            activa y el lider_id correspondan al mismo registro.
+            La asignación es activa si el miembro tiene es_lider=True y no tiene fecha_salida.
         -->
         <record id="rule_lider_solo_sus_registros" model="ir.rule">
             <field name="name">Lider ve sus registros</field>
@@ -14,12 +13,10 @@
             <field name="perm_write" eval="True" />
             <field name="perm_create" eval="True" />
             <field name="perm_unlink" eval="False" />
-            <field name="domain_force">[('proyecto_id.asignacion_ids.lider_id', '=', user.id)]</field>
+            <field name="domain_force">[('proyecto_id.miembro_ids.partner_id', '=', user.partner_id.id), ('proyecto_id.miembro_ids.es_lider', '=', True), ('proyecto_id.miembro_ids.fecha_salida', '=', False)]</field>
         </record>
         <!--
             El líder solo ve miembros de proyectos donde tiene asignación activa.
-            Sin esta regla, el líder podría leer miembros de otros proyectos
-            a través de la API aunque el ACL solo le dé lectura.
         -->
         <record id="rule_lider_solo_sus_miembros" model="ir.rule">
             <field name="name">Lider ve miembros de sus proyectos</field>
@@ -29,7 +26,7 @@
             <field name="perm_write" eval="False" />
             <field name="perm_create" eval="False" />
             <field name="perm_unlink" eval="False" />
-            <field name="domain_force">[('proyecto_id.asignacion_ids.lider_id', '=', user.id)]</field>
+            <field name="domain_force">[('proyecto_id.miembro_ids.partner_id', '=', user.partner_id.id), ('proyecto_id.miembro_ids.es_lider', '=', True), ('proyecto_id.miembro_ids.fecha_salida', '=', False)]</field>
         </record>
     </data>
 </odoo>

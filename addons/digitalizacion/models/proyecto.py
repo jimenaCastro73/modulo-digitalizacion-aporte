@@ -197,9 +197,8 @@ class DigitalizacionProyecto(models.Model):
     @api.depends("miembro_ids", "registro_ids", "registro_ids.total_escaneos")
     def _compute_totales(self):
         for proyecto in self:
-            # Contamos solo miembros activos (con fecha_salida o dados de baja no cuentan)
             miembros_activos = proyecto.miembro_ids.filtered(
-                lambda miembro: miembro.active
+                lambda miembro: not miembro.fecha_salida
             )
             proyecto.total_miembros = len(miembros_activos)
             proyecto.total_registros = len(proyecto.registro_ids)
@@ -255,19 +254,6 @@ class DigitalizacionProyecto(models.Model):
             "target": "current",
         }
 
-    def action_ver_miembros(self):
-        """Abre la lista de miembros del equipo de este proyecto."""
-        self.ensure_one()
-        return {
-            "type": "ir.actions.act_window",
-            "name": _("Equipo — %s", self.name),
-            "res_model": "digitalizacion.miembro_proyecto",
-            "view_mode": "tree,form",
-            "domain": [("proyecto_id", "=", self.id)],
-            "context": {"default_proyecto_id": self.id},
-            "target": "current",
-        }
-
     def action_ver_analisis_grafico(self):
         """Abre la vista de gráfico filtrada por este proyecto."""
         self.ensure_one()
@@ -279,19 +265,9 @@ class DigitalizacionProyecto(models.Model):
             "domain": [("proyecto_id", "=", self.id)],
             "context": {
                 "default_proyecto_id": self.id,
-                "graph_groupbys": ["fecha:day", "etapa_id"],
-                "graph_measure": "produccion_principal",
-                "graph_mode": "line",
+                "search_default_proyecto_id": self.id,
+                "group_by": ["fecha:day", "etapa_id"],
             },
-            "views": [
-                [
-                    self.env.ref(
-                        "digitalizacion.digitalizacion_registro_view_graph_dashboard"
-                    ).id,
-                    "graph",
-                ],
-                [False, "pivot"],
-            ],
             "target": "current",
         }
 
