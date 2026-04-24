@@ -11,16 +11,26 @@
          ================================================================ -->
     <!-- ================================================================
          1. VISTA LISTA
-         editable="bottom": edicion directa en fila (ideal para catalogos).
-         widget="handle" en sequence: drag-and-drop para reordenar.
-         decoration-muted: atenua visualmente las etapas archivadas.
+         La vista solo expone Nombre y Activo — las dos únicas cosas
+         que el admin puede hacer: identificar una etapa y encenderla
+         o apagarla.
+
+         Notas de diseño intencional:
+         - Sin editable="bottom": no se pueden crear filas inline.
+         - Sin widget="handle" ni campo sequence visible: el admin no
+           puede reordenar. El orden está fijado por los valores de
+           sequence en etapa_data.xml (semilla de BD).
+         - default_order="sequence asc" en <tree> sigue funcionando
+           aunque sequence no esté declarado en la vista — Odoo lo
+           respeta en silencio. El orden correcto se mantiene sin
+           exponerlo ni permitir que se rompa.
+         - decoration-muted: atenúa visualmente las etapas archivadas.
          ================================================================ -->
     <record id="digitalizacion_etapa_view_tree" model="ir.ui.view">
         <field name="name">digitalizacion.etapa.list</field>
         <field name="model">digitalizacion.etapa</field>
         <field name="arch" type="xml">
-            <tree string="Etapas" default_order="sequence asc" editable="bottom" decoration-muted="not active">
-                <field name="sequence" widget="handle" />
+            <tree string="Etapas" default_order="sequence asc" decoration-muted="not active">
                 <field name="name" string="Nombre de la etapa" />
                 <field name="active" string="Activo" widget="boolean_toggle" />
             </tree>
@@ -34,10 +44,16 @@
             <form string="Etapa de Digitalización">
                 <header />
                 <sheet>
+                    <!-- Banner informativo: etapas fijas por sistema -->
+                    <div class="alert alert-info" role="alert">
+                        <i class="fa fa-info-circle" />
+                        Las etapas son fijas por configuración del sistema.
+                        Solo puede activarlas o desactivarlas desde esta vista.
+                    </div>
                     <div class="oe_title">
                         <label string="Nombre de la etapa" for="name" />
                         <h1>
-                            <field name="name" placeholder="Ej: Limpieza, Digitalizado, Editado..." required="1" />
+                            <field name="name" readonly="1" />
                         </h1>
                     </div>
                     <group>
@@ -56,14 +72,17 @@
         </field>
     </record>
     <!-- 3. ACCIÓN PRINCIPAL DEL MODELO -->
+    <!-- context create=False: deshabilita el botón "Nuevo" de Odoo.
+         Las etapas se gestionan por constantes.py, no desde la UI. -->
     <record id="digitalizacion_etapa_action" model="ir.actions.act_window">
         <field name="name">Etapas</field>
         <field name="res_model">digitalizacion.etapa</field>
         <field name="view_mode">list,form</field>
         <field name="view_id" ref="digitalizacion_etapa_view_tree" />
+        <field name="context">{"create": False}</field>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">Crea la primera etapa del proceso</p>
-            <p>Define las fases del flujo: Limpieza, Digitalizado, Editado, Indexado, Ordenado.</p>
+            <p class="o_view_nocontent_smiling_face">No hay etapas activas en este momento</p>
+            <p>Las etapas del sistema (Limpieza, Digitalizado, Editado, Indexado, Ordenado) están definidas en la configuración del módulo. Usa la columna "Activo" para habilitarlas o deshabilitarlas.</p>
         </field>
     </record>
 </odoo>
