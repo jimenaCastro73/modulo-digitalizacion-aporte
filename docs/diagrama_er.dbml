@@ -166,6 +166,7 @@ Table digitalizacion_miembro_proyecto {
   fecha_salida      date      [note: 'Si está informada: excluye al miembro del selector del formulario']
   active            boolean   [default: true, note: 'Soft delete']
   es_lider          boolean   [default: false, note: 'Solo 1 líder activo por proyecto. Sincroniza con T-04.']
+  is_active         boolean   [note: 'COMPUTE (stored): true si fecha_salida es False. Facilita consultas de miembros activos.']
   partner_name      varchar   [note: 'RELATED (stored): partner_id.name. Para búsquedas.']
   proyecto_name     varchar   [note: 'RELATED (stored): proyecto_id.name. Para búsquedas.']
   create_date       timestamp
@@ -209,7 +210,7 @@ Table digitalizacion_registro {
 
   // --- Campos comunes ---
   referencia_cajas        varchar   [note: 'Texto libre. Ej: BF202, BF199. Máx. 200 chars. Requiere al menos 1 alfanumérico.']
-  observacion             text      [note: 'Notas libres. Máx. 2 000 caracteres.']
+  observacion             text      [note: 'Notas libres. Máx. 500 caracteres (MAX_LEN_TEXTO_LARGO en constantes.py).']
 
   // --- Limpieza / Ordenado ---
   no_expedientes          int       [default: 0, note: 'Expedientes procesados. Rango: 0 – 999 999.']
@@ -220,8 +221,9 @@ Table digitalizacion_registro {
   // tipo_escaner_ids → ver tabla de relación Many2many T-06b
 
   // --- Editado ---
-  expedientes_editados    int       [default: 0, note: 'Expedientes editados. Rango: 0 – 999 999.']
-  folios_editados         int       [default: 0, note: 'Folios editados. Rango: 0 – 999 999.']
+  // NOTA: expedientes_editados y folios_editados fueron eliminados en el refactor V2.
+  // La etapa Editado reutiliza no_expedientes y total_folios (igual que Limpieza/Ordenado),
+  // alineándose con el Excel original del cliente donde Editado no tiene columnas propias.
 
   // --- Indexado ---
   expedientes_indexados   int       [default: 0, note: 'Expedientes indexados. Rango: 0 – 999 999.']
@@ -254,7 +256,9 @@ Table digitalizacion_registro {
 Campos activos por etapa:
   Limpieza / Ordenado → referencia_cajas, no_expedientes, total_folios
   Digitalizado        → lo anterior + total_escaneos + tipo_escaner_ids
-  Editado             → expedientes_editados, folios_editados
+  Editado             → referencia_cajas, no_expedientes, total_folios
+                        (reutiliza los mismos campos que Limpieza/Ordenado —
+                         expedientes_editados/folios_editados eliminados en V2)
   Indexado            → expedientes_indexados, folios_indexados'''
 }
 

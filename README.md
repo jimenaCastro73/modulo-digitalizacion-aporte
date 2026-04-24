@@ -157,11 +157,11 @@ digitalizacion/
 
 ### T-01 · `digitalizacion.etapa` — Catálogo de etapas
 
-Catálogo configurable del proceso. Se instalan 5 etapas por defecto (no se sobreescriben en actualizaciones).
+Etapas fijas del proceso. Se instalan en `etapa_data.xml` y su comportamiento (campos visibles, métrica principal) está centralizado en `constantes.py`. **No están pensadas para ser creadas ni renombradas desde la UI** — la vista de administración solo permite activarlas o desactivarlas.
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
-| `name` | Char | Nombre de la etapa (único, no puede ser solo números) |
+| `name` | Char | Nombre de la etapa (único; **readonly en UI** — no editable desde el backend) |
 | `sequence` | Integer | Orden de visualización (≥ 0) |
 | `active` | Boolean | Soft delete |
 
@@ -468,7 +468,7 @@ Accesibles desde el menú principal **Digitalización** (solo rol Administrador)
 |------|-------------|
 | **Proyectos** | Gestión unificada de líderes, personal, dashboard y reportes |
 | **Dashboard** | Análisis global de producción con gráficos (línea, barras, pivot) |
-| **Configuración** | Catálogos de etapas y escáneres |
+| **Configuración** | Catálogos: etapas (solo activar/desactivar) y escáneres (CRUD) |
 
 ### Vistas de Proyectos
 
@@ -785,6 +785,7 @@ docker restart odoo.17.otecglobal
 - **Principio DRY:** Constantes centralizadas, validadores puros, mixins reutilizables.
 - **Seguridad en capas:** ACLs + ir.rules para protección en dos niveles.
 - **Sincronización automática:** Los cambios en miembros se propagan a asignaciones y grupos automáticamente.
+- **Etapas fijas por requerimiento:** Las 5 etapas del proceso están definidas en `constantes.py` (lógica de campos y métricas) y en `etapa_data.xml` (semilla de BD). La UI del backend las expone como de solo lectura — `name` es readonly y no hay botón "Nuevo" — para que la interfaz sea honesta con la arquitectura. El orden de la lista está controlado por `sequence` (invisible en la vista, respetado por `default_order`), fijado desde `etapa_data.xml`.
 
 ---
 
