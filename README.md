@@ -170,10 +170,10 @@ Etapas fijas del proceso. Se instalan en `etapa_data.xml` y su comportamiento (c
 | Secuencia | Nombre |
 |-----------|--------|
 | 10 | Limpieza |
-| 20 | Digitalizado |
-| 30 | Editado |
-| 40 | Indexado |
-| 50 | Ordenado |
+| 20 | Ordenado |
+| 30 | Digitalizado |
+| 40 | Editado |
+| 50 | Indexado |
 
 ---
 
