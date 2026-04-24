@@ -65,8 +65,8 @@ Table digitalizacion_etapa {
 
   Note: '''T-01 - Catálogo de etapas.
 Datos iniciales (noupdate=1):
-  seq=10 Limpieza | seq=20 Digitalizado | seq=30 Editado
-  seq=40 Indexado | seq=50 Ordenado'''
+  seq=10 Limpieza | seq=20 Ordenado | seq=30 Digitalizado
+  seq=40 Editado | seq=50 Indexado'''
 }
 
 
