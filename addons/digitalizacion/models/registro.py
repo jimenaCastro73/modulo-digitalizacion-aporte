@@ -82,6 +82,12 @@ class DigitalizacionRegistro(models.Model):
         help="Etapa del proceso. Determina qué campos son visibles.",
     )
 
+    etapa_nombre = fields.Char(
+        related="etapa_id.name",
+        string="Nombre de la etapa",
+        store=True,
+    )
+
     # Métrica Principal (Consolidada)
 
     produccion_principal = fields.Integer(
