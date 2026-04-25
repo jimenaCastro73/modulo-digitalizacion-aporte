@@ -12,13 +12,15 @@
                 <sheet>
                     <!-- Información básica (siempre visible) -->
                     <group name="info_basica" string="Información del Registro">
-                        <group>
+                        <group string="Identificación">
                             <field name="fecha" />
+                            <field name="hora" readonly="1" />
                             <field name="miembro_id" options="{'no_create': True}" />
                             <field name="proyecto_id" readonly="1" />
-                            <field name="lider_id" readonly="1" />
+                            <field name="lider_id" readonly="1" string="Registrado por" />
                         </group>
-                        <group>
+                        <group string="Producción computada">
+                            <field name="etapa_id" options="{'no_create': True}" />
                             <field name="produccion_principal" readonly="1" />
                             <field name="unidad_produccion" readonly="1" />
                         </group>
@@ -55,82 +57,19 @@
                         </page>
                         <!-- Page 2: Notas y Observaciones -->
                         <page string="Notas y Observaciones">
-                            <group name="grupo_notas">
-                                <field name="observacion" nolabel="1" placeholder="Ej: Escaneo de expedientes sin editar (exp dobles) | Limpieza de expedientes, arreglo de expedientes | Indexado de expedientes, caida de sistema de 2pm a 2:20 pm" />
-                            </group>
+                            <div class="alert alert-light border-start border-3 border-secondary mb-3" role="alert">
+                                <i class="fa fa-pencil me-2 text-muted" />
+                                <strong>Observaciones del turno</strong> — incidencias, aclaraciones o contexto relevante sobre este registro.
+                                <span class="text-muted ms-1">(máx. 500 caracteres)</span>
+                            </div>
+                            <field name="observacion"
+                                   nolabel="1"
+                                   style="min-height: 180px; resize: vertical;"
+                                   placeholder="Ej: Caída del sistema de 2pm a 2:20pm · Expedientes con hojas sueltas separadas · Cajas con dobles · Sin incidencias" />
                         </page>
                     </notebook>
                 </sheet>
             </form>
-        </field>
-    </record>
-    <!-- TREE VIEW - Lista de registros (simplificada) -->
-    <record id="digitalizacion_registro_view_tree" model="ir.ui.view">
-        <field name="name">digitalizacion.registro.tree</field>
-        <field name="model">digitalizacion.registro</field>
-        <field name="arch" type="xml">
-            <tree string="Registros de Producción" default_order="fecha desc, hora desc" decoration-muted="produccion_principal == 0">
-                <field name="fecha" width="100" />
-                <field name="miembro_id" string="Digitalizador" />
-                <field name="etapa_id" string="Etapa" />
-                <field name="produccion_principal" string="Producción" sum="Total" />
-                <field name="unidad_produccion" string="Unidad" />
-                <field name="referencia_cajas" optional="show" />
-                <field name="observacion" optional="hide" />
-            </tree>
-        </field>
-    </record>
-    <!-- SEARCH VIEW - Búsqueda y filtros -->
-    <record id="digitalizacion_registro_view_search" model="ir.ui.view">
-        <field name="name">digitalizacion.registro.search</field>
-        <field name="model">digitalizacion.registro</field>
-        <field name="arch" type="xml">
-            <search string="Buscar registros">
-                <field name="miembro_id" string="Digitalizador" />
-                <field name="proyecto_id" string="Proyecto" />
-                <field name="etapa_id" string="Etapa" />
-                <field name="referencia_cajas" />
-                <field name="observacion" />
-                <filter name="my_records" string="Mis registros" domain="[('lider_id', '=', uid)]" />
-                <separator />
-                <filter name="fecha_today" string="Hoy" domain="[('fecha', '=', context_today)]" />
-                <filter name="fecha_week" string="Esta semana" domain="[('fecha', '>=', context_today - 7)]" />
-                <filter name="fecha_month" string="Este mes" domain="[('fecha', '>=', context_today.replace(day=1))]" />
-                <group string="Agrupar por" expand="0">
-                    <filter name="group_etapa" string="Etapa" context="{'group_by': 'etapa_id'}" />
-                    <filter name="group_proyecto" string="Proyecto" context="{'group_by': 'proyecto_id'}" />
-                    <filter name="group_miembro" string="Digitalizador" context="{'group_by': 'miembro_id'}" />
-                    <filter name="group_fecha" string="Fecha" context="{'group_by': 'fecha'}" />
-                </group>
-            </search>
-        </field>
-    </record>
-    <!-- PIVOT VIEW - Análisis de datos -->
-    <record id="digitalizacion_registro_view_pivot" model="ir.ui.view">
-        <field name="name">digitalizacion.registro.pivot</field>
-        <field name="model">digitalizacion.registro</field>
-        <field name="arch" type="xml">
-            <pivot string="Análisis de Producción" sample="1">
-                <field name="fecha" type="row" interval="month" />
-                <field name="etapa_id" type="col" />
-                <field name="proyecto_id" type="row" />
-                <field name="produccion_principal" string="Producción" type="measure" />
-                <field name="total_escaneos" string="Escaneos" type="measure" />
-                <field name="expedientes_indexados" string="Exp. Indexados" type="measure" />
-                <field name="folios_indexados" string="Folios Indexados" type="measure" />
-            </pivot>
-        </field>
-    </record>
-    <!-- GRAPH VIEW - Tendencia -->
-    <record id="digitalizacion_registro_view_graph" model="ir.ui.view">
-        <field name="name">digitalizacion.registro.graph</field>
-        <field name="model">digitalizacion.registro</field>
-        <field name="arch" type="xml">
-            <graph string="Tendencia de Producción" type="line" sample="1">
-                <field name="fecha" type="row" interval="day" />
-                <field name="etapa_id" type="col" />
-                <field name="produccion_principal" type="measure" />
-            </graph>
         </field>
     </record>
 </odoo>

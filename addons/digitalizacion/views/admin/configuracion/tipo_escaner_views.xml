@@ -50,6 +50,8 @@
         <field name="res_model">digitalizacion.tipo_escaner</field>
         <field name="view_mode">list,form</field>
         <field name="view_id" ref="digitalizacion_tipo_escaner_view_tree" />
+        <!-- active_test=False: archivados siempre visibles para poder reactivarlos. -->
+        <field name="context">{"active_test": False}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">Registra el primer tipo de escáner</p>
             <p>Los escáneres disponibles aparecerán en el formulario de registro del Líder al registrar producción en la etapa de Digitalizado.</p>
