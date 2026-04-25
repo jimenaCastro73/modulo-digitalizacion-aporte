@@ -274,7 +274,7 @@ class DigitalizacionProyecto(models.Model):
     def get_report_data(self):
         """Prepara los datos consolidados para el reporte PDF."""
         self.ensure_one()
-        resumen_etapas = self.env["digitalizacion.registro"].get_resumen_por_etapa(
+        resumen_etapas = self.env["digitalizacion.registro"].get_resumen_por_proyecto(
             self.id
         )
         return {

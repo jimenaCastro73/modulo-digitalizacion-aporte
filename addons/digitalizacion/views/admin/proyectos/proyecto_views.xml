@@ -155,10 +155,10 @@
                             <div class="alert alert-info mb-3" role="alert">
                                 <i class="fa fa-info-circle me-2" title="Información" />
                                 <strong>Registros de Producción:</strong>
-                                Haz clic en cualquier registro para ver sus detalles. 
-                                Los registros se agrupan automáticamente por fecha.
+                                Haz clic en cualquier registro para ver y editar sus detalles.
+                                Solo el Administrador puede modificar registros existentes.
                             </div>
-                            <field name="registro_ids" readonly="1" context="{'tree_view_ref': 'digitalizacion.digitalizacion_registro_view_tree', 'form_view_ref': 'digitalizacion.digitalizacion_registro_view_form', 'default_proyecto_id': active_id}" options="{'no_create': True, 'no_edit': True}">
+                            <field name="registro_ids" context="{'tree_view_ref': 'digitalizacion.digitalizacion_registro_view_tree', 'form_view_ref': 'digitalizacion.digitalizacion_registro_view_form', 'default_proyecto_id': active_id}" options="{'no_create': True}">
                                 <tree string="Registros del Proyecto" default_order="fecha desc, hora desc" decoration-muted="produccion_principal == 0">
                                     <field name="fecha" width="110" />
                                     <field name="miembro_id" string="Digitalizador" />

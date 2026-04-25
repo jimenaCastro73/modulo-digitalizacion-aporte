@@ -79,7 +79,10 @@
         <field name="res_model">digitalizacion.etapa</field>
         <field name="view_mode">list,form</field>
         <field name="view_id" ref="digitalizacion_etapa_view_tree" />
-        <field name="context">{"create": False}</field>
+        <!-- active_test=False: muestra siempre TODAS las etapas (activas y archivadas)
+             sin necesidad de un filtro manual. El admin activa/desactiva desde la lista.
+             create=False: deshabilita el botón "Nuevo". -->
+        <field name="context">{"create": False, "active_test": False}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">No hay etapas activas en este momento</p>
             <p>Las etapas del sistema (Limpieza, Digitalizado, Editado, Indexado, Ordenado) están definidas en la configuración del módulo. Usa la columna "Activo" para habilitarlas o deshabilitarlas.</p>
