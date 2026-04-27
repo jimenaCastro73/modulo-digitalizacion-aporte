@@ -13,9 +13,6 @@ services:
       - ./config:/etc/odoo
       - ./addons:/mnt/extra-addons
     entrypoint: "/usr/bin/odoo -c /etc/odoo/odoo.conf"
-    networks:
-      - odoo_net
-
   db:
     container_name: ${DB_HOST}
     image: ${DB_IMAGE}
@@ -28,22 +25,6 @@ services:
       - "${DB_PORT}:5432"
     volumes:
       - odoo-db-data:/var/lib/postgresql/data/pgdata
-    networks:
-      - odoo_net
-
-  tunnel:
-    container_name: odoo.tunnel.otec
-    image: cloudflare/cloudflared:latest
-    depends_on:
-      - web
-    command: tunnel --no-autoupdate --url http://web:8069
-    networks:
-      - odoo_net
-
-networks:
-  odoo_net:
-    name: ${NETWORK_NAME}
-
 volumes:
   odoo-db-data:
   odoo-web-data:
